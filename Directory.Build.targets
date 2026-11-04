@@ -1,0 +1,58 @@
+<Project>
+
+  <!-- What runs in the game targets .NET Framework: the plugin, and the SDK that mods' test plugins compile against -->
+
+  <PropertyGroup Condition=" '$(TargetFrameworkIdentifier)' == '.NETFramework' ">
+    <!-- Lets Mono skip access checks, so publicized private game members can be called directly -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup Condition=" '$(TargetFrameworkIdentifier)' == '.NETFramework' ">
+    <PackageReference Include="BepInEx.Core" Version="5.*" PrivateAssets="all" ExcludeAssets="runtime" />
+    <PackageReference Include="Zeepkist.GameLibs" Version="18.10.2087" PrivateAssets="all" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- Only a project that sets IsBepInExPlugin is loaded by BepInEx; the SDK shouldn't depend on ZeepSDK or carry a public MyPluginInfo -->
+
+  <ItemGroup Condition=" '$(IsBepInExPlugin)' == 'true' ">
+    <PackageReference Include="BepInEx.Analyzers" Version="1.0.8" PrivateAssets="all" ExcludeAssets="runtime" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" PrivateAssets="all" ExcludeAssets="runtime" />
+    <PackageReference Include="ZeepSDK" Version="$(ZeepSdkVersion)" PrivateAssets="all" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <!-- BepInEx.PluginInfoProps' MyPluginInfo.cs is only generated code to .editorconfig in an obj/ inside the repo; as .g.cs it is wherever obj/ is -->
+  <Target Name="MarkPluginInfoGenerated" AfterTargets="AddGeneratedFile" Condition=" '$(IsBepInExPlugin)' == 'true' ">
+    <PropertyGroup>
+      <PluginInfoFile>$(IntermediateOutputPath)MyPluginInfo.cs</PluginInfoFile>
+      <GeneratedPluginInfoFile>$(IntermediateOutputPath)MyPluginInfo.g.cs</GeneratedPluginInfoFile>
+    </PropertyGroup>
+    <Copy SourceFiles="$(PluginInfoFile)" DestinationFiles="$(GeneratedPluginInfoFile)" SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <Compile Remove="$(PluginInfoFile)" />
+      <Compile Include="$(GeneratedPluginInfoFile)" />
+      <FileWrites Include="$(GeneratedPluginInfoFile)" />
+    </ItemGroup>
+  </Target>
+
+  <!-- MyPluginInfo has no room for our own values, so ZeepSdkVersion reaches the plugin's BepInDependency through this -->
+  <Target Name="GenerateZeepSdkInfo" BeforeTargets="CoreCompile" Condition=" '$(IsBepInExPlugin)' == 'true' ">
+    <PropertyGroup>
+      <ZeepSdkInfoFile>$(IntermediateOutputPath)ZeepSdkInfo.g.cs</ZeepSdkInfoFile>
+    </PropertyGroup>
+    <ItemGroup>
+      <ZeepSdkInfoLine Include="namespace $(RootNamespace)%3B" />
+      <ZeepSdkInfoLine Include="internal static class ZeepSdkInfo" />
+      <ZeepSdkInfoLine Include="{" />
+      <ZeepSdkInfoLine Include="%20%20%20%20public const string PluginGuid = &quot;ZeepSDK&quot;%3B" />
+      <ZeepSdkInfoLine Include="%20%20%20%20public const string Version = &quot;$(ZeepSdkVersion)&quot;%3B" />
+      <ZeepSdkInfoLine Include="}" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(ZeepSdkInfoFile)" Lines="@(ZeepSdkInfoLine)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <Compile Include="$(ZeepSdkInfoFile)" />
+      <FileWrites Include="$(ZeepSdkInfoFile)" />
+    </ItemGroup>
+  </Target>
+
+</Project>

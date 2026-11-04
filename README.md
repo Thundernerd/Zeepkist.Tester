@@ -9,6 +9,24 @@ An in-game test harness for [Zeepkist](https://store.steampowered.com/app/144067
 
 Status: in design. See the [issues](https://github.com/Thundernerd/Zeepkist.Tester/issues) for the plan.
 
+## Building
+
+You need the [.NET 10 SDK](https://dotnet.microsoft.com/download), on Windows or Linux. The game doesn't have to be installed.
+
+```sh
+dotnet build
+dotnet test
+```
+
+| Project | What it is |
+| --- | --- |
+| `Zeepkist.Tester.Sdk` | What mods compile against |
+| `Zeepkist.Tester` | The BepInEx plugin: the harness in the game |
+| `Zeepkist.Tester.Cli` | The `ztest` dotnet tool: the runner and offline tools |
+| `Zeepkist.Tester.Tests` | Unit tests |
+
+The build should finish with zero warnings. CI treats any warning as an error.
+
 ## License
 
 [MIT](LICENSE)

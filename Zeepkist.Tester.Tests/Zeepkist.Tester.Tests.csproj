@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>TNRD.Zeepkist.Tester.Tests</RootNamespace>
+    <!-- The SDK targets .NET Framework; the code under test runs on .NET too -->
+    <NoWarn>$(NoWarn);NU1702</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zeepkist.Tester.Sdk\Zeepkist.Tester.Sdk.csproj" />
+    <ProjectReference Include="..\Zeepkist.Tester.Cli\Zeepkist.Tester.Cli.csproj" />
+  </ItemGroup>
+
+</Project>

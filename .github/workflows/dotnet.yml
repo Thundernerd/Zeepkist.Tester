@@ -1,0 +1,32 @@
+# Builds and runs the unit tests; nothing here needs the game
+
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+      with:
+        dotnet-version: 10.0.x
+    - name: Build
+      run: dotnet build --configuration Release -p:TreatWarningsAsErrors=true
+    - name: Test
+      run: dotnet test --no-build --configuration Release

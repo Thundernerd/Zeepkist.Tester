@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>TNRD.Zeepkist.Tester.Cli</RootNamespace>
+    <Product>Zeepkist Tester CLI</Product>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ztest</ToolCommandName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Zeepkist.Tester.Tests" />
+  </ItemGroup>
+
+</Project>
