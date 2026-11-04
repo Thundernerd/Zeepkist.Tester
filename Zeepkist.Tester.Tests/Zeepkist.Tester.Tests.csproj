@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>TNRD.Zeepkist.Tester.Tests</RootNamespace>
+    <!-- Zeepkist.Tester.Sdk and the game's libraries target .NET Framework; the code under test runs on .NET too -->
+    <NoWarn>$(NoWarn);NU1701;NU1702</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Zeepkist.Tester.Sdk's types expose these, but only compiles against them and doesn't pass them on -->
+    <PackageReference Include="BepInEx.BaseLib" Version="5.4.20" />
+    <PackageReference Include="Zeepkist.GameLibs" Version="$(GameLibsVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zeepkist.Tester.Sdk\Zeepkist.Tester.Sdk.csproj" />
+    <ProjectReference Include="..\Zeepkist.Tester.Cli\Zeepkist.Tester.Cli.csproj" />
+  </ItemGroup>
+
+</Project>

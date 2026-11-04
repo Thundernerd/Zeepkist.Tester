@@ -175,7 +175,7 @@ Other mods depend on ZeepSDK too, so the runner should deploy the ZeepSDK build 
 
 ## 5a. Spike results (2026-11-04, Linux + Proton Experimental)
 
-`spikes/InputAndYaml/` is a throwaway plugin and `run.sh`. The plugin runs only with `-ztest-spike <id>` and a matching `run.json`. It probes at the start screen and main menu, writes `results.json` and quits. Every probe passed:
+`spikes/InputAndYaml/` is a throwaway plugin and `run.sh`, to be deleted once #2 has run it on Windows: this section keeps the results and git history keeps the code. The plugin runs only with `-ztest-spike <id>` and a matching `run.json`. It probes at the start screen and main menu, writes `results.json` and quits. Every probe passed:
 
 | Probe | Result |
 | --- | --- |

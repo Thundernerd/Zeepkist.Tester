@@ -1,0 +1,5 @@
+<Project>
+
+  <!-- Stops MSBuild's search here: the repo's targets would duplicate the spike's package references -->
+
+</Project>

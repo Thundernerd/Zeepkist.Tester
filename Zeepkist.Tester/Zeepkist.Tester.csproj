@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <IsBepInExPlugin>true</IsBepInExPlugin>
+    <RootNamespace>TNRD.Zeepkist.Tester</RootNamespace>
+    <Product>Zeepkist Tester</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zeepkist.Tester.Sdk\Zeepkist.Tester.Sdk.csproj" />
+  </ItemGroup>
+
+</Project>

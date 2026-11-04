@@ -1,0 +1,44 @@
+<Project>
+
+  <!-- Zeepkist.Tester and Zeepkist.Tester.Sdk get their own settings from Directory.Build.targets, where the target framework is known -->
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <!-- The plugin, the SDK and the CLI are released together with one version -->
+    <Version>0.1.0</Version>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- The compiler only reports unused usings (IDE0005) when it generates docs; missing docs aren't an error -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1701;CS1702 is the .NET SDK's default, which it only sets when nothing set NoWarn before it -->
+    <NoWarn>$(NoWarn);CS1701;CS1702;CS1591</NoWarn>
+    <!-- What the plugin compiles against and its BepInDependency minimum, so it stays a plain version that BepInEx can parse, never a range -->
+    <ZeepSdkVersion>2.7.6</ZeepSdkVersion>
+    <GameLibsVersion>18.10.2087</GameLibsVersion>
+    <RestoreAdditionalProjectSources>
+      https://api.nuget.org/v3/index.json;
+      https://nuget.bepinex.dev/v3/index.json;
+      https://nuget.samboy.dev/v3/index.json
+    </RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="all" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" Link="stylecop.json" />
+  </ItemGroup>
+
+  <!-- The xUnit project -->
+  <PropertyGroup Condition=" $(MSBuildProjectName.EndsWith('.Tests')) ">
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup Condition=" $(MSBuildProjectName.EndsWith('.Tests')) ">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>
