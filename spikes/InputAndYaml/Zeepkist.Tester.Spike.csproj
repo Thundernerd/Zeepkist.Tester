@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Throwaway spike: does YamlDotNet load in the game, does SendInput reach Rewired/Input/OnGUI, do Harmony patches on Input reach game code -->
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>Zeepkist.Tester.Spike</AssemblyName>
+    <RootNamespace>TNRD.Zeepkist.Tester.Spike</RootNamespace>
+    <Version>0.0.1</Version>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RestoreAdditionalProjectSources>
+      https://api.nuget.org/v3/index.json;
+      https://nuget.bepinex.dev/v3/index.json;
+      https://nuget.samboy.dev/v3/index.json
+    </RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Core" Version="5.*" PrivateAssets="all" ExcludeAssets="runtime" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" PrivateAssets="all" ExcludeAssets="runtime" />
+    <PackageReference Include="Zeepkist.GameLibs" Version="18.10.2087" PrivateAssets="all" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
+  </ItemGroup>
+
+</Project>
