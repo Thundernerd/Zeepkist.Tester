@@ -86,6 +86,12 @@ public class StepDescriptorRuleTests
     }
 
     [Fact]
+    public void Build_TwoArgumentsWithOneName_Fails()
+    {
+        AssertFails(typeof(InvalidSteps.SameArgumentName), $"{InvalidStepsType}+SameArgumentName has more than one argument named 'value'.");
+    }
+
+    [Fact]
     public void Build_UnsupportedArgumentType_Fails()
     {
         AssertFails(typeof(InvalidSteps.UnsupportedType), $"Argument 'when' ({InvalidStepsType}+UnsupportedType) has the type System.DateTime, which isn't an argument type.");

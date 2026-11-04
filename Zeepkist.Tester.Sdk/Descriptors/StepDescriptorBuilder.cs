@@ -102,6 +102,8 @@ public sealed class StepDescriptorBuilder
 
             var name = NamedValue<string>(argAttribute, nameof(ArgAttribute.Name)) ?? ToKebabCase(property.Name);
             RequireKebabCase($"Argument name '{name}'", name, owner);
+            if (arguments.Any(argument => argument.Name == name))
+                throw new StepDefinitionException($"{owner.FullName} has more than one argument named '{name}'.");
 
             var type = BuildType(property.PropertyType, name, enclosing);
             var range = FindAttribute<RangeAttribute>(property);

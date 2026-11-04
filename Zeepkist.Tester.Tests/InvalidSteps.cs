@@ -44,6 +44,16 @@ public static class InvalidSteps
         public List<NestedTwoPrimaries> Items { get; set; }
     }
 
+    [Step("same-argument-name")]
+    public sealed class SameArgumentName : Base
+    {
+        [Arg(Name = "value")]
+        public string First { get; set; }
+
+        [Arg(Name = "value")]
+        public string Second { get; set; }
+    }
+
     [Step("no-namespace")]
     public sealed class NoNamespace : Base
     {
