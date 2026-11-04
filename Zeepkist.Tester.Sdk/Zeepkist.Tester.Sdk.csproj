@@ -6,4 +6,8 @@
     <Product>Zeepkist Tester SDK</Product>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Zeepkist.Tester.Tests" />
+  </ItemGroup>
+
 </Project>

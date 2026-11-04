@@ -24,6 +24,7 @@ dotnet test
 | `Zeepkist.Tester` | The BepInEx plugin: the harness in the game |
 | `Zeepkist.Tester.Cli` | The `ztest` dotnet tool: the runner and offline tools |
 | `Zeepkist.Tester.Tests` | Unit tests |
+| `Zeepkist.Tester.Tests.SampleMod` | A mod's assembly on net472, for the unit tests to build descriptors from |
 
 The build should finish with zero warnings. CI treats any warning as an error.
 
