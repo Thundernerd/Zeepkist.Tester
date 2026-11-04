@@ -7,7 +7,7 @@ namespace TNRD.Zeepkist.Tester.Tests;
 public class ProgramTests
 {
     [Fact]
-    public void NoArguments_PrintsUsageAndSucceeds()
+    public void Run_PrintsUsageAndSucceeds()
     {
         var output = new StringWriter();
 

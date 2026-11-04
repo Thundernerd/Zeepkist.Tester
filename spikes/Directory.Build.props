@@ -1,5 +1,5 @@
 <Project>
 
-  <!-- Stops MSBuild's search here: the spike carries its own settings, and the repo's would add StyleCop and duplicate its package references -->
+  <!-- Stops MSBuild's search here: the spike carries its own settings and shouldn't get the repo's StyleCop -->
 
 </Project>

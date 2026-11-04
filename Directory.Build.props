@@ -9,9 +9,9 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <!-- The compiler only reports unused usings (IDE0005) when it generates docs; missing docs aren't an error -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <!-- CS1701;CS1702 is the SDK's default, which it only sets when nothing set NoWarn before it -->
+    <!-- CS1701;CS1702 is the .NET SDK's default, which it only sets when nothing set NoWarn before it -->
     <NoWarn>$(NoWarn);CS1701;CS1702;CS1591</NoWarn>
-    <!-- It is also the plugin's BepInDependency minimum, so it stays a plain version that BepInEx can parse, never a range -->
+    <!-- What the plugin compiles against and its BepInDependency minimum, so it stays a plain version that BepInEx can parse, never a range -->
     <ZeepSdkVersion>2.7.6</ZeepSdkVersion>
     <GameLibsVersion>18.10.2087</GameLibsVersion>
     <RestoreAdditionalProjectSources>
@@ -26,7 +26,7 @@
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" Link="stylecop.json" />
   </ItemGroup>
 
-  <!-- The xUnit projects -->
+  <!-- The xUnit project -->
   <PropertyGroup Condition=" $(MSBuildProjectName.EndsWith('.Tests')) ">
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
