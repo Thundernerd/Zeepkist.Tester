@@ -30,20 +30,20 @@ function Find-Game([string] $SteamRoot) {
     $libraries = @($SteamRoot)
     $folders = Join-Path $SteamRoot 'steamapps/libraryfolders.vdf'
     if (Test-Path -LiteralPath $folders) {
-        $found = [regex]::Matches((Get-Content -LiteralPath $folders -Raw), '"path"\s+"([^"]+)"')
+        $found = [regex]::Matches((Get-Content -LiteralPath $folders -Raw -Encoding UTF8), '"path"\s+"([^"]+)"')
         $libraries += @($found | ForEach-Object { $_.Groups[1].Value.Replace('\\', '\') })
     }
 
+    # Not Join-Path: it throws on a library whose drive isn't plugged in
     foreach ($library in $libraries) {
-        if (Test-Path -LiteralPath (Join-Path $library "steamapps/appmanifest_$appId.acf")) {
-            return Join-Path $library 'steamapps/common/Zeepkist'
+        if (Test-Path -LiteralPath "$library/steamapps/appmanifest_$appId.acf") {
+            return "$library/steamapps/common/Zeepkist"
         }
     }
 
     return $null
 }
 
-# No lock like run.sh's: nothing else takes one on Windows, so the check below is what stops a second run
 if (Test-GameRunning) { Stop-Run 'Zeepkist is already running, close it first' }
 if (-not (Get-Process -Name steam -ErrorAction SilentlyContinue)) { Stop-Run "Steam isn't running" }
 
@@ -58,14 +58,24 @@ if (-not (Test-Path -LiteralPath $plugin)) {
 }
 
 $deploy = Join-Path $game 'BepInEx/plugins/Sideloaded/Plugins/Zeepkist.Tester.Spike'
-$results = Join-Path $deploy 'out/results.json'
+$pluginOut = Join-Path $deploy 'out'
+$results = Join-Path $pluginOut 'results.json'
 $finished = $false
+$started = $false
+
+if (Test-Path -LiteralPath (Join-Path $Out 'results.json')) { Stop-Run "$Out already has results, use another folder" }
+New-Item -ItemType Directory -Force -Path $Out | Out-Null
+
+# The game's process only shows up a while after the launch, so checking for it can't stop a second run
+$isOnlyRun = $false
+$lock = [System.Threading.Mutex]::new($true, 'Zeepkist.Tester.Spike', [ref]$isOnlyRun)
+if (-not $isOnlyRun) { Stop-Run 'another run is going, wait for it to end' }
 
 # A closed terminal skips the cleanup, and results.json left behind by that would count as this run's
 if (Test-Path -LiteralPath $deploy) { Remove-Item -LiteralPath $deploy -Recurse -Force }
 
 try {
-    New-Item -ItemType Directory -Force -Path $Out, $deploy | Out-Null
+    New-Item -ItemType Directory -Force -Path $deploy | Out-Null
     Copy-Item -LiteralPath $plugin, (Join-Path $build 'YamlDotNet.dll') -Destination $deploy
     $runId = Get-Date -Format 'yyyyMMdd-HHmmss'
     Set-Content -LiteralPath (Join-Path $deploy 'run.json') -Value "{`"runId`":`"$runId`"}" -NoNewline -Encoding Ascii
@@ -74,7 +84,6 @@ try {
     Start-Process -FilePath (Join-Path $steamRoot 'steam.exe') -ArgumentList '-applaunch', $appId, '-ztest-spike', $runId
 
     $deadline = (Get-Date).AddSeconds(240)
-    $started = $false
     while ((Get-Date) -lt $deadline) {
         if (Test-Path -LiteralPath $results) {
             Write-SpikeLog 'results written'
@@ -100,25 +109,30 @@ try {
     }
 }
 finally {
-    if (Test-GameRunning) {
-        Get-Process -Name Zeepkist | ForEach-Object { [void]$_.CloseMainWindow() }
-        Start-Sleep -Seconds 5
-        Get-Process -Name Zeepkist -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-        # Windows won't delete the plugin's DLLs until the process is gone
-        Wait-Process -Name Zeepkist -Timeout 10 -ErrorAction SilentlyContinue
+    try {
+        if (Test-GameRunning) {
+            Get-Process -Name Zeepkist -ErrorAction SilentlyContinue | ForEach-Object { [void]$_.CloseMainWindow() }
+            Start-Sleep -Seconds 5
+            Get-Process -Name Zeepkist -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            # Windows won't delete the plugin's DLLs until the process is gone
+            Wait-Process -Name Zeepkist -Timeout 10 -ErrorAction SilentlyContinue
+        }
+
+        if (Test-Path -LiteralPath $pluginOut) { Get-ChildItem -LiteralPath $pluginOut | Copy-Item -Destination $Out -Recurse -Force }
+
+        # The logs of a game that never started are an earlier run's. Player.log says why when the game stalled before BepInEx loaded the plugin
+        if ($started) {
+            $logs = @((Join-Path $game 'BepInEx/LogOutput.log'), (Join-Path $env:USERPROFILE 'AppData/LocalLow/Steelpan Interactive/Zeepkist/Player.log'))
+            foreach ($logFile in $logs) {
+                if (Test-Path -LiteralPath $logFile) { Copy-Item -LiteralPath $logFile -Destination $Out -Force }
+            }
+        }
     }
-
-    $written = Join-Path $deploy 'out'
-    if (Test-Path -LiteralPath $written) { Get-ChildItem -LiteralPath $written | Copy-Item -Destination $Out -Recurse -Force }
-
-    # Player.log says why when the game stalled before BepInEx loaded the plugin
-    $logs = @((Join-Path $game 'BepInEx/LogOutput.log'), (Join-Path $env:USERPROFILE 'AppData/LocalLow/Steelpan Interactive/Zeepkist/Player.log'))
-    foreach ($logFile in $logs) {
-        if (Test-Path -LiteralPath $logFile) { Copy-Item -LiteralPath $logFile -Destination $Out -Force }
+    finally {
+        if (Test-Path -LiteralPath $deploy) { Remove-Item -LiteralPath $deploy -Recurse -Force }
+        Write-SpikeLog "removed the spike from $deploy"
+        $lock.Dispose()
     }
-
-    Remove-Item -LiteralPath $deploy -Recurse -Force
-    Write-SpikeLog "removed the spike from $deploy"
 }
 
 if (-not $finished) { Stop-Run "no results, see the logs in $Out" }
