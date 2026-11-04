@@ -9,7 +9,7 @@
 
   <ItemGroup Condition=" '$(TargetFrameworkIdentifier)' == '.NETFramework' ">
     <PackageReference Include="BepInEx.Core" Version="5.*" PrivateAssets="all" ExcludeAssets="runtime" />
-    <PackageReference Include="Zeepkist.GameLibs" Version="18.10.2087" PrivateAssets="all" ExcludeAssets="runtime" />
+    <PackageReference Include="Zeepkist.GameLibs" Version="$(GameLibsVersion)" PrivateAssets="all" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
   </ItemGroup>
 
