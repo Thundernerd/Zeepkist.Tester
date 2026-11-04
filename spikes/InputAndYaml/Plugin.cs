@@ -150,13 +150,13 @@ public class Plugin : BaseUnityPlugin
             return result;
         }
 
-        var active = Native.GetActiveWindow();
-        var foreground = Native.GetForegroundWindow();
-        result["game_window_is_foreground"] = active == foreground;
-        if (active != foreground)
+        var window = Native.GameWindow();
+        result["game_window_found"] = window != IntPtr.Zero;
+        result["game_window_is_foreground"] = window == Native.GetForegroundWindow();
+        if (window != Native.GetForegroundWindow())
         {
-            result["set_foreground_returned"] = Native.SetForegroundWindow(active);
-            result["game_window_is_foreground_after"] = Native.GetActiveWindow() == Native.GetForegroundWindow();
+            result["set_foreground_returned"] = Native.SetForegroundWindow(window);
+            result["game_window_is_foreground_after"] = window == Native.GetForegroundWindow();
         }
 
         return result;
@@ -393,8 +393,11 @@ internal static class Native
     private const uint MouseEventAbsolute = 0x8000;
     private const uint MouseEventVirtualDesk = 0x4000;
 
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string className, string title);
+
     [DllImport("user32.dll")]
-    public static extern IntPtr GetActiveWindow();
+    private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
 
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
@@ -413,6 +416,23 @@ internal static class Native
 
     [DllImport("user32.dll")]
     private static extern int GetSystemMetrics(int index);
+
+    /// <summary>
+    /// The game's own window. GetActiveWindow can't tell: it returns null while another application is in front.
+    /// </summary>
+    public static IntPtr GameWindow()
+    {
+        var self = (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
+        var window = IntPtr.Zero;
+        while ((window = FindWindowEx(IntPtr.Zero, window, "UnityWndClass", null)) != IntPtr.Zero)
+        {
+            GetWindowThreadProcessId(window, out var owner);
+            if (owner == self)
+                return window;
+        }
+
+        return IntPtr.Zero;
+    }
 
     public static string SendKey(ushort vk, ushort scan, KeyMode mode, bool up)
     {
@@ -441,7 +461,7 @@ internal static class Native
     /// </summary>
     public static string MoveMouseToWindowFraction(Vector2 fraction)
     {
-        var window = GetActiveWindow();
+        var window = GameWindow();
         if (!GetClientRect(window, out var rect))
             return "GetClientRect failed";
 
