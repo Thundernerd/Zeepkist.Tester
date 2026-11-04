@@ -175,7 +175,7 @@ Other mods depend on ZeepSDK too, so the runner should deploy the ZeepSDK build 
 
 ## 5a. Spike results (2026-11-04, Linux + Proton Experimental)
 
-`spikes/InputAndYaml/` is a throwaway plugin and `run.sh`, to be deleted once #2 has run it on Windows: this section keeps the results and git history keeps the code. The plugin runs only with `-ztest-spike <id>` and a matching `run.json`. It probes at the start screen and main menu, writes `results.json` and quits. Every probe passed:
+`spikes/InputAndYaml/` is a throwaway plugin with `run.sh` and `run.ps1` to run it, to be deleted once #2 has run it on Windows: this section keeps the results and git history keeps the code. The plugin runs only with `-ztest-spike <id>` and a matching `run.json`. It probes at the start screen and main menu, writes `results.json` and quits. Every probe passed:
 
 | Probe | Result |
 | --- | --- |
@@ -191,6 +191,24 @@ What follows from this:
 - **Tier 2 legacy `Input` patching is viable.**
 - Rewired action injection (risk 3) now matters only for deterministic in-process tests, not for reaching gameplay at all.
 - **The game needs a display.** With the monitor off, Unity logs `MonitorFromWindow failed: Success.` in `Player.log` and stalls before the first scene, so BepInEx never loads plugins. The runner should look for that line in `Player.log` (`AppData/LocalLow/Steelpan Interactive/Zeepkist/`) and fail fast with "no display", rather than time out.
+
+### Running it on Windows (#2)
+
+This takes the .NET 10 SDK, and Steam running with Zeepkist installed. It makes two runs, from the repo root:
+
+```powershell
+dotnet build spikes\InputAndYaml\Zeepkist.Tester.Spike.csproj -c Release
+
+# The game in front: leave the mouse and keyboard alone until the script ends
+powershell -ExecutionPolicy Bypass -File spikes\InputAndYaml\run.ps1 $HOME\spike-out\front
+
+# The game behind another window: open an empty Notepad, start this, click Notepad as soon as the game's window appears, and keep it in front until the script ends
+powershell -ExecutionPolicy Bypass -File spikes\InputAndYaml\run.ps1 $HOME\spike-out\behind
+```
+
+In the second run the spike's key presses go to whatever has focus, which is why Notepad should be empty. If that run ends in `timed out`, that's a result too: the game doesn't get as far as the probes while it's behind another window.
+
+Each folder gets `results.json`, `LogOutput.log` and `Player.log`. Those three files and the script's output are what the Windows column comes from. `focus` in `results.json` answers whether `SetForegroundWindow` works from inside the game.
 
 ## 6. Decided
 
