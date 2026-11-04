@@ -1,0 +1,14 @@
+# Zeepkist.Tester
+
+An in-game test harness for [Zeepkist](https://store.steampowered.com/app/1440670/Zeepkist/) mods. It runs scenarios inside the real game: the game starts through Steam, walks into the level editor (or the main menu, or free play), runs each scenario's steps, and reports what passed, what failed and what it logged, with screenshots. Afterwards it puts the game install and your mods' data back as they were.
+
+- **Scenarios** are YAML files, with completion and checking in VS Code, Rider and Visual Studio from a generated schema.
+- **C# tests** (`[InGameTest]`) are for tests that need real logic.
+- **Steps** come from the tester itself (wait, screenshot, press, click, test mode, …) and from your mod, which registers its own in C#.
+- **Input** can be in-process and repeatable, or real OS input, the way a player's keyboard and mouse reach the game.
+
+Status: in design. See the [issues](https://github.com/Thundernerd/Zeepkist.Tester/issues) for the plan.
+
+## License
+
+[MIT](LICENSE)
