@@ -19,9 +19,9 @@ public sealed class StepDescriptorBuilder
     // Also a different type on each runtime: the BCL's on .NET, the SDK's polyfill on net472
     private const string RequiredMemberAttributeName = "System.Runtime.CompilerServices.RequiredMemberAttribute";
 
-    private static readonly Regex _kebabCase = new("^[a-z0-9]+(-[a-z0-9]+)*$");
+    private static readonly Regex _kebabCase = new Regex("^[a-z0-9]+(-[a-z0-9]+)*$");
 
-    private static readonly Dictionary<string, ArgumentType> _scalarTypes = new()
+    private static readonly Dictionary<string, ArgumentType> _scalarTypes = new Dictionary<string, ArgumentType>()
     {
         [typeof(string).FullName] = new ArgumentType { Kind = ArgumentKind.String },
         [typeof(Text).FullName] = new ArgumentType { Kind = ArgumentKind.Text },
@@ -46,16 +46,16 @@ public sealed class StepDescriptorBuilder
 
     public StepDescriptor Build(Type stepType)
     {
-        var step = FindAttribute(stepType, typeof(StepAttribute).FullName)
+        var stepAttribute = FindAttribute<StepAttribute>(stepType)
             ?? throw new StepDefinitionException($"{stepType.FullName} has no [Step] attribute.");
 
         if (!DerivesFromStep(stepType))
             throw new StepDefinitionException($"{stepType.FullName} has [Step] but doesn't derive from Step.");
 
-        var name = ConstructorValue<string>(step);
+        var name = ConstructorValue<string>(stepAttribute);
         RequireKebabCase($"Step name '{name}'", name, stepType);
 
-        var stepNamespace = NamedValue<string>(step, nameof(StepAttribute.Namespace)) ?? TestPluginNamespace(stepType.Assembly) ?? string.Empty;
+        var stepNamespace = NamedValue<string>(stepAttribute, nameof(StepAttribute.Namespace)) ?? TestPluginNamespace(stepType.Assembly) ?? string.Empty;
         if (stepNamespace.Length > 0)
             RequireKebabCase($"Namespace '{stepNamespace}'", stepNamespace, stepType);
         else if (stepType.Assembly.GetName().Name != TesterAssemblyName)
@@ -96,27 +96,27 @@ public sealed class StepDescriptorBuilder
         var arguments = new List<ArgumentDescriptor>();
         foreach (var property in owner.GetProperties())
         {
-            var arg = FindAttribute(property, typeof(ArgAttribute).FullName);
-            if (arg == null)
+            var argAttribute = FindAttribute<ArgAttribute>(property);
+            if (argAttribute == null)
                 continue;
 
-            var name = NamedValue<string>(arg, nameof(ArgAttribute.Name)) ?? ToKebabCase(property.Name);
+            var name = NamedValue<string>(argAttribute, nameof(ArgAttribute.Name)) ?? ToKebabCase(property.Name);
             RequireKebabCase($"Argument name '{name}'", name, owner);
 
-            var type = BuildType(property.PropertyType, name, owner, enclosing);
-            var range = FindAttribute(property, typeof(RangeAttribute).FullName);
+            var type = BuildType(property.PropertyType, name, enclosing);
+            var range = FindAttribute<RangeAttribute>(property);
             arguments.Add(new ArgumentDescriptor
             {
                 Name = name,
                 Type = type,
                 Documentation = Summaries($"P:{DocName(property.DeclaringType)}.{property.Name}"),
-                IsPrimary = NamedValue<bool>(arg, nameof(ArgAttribute.Primary)),
+                IsPrimary = NamedValue<bool>(argAttribute, nameof(ArgAttribute.Primary)),
                 IsRequired = FindAttribute(property, RequiredMemberAttributeName) != null,
-                Default = WrittenDefault(arg),
-                Pattern = ConstructorValue<string>(FindAttribute(property, typeof(PatternAttribute).FullName)) ?? type.Pattern,
-                Minimum = (double?)range?.ConstructorArguments[0].Value,
+                Default = WrittenDefault(argAttribute),
+                Pattern = ConstructorValue<string>(FindAttribute<PatternAttribute>(property)) ?? type.Pattern,
+                Minimum = ConstructorValue<double?>(range),
                 Maximum = (double?)range?.ConstructorArguments[1].Value,
-                MinItems = (int?)FindAttribute(property, typeof(MinItemsAttribute).FullName)?.ConstructorArguments[0].Value,
+                MinItems = ConstructorValue<int?>(FindAttribute<MinItemsAttribute>(property)),
             });
         }
 
@@ -127,10 +127,10 @@ public sealed class StepDescriptorBuilder
         return arguments;
     }
 
-    private ArgumentType BuildType(Type type, string argument, Type owner, List<Type> enclosing)
+    private ArgumentType BuildType(Type type, string argument, List<Type> enclosing)
     {
         if (IsGeneric(type, "System.Nullable`1"))
-            return BuildType(type.GetGenericArguments()[0], argument, owner, enclosing);
+            return BuildType(type.GetGenericArguments()[0], argument, enclosing);
 
         if (_scalarTypes.TryGetValue(type.FullName, out var scalar))
             return scalar;
@@ -139,10 +139,10 @@ public sealed class StepDescriptorBuilder
             return new ArgumentType { Kind = ArgumentKind.Enum, EnumValues = [.. EnumMembers(type).Select(WrittenEnumValue)] };
 
         if (IsGeneric(type, "System.Collections.Generic.List`1"))
-            return new ArgumentType { Kind = ArgumentKind.List, ItemType = BuildType(type.GetGenericArguments()[0], argument, owner, enclosing) };
+            return new ArgumentType { Kind = ArgumentKind.List, ItemType = BuildType(type.GetGenericArguments()[0], argument, enclosing) };
 
-        if (!type.IsClass || !type.GetProperties().Any(property => FindAttribute(property, typeof(ArgAttribute).FullName) != null))
-            throw new StepDefinitionException($"Argument '{argument}' ({owner.FullName}) has the type {type.FullName}, which isn't an argument type.");
+        if (!type.IsClass || !type.GetProperties().Any(property => FindAttribute<ArgAttribute>(property) != null))
+            throw new StepDefinitionException($"Argument '{argument}' ({enclosing.Last().FullName}) has the type {type.FullName}, which isn't an argument type.");
 
         if (enclosing.Any(other => other.FullName == type.FullName))
             throw new StepDefinitionException($"{type.FullName} contains itself through argument '{argument}'.");
@@ -169,7 +169,7 @@ public sealed class StepDescriptorBuilder
     private static string TestPluginNamespace(Assembly assembly)
     {
         return assembly.GetTypes()
-            .Select(type => FindAttribute(type, typeof(TestPluginAttribute).FullName))
+            .Select(type => FindAttribute<TestPluginAttribute>(type))
             .Where(plugin => plugin != null)
             .Select(plugin => NamedValue<string>(plugin, nameof(TestPluginAttribute.Namespace)))
             .FirstOrDefault();
@@ -193,15 +193,15 @@ public sealed class StepDescriptorBuilder
 
     private static string WrittenEnumValue(FieldInfo member)
     {
-        return ConstructorValue<string>(FindAttribute(member, typeof(ArgValueAttribute).FullName)) ?? ToKebabCase(member.Name);
+        return ConstructorValue<string>(FindAttribute<ArgValueAttribute>(member)) ?? ToKebabCase(member.Name);
     }
 
     /// <summary>
     /// An enum in an attribute is only its number, so this finds the member it means.
     /// </summary>
-    private static object WrittenDefault(CustomAttributeData arg)
+    private static object WrittenDefault(CustomAttributeData argAttribute)
     {
-        foreach (var argument in arg.NamedArguments)
+        foreach (var argument in argAttribute.NamedArguments)
         {
             if (argument.MemberName != nameof(ArgAttribute.Default))
                 continue;
@@ -235,6 +235,12 @@ public sealed class StepDescriptorBuilder
         }
 
         return kebab.ToString();
+    }
+
+    private static CustomAttributeData FindAttribute<TAttribute>(MemberInfo member)
+        where TAttribute : Attribute
+    {
+        return FindAttribute(member, typeof(TAttribute).FullName);
     }
 
     private static CustomAttributeData FindAttribute(MemberInfo member, string attributeName)

@@ -4,6 +4,9 @@ using TNRD.Zeepkist.Tester.Sdk;
 
 namespace TNRD.Zeepkist.Tester.Tests.SampleMod;
 
+/// <summary>
+/// Its constructors are there to compile on net472: <c>required</c> with <see cref="SetsRequiredMembersAttribute"/>.
+/// </summary>
 [Step("compile")]
 public sealed class Compile : Step
 {

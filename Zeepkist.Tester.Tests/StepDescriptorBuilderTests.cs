@@ -213,11 +213,7 @@ public class StepDescriptorBuilderTests
     [Fact]
     public void Build_WithSummaries_DocumentsTheStepAndItsArguments()
     {
-        var builder = new StepDescriptorBuilder
-        {
-            TesterAssemblyName = typeof(TestSteps).Assembly.GetName().Name,
-            Summaries = ReadSummaries(typeof(TestSteps).Assembly),
-        };
+        var builder = AsTester(ReadSummaries(typeof(TestSteps).Assembly));
 
         var descriptor = builder.Build(typeof(TestSteps.Wait));
 
@@ -228,11 +224,7 @@ public class StepDescriptorBuilderTests
     [Fact]
     public void Build_WithSummaries_DocumentsNestedClassesAndTheirArguments()
     {
-        var builder = new StepDescriptorBuilder
-        {
-            TesterAssemblyName = typeof(TestSteps).Assembly.GetName().Name,
-            Summaries = ReadSummaries(typeof(TestSteps).Assembly),
-        };
+        var builder = AsTester(ReadSummaries(typeof(TestSteps).Assembly));
 
         var item = builder.Build(typeof(TestSteps.DragWindowEdge)).Arguments[0].Type.ItemType;
 
@@ -256,15 +248,15 @@ public class StepDescriptorBuilderTests
 
     private static StepDescriptor Build(Type stepType)
     {
-        return AsTester().Build(stepType);
+        return AsTester(_ => null).Build(stepType);
     }
 
     /// <summary>
     /// The builder as if this assembly were the tester's, so its steps may use the reserved empty namespace.
     /// </summary>
-    private static StepDescriptorBuilder AsTester()
+    private static StepDescriptorBuilder AsTester(Func<string, string> summaries)
     {
-        return new StepDescriptorBuilder { TesterAssemblyName = typeof(TestSteps).Assembly.GetName().Name };
+        return new StepDescriptorBuilder { TesterAssemblyName = typeof(TestSteps).Assembly.GetName().Name, Summaries = summaries };
     }
 
     /// <summary>

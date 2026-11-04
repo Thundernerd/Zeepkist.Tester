@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using TNRD.Zeepkist.Tester.Sdk;
@@ -94,7 +95,7 @@ public static class InvalidSteps
     public sealed class UnsupportedType : Base
     {
         [Arg]
-        public System.DateTime When { get; set; }
+        public DateTime When { get; set; }
     }
 
     public sealed class ClassWithoutArgs
