@@ -7,6 +7,11 @@ namespace TNRD.Zeepkist.Tester.Sdk;
 /// </summary>
 public readonly struct Seconds
 {
+    /// <summary>
+    /// The form with a unit. A plain number is also a length of time, so it doesn't have to match this.
+    /// </summary>
+    public const string Pattern = @"^\d+(\.\d+)?(ms|s)$";
+
     public Seconds(float value)
     {
         Value = value;

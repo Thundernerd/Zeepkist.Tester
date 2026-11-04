@@ -21,17 +21,17 @@ public sealed class StepDescriptorBuilder
 
     private static readonly Regex _kebabCase = new("^[a-z0-9]+(-[a-z0-9]+)*$");
 
-    private static readonly Dictionary<string, ArgumentKind> _scalarKinds = new()
+    private static readonly Dictionary<string, ArgumentType> _scalarTypes = new()
     {
-        [typeof(string).FullName] = ArgumentKind.String,
-        [typeof(Text).FullName] = ArgumentKind.Text,
-        [typeof(int).FullName] = ArgumentKind.Int,
-        [typeof(float).FullName] = ArgumentKind.Float,
-        [typeof(bool).FullName] = ArgumentKind.Bool,
-        [typeof(Seconds).FullName] = ArgumentKind.Seconds,
-        [typeof(Pixels).FullName] = ArgumentKind.Pixels,
-        [typeof(Keys).FullName] = ArgumentKind.Keys,
-        [typeof(FileName).FullName] = ArgumentKind.FileName,
+        [typeof(string).FullName] = new ArgumentType { Kind = ArgumentKind.String },
+        [typeof(Text).FullName] = new ArgumentType { Kind = ArgumentKind.Text },
+        [typeof(int).FullName] = new ArgumentType { Kind = ArgumentKind.Int },
+        [typeof(float).FullName] = new ArgumentType { Kind = ArgumentKind.Float },
+        [typeof(bool).FullName] = new ArgumentType { Kind = ArgumentKind.Bool },
+        [typeof(Seconds).FullName] = new ArgumentType { Kind = ArgumentKind.Seconds, Pattern = Seconds.Pattern },
+        [typeof(Pixels).FullName] = new ArgumentType { Kind = ArgumentKind.Pixels },
+        [typeof(Keys).FullName] = new ArgumentType { Kind = ArgumentKind.Keys, Pattern = Keys.Pattern },
+        [typeof(FileName).FullName] = new ArgumentType { Kind = ArgumentKind.FileName, Pattern = FileName.Pattern },
     };
 
     /// <summary>
@@ -113,7 +113,7 @@ public sealed class StepDescriptorBuilder
                 IsPrimary = NamedValue<bool>(arg, nameof(ArgAttribute.Primary)),
                 IsRequired = FindAttribute(property, RequiredMemberAttributeName) != null,
                 Default = WrittenDefault(arg),
-                Pattern = ConstructorValue<string>(FindAttribute(property, typeof(PatternAttribute).FullName)) ?? TypePattern(type.Kind),
+                Pattern = ConstructorValue<string>(FindAttribute(property, typeof(PatternAttribute).FullName)) ?? type.Pattern,
                 Minimum = (double?)range?.ConstructorArguments[0].Value,
                 Maximum = (double?)range?.ConstructorArguments[1].Value,
                 MinItems = (int?)FindAttribute(property, typeof(MinItemsAttribute).FullName)?.ConstructorArguments[0].Value,
@@ -132,8 +132,8 @@ public sealed class StepDescriptorBuilder
         if (IsGeneric(type, "System.Nullable`1"))
             return BuildType(type.GetGenericArguments()[0], argument, owner, enclosing);
 
-        if (_scalarKinds.TryGetValue(type.FullName, out var kind))
-            return new ArgumentType { Kind = kind };
+        if (_scalarTypes.TryGetValue(type.FullName, out var scalar))
+            return scalar;
 
         if (type.IsEnum)
             return new ArgumentType { Kind = ArgumentKind.Enum, EnumValues = [.. EnumMembers(type).Select(WrittenEnumValue)] };
@@ -147,7 +147,12 @@ public sealed class StepDescriptorBuilder
         if (enclosing.Any(other => other.FullName == type.FullName))
             throw new StepDefinitionException($"{type.FullName} contains itself through argument '{argument}'.");
 
-        return new ArgumentType { Kind = ArgumentKind.Object, Arguments = BuildArguments(type, [.. enclosing, type]) };
+        return new ArgumentType
+        {
+            Kind = ArgumentKind.Object,
+            Documentation = Summaries($"T:{DocName(type)}"),
+            Arguments = BuildArguments(type, [.. enclosing, type]),
+        };
     }
 
     private static bool DerivesFromStep(Type type)
@@ -174,16 +179,6 @@ public sealed class StepDescriptorBuilder
     {
         if (!_kebabCase.IsMatch(name))
             throw new StepDefinitionException($"{what} ({owner.FullName}) isn't in kebab case, such as 'place-block'.");
-    }
-
-    private static string TypePattern(ArgumentKind kind)
-    {
-        return kind switch
-        {
-            ArgumentKind.Keys => Keys.Pattern,
-            ArgumentKind.FileName => FileName.Pattern,
-            _ => null,
-        };
     }
 
     private static bool IsGeneric(Type type, string definitionName)

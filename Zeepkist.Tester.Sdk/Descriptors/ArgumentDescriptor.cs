@@ -21,7 +21,7 @@ public sealed class ArgumentDescriptor
     public object Default { get; init; }
 
     /// <summary>
-    /// From <see cref="PatternAttribute"/>, or what the type itself takes, as <see cref="Sdk.FileName"/> does.
+    /// From <see cref="PatternAttribute"/>, or else <see cref="ArgumentType.Pattern"/>.
     /// </summary>
     public string Pattern { get; init; }
 

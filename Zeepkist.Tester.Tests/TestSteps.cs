@@ -120,6 +120,12 @@ public static class TestSteps
         [Arg]
         public List<Seconds> Times { get; set; }
 
+        [Arg]
+        public List<Keys> Chords { get; set; }
+
+        [Arg]
+        public Seconds Timeout { get; set; }
+
         public override IEnumerator Run(IStepContext context)
         {
             yield break;

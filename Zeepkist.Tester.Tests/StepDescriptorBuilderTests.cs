@@ -161,6 +161,7 @@ public class StepDescriptorBuilderTests
     [InlineData("a", true)]
     [InlineData("ctrl+space escape", true)]
     [InlineData("ctrl+/", true)]
+    [InlineData("ctrl+\\", true)]
     [InlineData("shift+alt+pagedown", true)]
     [InlineData("-", true)]
     [InlineData("", false)]
@@ -168,11 +169,33 @@ public class StepDescriptorBuilderTests
     [InlineData("hyper+a", false)]
     [InlineData("ctrl+a  b", false)]
     [InlineData("spacebar", false)]
+    [InlineData("Ctrl+A", false)]
     public void Build_Keys_TakesTheKeyChordSyntax(string keys, bool matches)
     {
         var pattern = Argument(typeof(TestSteps.EveryType), "keys").Pattern;
 
         Assert.Equal(matches, Regex.IsMatch(keys, pattern));
+    }
+
+    [Fact]
+    public void Build_ListOfKeys_HasThePatternOnItsItems()
+    {
+        var chords = Argument(typeof(TestSteps.EveryType), "chords");
+
+        Assert.Equal(Keys.Pattern, chords.Type.ItemType.Pattern);
+    }
+
+    [Theory]
+    [InlineData("500ms", true)]
+    [InlineData("0.5s", true)]
+    [InlineData("500", false)]
+    [InlineData("-1s", false)]
+    [InlineData("1m", false)]
+    public void Build_Seconds_TakesTheTextFormAsAPattern(string seconds, bool matches)
+    {
+        var pattern = Argument(typeof(TestSteps.EveryType), "timeout").Pattern;
+
+        Assert.Equal(matches, Regex.IsMatch(seconds, pattern));
     }
 
     [Theory]
@@ -200,6 +223,21 @@ public class StepDescriptorBuilderTests
 
         Assert.Equal("Waits, such as for the level to run a little before a screenshot.", descriptor.Documentation);
         Assert.Equal("How long to wait.", Assert.Single(descriptor.Arguments).Documentation);
+    }
+
+    [Fact]
+    public void Build_WithSummaries_DocumentsNestedClassesAndTheirArguments()
+    {
+        var builder = new StepDescriptorBuilder
+        {
+            TesterAssemblyName = typeof(TestSteps).Assembly.GetName().Name,
+            Summaries = ReadSummaries(typeof(TestSteps).Assembly),
+        };
+
+        var item = builder.Build(typeof(TestSteps.DragWindowEdge)).Arguments[0].Type.ItemType;
+
+        Assert.Equal("One move of a drag.", item.Documentation);
+        Assert.Equal("Frames the move takes.", item.Arguments[1].Documentation);
     }
 
     [Fact]
