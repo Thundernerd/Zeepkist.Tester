@@ -2,7 +2,7 @@
 
 The typed list of steps that the YAML parser, the editor schema, the step reference docs, `ztest check`, `ztest convert` and C# tests all come from. It replaces ZeepLogicScript's `StepList` + `StepArgument` + the hand-kept step table + `StepListTests`. Background: [generic-tester.md](../research/generic-tester.md) §4 and §7, and [scenario-format.md](../research/scenario-format.md).
 
-Status: sketch, nothing built. Names are placeholders.
+Status: sketch. The attributes, argument types and descriptors are built (#3); the rest isn't, and its names are placeholders.
 
 ## The one constraint that shapes it
 
