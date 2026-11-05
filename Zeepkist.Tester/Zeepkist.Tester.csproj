@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Zeepkist.Tester.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Zeepkist.Tester.Sdk\Zeepkist.Tester.Sdk.csproj" />
   </ItemGroup>
 
