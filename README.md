@@ -25,6 +25,7 @@ dotnet test
 | `Zeepkist.Tester.Cli` | The `ztest` dotnet tool: the runner and offline tools |
 | `Zeepkist.Tester.Tests` | Unit tests |
 | `Zeepkist.Tester.Tests.SampleMod` | A mod's assembly on net472, for the unit tests to build descriptors from |
+| `Zeepkist.Tester.Tests.SampleCore` | An assembly on net472 with a step as the tester ships them, for the same tests |
 
 The build should finish with zero warnings. CI treats any warning as an error.
 

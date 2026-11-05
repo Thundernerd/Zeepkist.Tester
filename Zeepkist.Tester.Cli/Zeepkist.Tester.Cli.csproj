@@ -7,10 +7,26 @@
     <Product>Zeepkist Tester CLI</Product>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>ztest</ToolCommandName>
+    <!-- Zeepkist.Tester.Sdk targets .NET Framework; the descriptor builder runs on .NET too -->
+    <NoWarn>$(NoWarn);NU1702</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="Zeepkist.Tester.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Reflection.MetadataLoadContext" Version="10.0.14" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zeepkist.Tester.Sdk\Zeepkist.Tester.Sdk.csproj" />
+    <!-- Only built first: the CLI reads the tester's own steps from the DLL and docs below, and never loads it -->
+    <ProjectReference Include="..\Zeepkist.Tester\Zeepkist.Tester.csproj" ReferenceOutputAssembly="false" Private="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\Zeepkist.Tester\bin\$(Configuration)\net472\Zeepkist.Tester.dll;..\Zeepkist.Tester\bin\$(Configuration)\net472\Zeepkist.Tester.xml" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Pack="false" />
   </ItemGroup>
 
 </Project>

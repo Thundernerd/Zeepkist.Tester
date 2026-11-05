@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -43,6 +44,22 @@ public sealed class StepDescriptorBuilder
     /// Finds a member's <c>&lt;summary&gt;</c> by its XML doc id, such as <c>T:Mod.Compile</c>. There are no docs without it.
     /// </summary>
     public Func<string, string> Summaries { get; init; } = _ => null;
+
+    /// <summary>
+    /// The types in an assembly with <see cref="StepAttribute"/>.
+    /// </summary>
+    internal static IEnumerable<Type> FindSteps(Assembly assembly)
+    {
+        return assembly.GetTypes().Where(type => FindAttribute<StepAttribute>(type) != null);
+    }
+
+    /// <summary>
+    /// Whether a type in the assembly has <see cref="TestPluginAttribute"/>.
+    /// </summary>
+    internal static bool IsTestPlugin(Assembly assembly)
+    {
+        return TestPlugins(assembly).Any();
+    }
 
     public StepDescriptor Build(Type stepType)
     {
@@ -170,11 +187,16 @@ public sealed class StepDescriptorBuilder
 
     private static string TestPluginNamespace(Assembly assembly)
     {
-        return assembly.GetTypes()
-            .Select(type => FindAttribute<TestPluginAttribute>(type))
-            .Where(plugin => plugin != null)
+        return TestPlugins(assembly)
             .Select(plugin => NamedValue<string>(plugin, nameof(TestPluginAttribute.Namespace)))
             .FirstOrDefault();
+    }
+
+    private static IEnumerable<CustomAttributeData> TestPlugins(Assembly assembly)
+    {
+        return assembly.GetTypes()
+            .Select(type => FindAttribute<TestPluginAttribute>(type))
+            .Where(plugin => plugin != null);
     }
 
     private static void RequireKebabCase(string what, string name, Type owner)
@@ -252,7 +274,22 @@ public sealed class StepDescriptorBuilder
 
     private static IEnumerable<CustomAttributeData> FindAttributes(MemberInfo member, string attributeName)
     {
-        return member.GetCustomAttributesData().Where(data => data.AttributeType.FullName == attributeName);
+        return member.GetCustomAttributesData().Where(data => AttributeName(data) == attributeName);
+    }
+
+    /// <summary>
+    /// Null for an attribute a MetadataLoadContext can't find, such as from a package of the mod's: it isn't one we look for, which are all in this assembly or the BCL.
+    /// </summary>
+    private static string AttributeName(CustomAttributeData attribute)
+    {
+        try
+        {
+            return attribute.AttributeType.FullName;
+        }
+        catch (Exception exception) when (exception is FileNotFoundException or TypeLoadException)
+        {
+            return null;
+        }
     }
 
     private static T ConstructorValue<T>(CustomAttributeData attribute)
