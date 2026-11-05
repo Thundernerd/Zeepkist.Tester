@@ -32,11 +32,15 @@ internal sealed class RunRequest
         {
             request = JsonConvert.DeserializeObject<RunRequest>(File.ReadAllText(path));
         }
-        catch (JsonException)
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {
             return false;
         }
 
-        return request?.RunId == args[flagAt + 1];
+        if (request?.RunId == args[flagAt + 1])
+            return true;
+
+        request = null;
+        return false;
     }
 }

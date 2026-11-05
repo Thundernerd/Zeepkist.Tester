@@ -52,6 +52,17 @@ public class RunRequestTests
     }
 
     [Fact]
+    public void WithARunJsonForAnotherRun_ThereIsNoRequest()
+    {
+        using var folder = new TemporaryFolder();
+        File.WriteAllText(Path.Combine(folder.Path, "run.json"), RunJson);
+
+        Assert.False(RunRequest.TryRead(folder.Path, ["-ztest", "other"], out var request));
+
+        Assert.Null(request);
+    }
+
+    [Fact]
     public void WithoutARunJson_ThereIsNoRun()
     {
         using var folder = new TemporaryFolder();
