@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
+using TNRD.Zeepkist.Tester.Cli;
 using TNRD.Zeepkist.Tester.Sdk;
 using Xunit;
 
@@ -264,8 +262,6 @@ public class StepDescriptorBuilderTests
     /// </summary>
     private static Func<string, string> ReadSummaries(Assembly assembly)
     {
-        var members = XDocument.Load(Path.ChangeExtension(assembly.Location, ".xml")).Descendants("member");
-        var summaries = members.ToDictionary(member => member.Attribute("name").Value, member => member.Element("summary")?.Value);
-        return id => summaries.GetValueOrDefault(id);
+        return XmlDocs.Read([assembly.Location]);
     }
 }
