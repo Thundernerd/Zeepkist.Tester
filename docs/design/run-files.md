@@ -22,7 +22,7 @@ Each mod in `mods` has to pass the build check, as a step in the results named `
 
 ## `out/results.json`
 
-In the `out` folder next to the plugin, rewritten after every step, so a crash still leaves the steps before it. It's written to a temporary file first, so a reader never sees half a file, but can briefly find none.
+In the `out` folder next to the plugin, rewritten after every step, so a crash still leaves the steps before it. It's written to a temporary file and swapped in, so a reader never sees half a file. A reader should open it sharing read, write and delete, or the swap can fail while it's open.
 
 | Field | What it is |
 | --- | --- |

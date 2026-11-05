@@ -96,15 +96,27 @@ public class RunResultsTests
         using var folder = new TemporaryFolder();
         var results = new RunResults("abc", folder.Path, []);
 
-        var path = results.ScreenshotPath("editor");
-        results.ScreenshotPath("dark");
+        results.AddScreenshot("editor");
+        results.AddScreenshot("dark");
         results.MarkBlank("dark", "#00000000");
         results.Finish();
 
-        Assert.Equal(Path.Combine(folder.Path, "editor.png"), path);
         var written = Read(folder.Path);
         Assert.Equal(["editor.png", "dark.png"], written["Screenshots"].Select(name => (string)name));
         Assert.Equal("#00000000", (string)written["BlankScreenshots"]["dark.png"]);
+    }
+
+    [Fact]
+    public void AScreenshotsPath_DoesntListIt_UntilItsSaved()
+    {
+        using var folder = new TemporaryFolder();
+        var results = new RunResults("abc", folder.Path, []);
+
+        var path = results.ScreenshotPath("editor");
+        results.Finish();
+
+        Assert.Equal(Path.Combine(folder.Path, "editor.png"), path);
+        Assert.Empty(Read(folder.Path)["Screenshots"]);
     }
 
     [Fact]

@@ -44,8 +44,15 @@ internal sealed class RunResults
 
     public string ScreenshotPath(string name)
     {
-        Screenshots.Add(FileName(name));
         return Path.Combine(_folder, FileName(name));
+    }
+
+    /// <summary>
+    /// Lists a screenshot saved at its <see cref="ScreenshotPath"/>.
+    /// </summary>
+    public void AddScreenshot(string name)
+    {
+        Screenshots.Add(FileName(name));
     }
 
     public void MarkBlank(string name, string color)
@@ -80,8 +87,8 @@ internal sealed class RunResults
         var temporary = path + ".tmp";
         File.WriteAllText(temporary, JsonConvert.SerializeObject(this, Formatting.Indented));
         if (File.Exists(path))
-            File.Delete(path);
-
-        File.Move(temporary, path);
+            File.Replace(temporary, path, null);
+        else
+            File.Move(temporary, path);
     }
 }
