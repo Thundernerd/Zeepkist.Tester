@@ -48,7 +48,7 @@ public sealed class StepDescriptorBuilder
     /// <summary>
     /// The types in an assembly with <see cref="StepAttribute"/>.
     /// </summary>
-    public static IEnumerable<Type> FindSteps(Assembly assembly)
+    internal static IEnumerable<Type> FindSteps(Assembly assembly)
     {
         return assembly.GetTypes().Where(type => FindAttribute<StepAttribute>(type) != null);
     }
@@ -56,7 +56,7 @@ public sealed class StepDescriptorBuilder
     /// <summary>
     /// Whether a type in the assembly has <see cref="TestPluginAttribute"/>.
     /// </summary>
-    public static bool IsTestPlugin(Assembly assembly)
+    internal static bool IsTestPlugin(Assembly assembly)
     {
         return TestPlugins(assembly).Any();
     }
