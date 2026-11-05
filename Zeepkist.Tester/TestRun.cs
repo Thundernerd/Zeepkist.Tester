@@ -43,16 +43,24 @@ internal sealed class TestRun : IDisposable
     {
         Exception error = null;
         yield return GuardedRoutine.Run(Checks(), exception => error = exception);
+        yield return GuardedRoutine.Run(RecordFailure(error), LogError);
+        Finish();
+
+        // Quitting this way skips the editor's unsaved-level prompt
+        yield return null;
+        Application.Quit();
+    }
+
+    private IEnumerator RecordFailure(Exception error)
+    {
         if (error != null)
         {
-            _logger.LogError(error);
+            LogError(error);
             Step(RunStep.Fail("no errors", $"{error.GetType().Name}: {error.Message}"));
         }
 
-        if (error != null || _results.AnyStepFailed)
-            yield return GuardedRoutine.Run(_screenshots.Take("failure"), _logger.LogError);
-
-        yield return Finish();
+        if (_results.AnyStepFailed)
+            yield return _screenshots.Take("failure");
     }
 
     private IEnumerator Checks()
@@ -92,17 +100,26 @@ internal sealed class TestRun : IDisposable
             _exceptions.Record(message, stackTrace);
     }
 
-    private IEnumerator Finish()
+    private void Finish()
     {
         // What's logged from here on is the game quitting, which the runner reads from the log once it has quit
         Application.logMessageReceived -= OnLogMessage;
-        _results.Finish();
-        _logger.LogInfo($"{Marker} run {_results.RunId} {(_results.Passed ? "passed" : "failed")}");
-        FlushDiskLog();
+        try
+        {
+            _results.Finish();
+            _logger.LogInfo($"{Marker} run {_results.RunId} {(_results.Passed ? "passed" : "failed")}");
+        }
+        catch (Exception exception)
+        {
+            LogError(exception);
+        }
 
-        // Quitting this way skips the editor's unsaved-level prompt
-        yield return null;
-        Application.Quit();
+        FlushDiskLog();
+    }
+
+    private void LogError(Exception exception)
+    {
+        _logger.LogError($"{Marker} {exception}");
     }
 
     /// <summary>
