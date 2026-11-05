@@ -71,6 +71,18 @@ public class OfflineRegistryTests
     }
 
     [Fact]
+    public void For_Plugin_TakesTheCoreTypesFromTheReferenceAssemblies()
+    {
+        using var assemblies = new OfflineAssemblies(ReferenceFolders.For([_modPath]));
+        var step = assemblies.Load(_modPath).GetType(typeof(Compile).FullName).BaseType;
+
+        var core = step.BaseType.Assembly;
+
+        Assert.Equal("System.Object", step.BaseType.FullName);
+        Assert.Contains("microsoft.netframework.referenceassemblies.net472", core.Location);
+    }
+
+    [Fact]
     public void IsTestPlugin_AttributeFromAnAssemblyThatCannotBeFound_IsNotOne()
     {
         // The plugin has BepInPlugin, and BepInEx isn't in these folders
