@@ -14,6 +14,8 @@ public class XmlDocsTests
     [InlineData("Like <see cref=\"P:Mod.Steps.Wait.Seconds\"/>.", "Like `Seconds`.")]
     [InlineData("Like <see cref=\"M:Mod.Steps.Wait.Run(Mod.Context,System.Int32)\"/>.", "Like `Run`.")]
     [InlineData("Like <see cref=\"T:Mod.Named`1\"/>.", "Like `Named`.")]
+    [InlineData("Like <see cref=\"M:Mod.Steps.Wait.#ctor(System.Int32)\"/>.", "Like `Wait`.")]
+    [InlineData("Uses <paramref name=\"count\"/> and <typeparamref name=\"T\"/>.", "Uses `count` and `T`.")]
     [InlineData("Like <see cref=\"T:Mod.Steps.Wait\">waiting</see>.", "Like waiting.")]
     [InlineData("Or <see langword=\"null\"/>.", "Or `null`.")]
     [InlineData("See <see href=\"https://example.com\">the site</see>.", "See [the site](https://example.com).")]

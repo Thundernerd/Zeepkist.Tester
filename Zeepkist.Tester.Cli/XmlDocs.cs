@@ -40,6 +40,7 @@ internal static class XmlDocs
             XText text => text.Value,
             XElement { Name.LocalName: "c" } code => $"`{code.Value}`",
             XElement { Name.LocalName: "see" } see => SeeToMarkdown(see),
+            XElement { Name.LocalName: "paramref" or "typeparamref" } reference => $"`{reference.Attribute("name")?.Value}`",
             XElement other => ToMarkdown(other),
             _ => string.Empty,
         }));
@@ -58,11 +59,11 @@ internal static class XmlDocs
     }
 
     /// <summary>
-    /// <c>M:Mod.Steps.Wait.Run(System.Int32)</c> to <c>Run</c>, and <c>T:Mod.Named`1</c> to <c>Named</c>.
+    /// <c>M:Mod.Steps.Wait.Run(System.Int32)</c> to <c>Run</c>, <c>T:Mod.Named`1</c> to <c>Named</c>, and <c>M:Mod.Wait.#ctor</c> to <c>Wait</c>.
     /// </summary>
     private static string ShortName(string cref)
     {
-        var name = cref.Split('(')[0];
+        var name = cref.Split('(')[0].Replace(".#ctor", string.Empty);
         name = name.Substring(Math.Max(name.LastIndexOf('.'), name.LastIndexOf(':')) + 1);
         return name.Split('`')[0];
     }
