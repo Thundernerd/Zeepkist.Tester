@@ -50,6 +50,22 @@ public class ScenarioValuesTests
     }
 
     [Fact]
+    public void Set_NameLeftOut_FailsTheStep()
+    {
+        var exception = Assert.Throws<StepFailedException>(() => default(Name<BlockValue>).Set(_context, new BlockValue()));
+
+        Assert.Equal("The step defines a named value, but its name was left out.", exception.Message);
+    }
+
+    [Fact]
+    public void Get_NameLeftOut_FailsTheStep()
+    {
+        var exception = Assert.Throws<StepFailedException>(() => default(Ref<BlockValue>).Get(_context));
+
+        Assert.Equal("The step uses a named value, but its name was left out.", exception.Message);
+    }
+
+    [Fact]
     public void Get_NameNotDefined_FailsTheStepNamingIt()
     {
         var exception = Assert.Throws<StepFailedException>(() => new Ref<BlockValue>("lamp").Get(_context));

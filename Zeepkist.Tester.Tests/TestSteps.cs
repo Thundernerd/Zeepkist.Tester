@@ -217,6 +217,9 @@ public static class TestSteps
         [Arg]
         public Ref<BlockValue> Uses { get; set; }
 
+        [Arg]
+        public int GetOnly => 1;
+
         public string NotAnArgument { get; set; }
 
         public override IEnumerator Run(IStepContext context)

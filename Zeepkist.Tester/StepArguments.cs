@@ -24,8 +24,12 @@ internal static class StepArguments
                 continue;
 
             var value = property.GetValue(owner);
-            if (value != null)
-                property.SetValue(owner, Substituted(value, values));
+            if (value == null)
+                continue;
+
+            var substituted = Substituted(value, values);
+            if (!Equals(substituted, value))
+                property.SetValue(owner, substituted);
         }
     }
 
@@ -39,7 +43,10 @@ internal static class StepArguments
                 return new Text(values.Substitute(text.Value));
             case IList list:
                 for (var i = 0; i < list.Count; i++)
-                    list[i] = Substituted(list[i], values);
+                {
+                    if (list[i] != null)
+                        list[i] = Substituted(list[i], values);
+                }
 
                 return list;
             default:

@@ -19,6 +19,9 @@ internal sealed class ScenarioValues : IValues
     public void Define<T>(string name, T value)
         where T : class
     {
+        if (name == null)
+            throw new StepFailedException("The step defines a named value, but its name was left out.");
+
         if (_values.TryGetValue(name, out var defined))
             throw new StepFailedException($"The name '{name}' is already defined, as a {defined.Kind}.");
 
@@ -31,6 +34,9 @@ internal sealed class ScenarioValues : IValues
     public T Get<T>(string name)
         where T : class
     {
+        if (name == null)
+            throw new StepFailedException("The step uses a named value, but its name was left out.");
+
         var defined = Find(name);
         if (defined.Value is T value)
             return value;

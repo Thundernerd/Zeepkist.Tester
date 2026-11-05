@@ -61,6 +61,26 @@ public class StepArgumentsTests
     }
 
     [Fact]
+    public void Substitute_NullListItem_StaysNull()
+    {
+        var step = new Written { Strings = [null, Written] };
+
+        StepArguments.Substitute(step, _values);
+
+        Assert.Equal([null, Uid], step.Strings);
+    }
+
+    [Fact]
+    public void Substitute_ArgumentWithoutASetter_IsFineWithNothingToWrite()
+    {
+        var step = new Written();
+
+        StepArguments.Substitute(step, _values);
+
+        Assert.Equal(1, step.GetOnly);
+    }
+
+    [Fact]
     public void Substitute_OtherArgumentTypes_AreLeftAlone()
     {
         var step = new Written { FileName = Written, Keys = new Keys(Written), Defines = Written, Uses = Written };
