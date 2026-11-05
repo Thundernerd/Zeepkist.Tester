@@ -20,6 +20,7 @@ public sealed class Compile : Step
         Function = function;
     }
 
+    /// <summary>The function to compile.</summary>
     [Arg(Primary = true)]
     public required string Function { get; set; }
 

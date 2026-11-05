@@ -20,6 +20,7 @@
     <!-- Only the parts of the harness that don't touch the game run here -->
     <ProjectReference Include="..\Zeepkist.Tester\Zeepkist.Tester.csproj" />
     <ProjectReference Include="..\Zeepkist.Tester.Cli\Zeepkist.Tester.Cli.csproj" />
+    <ProjectReference Include="..\Zeepkist.Tester.Tests.SampleCore\Zeepkist.Tester.Tests.SampleCore.csproj" />
     <ProjectReference Include="..\Zeepkist.Tester.Tests.SampleMod\Zeepkist.Tester.Tests.SampleMod.csproj" />
   </ItemGroup>
 

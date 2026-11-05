@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zeepkist.Tester.Tests", "Ze
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zeepkist.Tester.Tests.SampleMod", "Zeepkist.Tester.Tests.SampleMod\Zeepkist.Tester.Tests.SampleMod.csproj", "{53CB6469-6FB3-465F-A4BD-28C6E77717C2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zeepkist.Tester.Tests.SampleCore", "Zeepkist.Tester.Tests.SampleCore\Zeepkist.Tester.Tests.SampleCore.csproj", "{EAC0BA1D-BCA4-48CC-A229-B5A7AA20517F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{53CB6469-6FB3-465F-A4BD-28C6E77717C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{53CB6469-6FB3-465F-A4BD-28C6E77717C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{53CB6469-6FB3-465F-A4BD-28C6E77717C2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EAC0BA1D-BCA4-48CC-A229-B5A7AA20517F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EAC0BA1D-BCA4-48CC-A229-B5A7AA20517F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EAC0BA1D-BCA4-48CC-A229-B5A7AA20517F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EAC0BA1D-BCA4-48CC-A229-B5A7AA20517F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
