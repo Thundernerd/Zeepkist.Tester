@@ -175,14 +175,14 @@ Other mods depend on ZeepSDK too, so the runner should deploy the ZeepSDK build 
 
 ## 5a. Spike results (2026-11-04, Linux + Proton Experimental)
 
-`spikes/InputAndYaml/` is a throwaway plugin and `run.sh`, to be deleted once #2 has run it on Windows: this section keeps the results and git history keeps the code. The plugin runs only with `-ztest-spike <id>` and a matching `run.json`. It probes at the start screen and main menu, writes `results.json` and quits. Every probe passed:
+`spikes/InputAndYaml/` is a throwaway plugin with `run.sh` and `run.ps1` to run it, to be deleted once #2 has run it on Windows: this section keeps the results and git history keeps the code. The plugin runs only with `-ztest-spike <id>` and a matching `run.json`. It probes at the start screen and main menu, writes `results.json` and quits. Every probe passed:
 
 | Probe | Result |
 | --- | --- |
 | YamlDotNet 18.1.0 (`net47` build) next to the plugin | Loads (assembly version 18.0.0.0). It's the only YamlDotNet in the process among the installed mods. Every step node has its line and column. `on` stays the string `'on'` in the representation model. A `\|` block keeps a nested `end`. A malformed file gives `line 3 col 5: While parsing a block mapping, did not find expected key.` |
 | `SendInput` absolute mouse move to 25%/75% of the client rect | Legacy `Input.mousePosition` and Rewired `Mouse.screenPosition` both land within 1 px of the target. This works with the window on a second monitor (screen x 2080). |
 | `SendInput` F9, virtual-key only / scan code only | Seen by all of `Input.GetKey/GetKeyDown`, Rewired `Keyboard.GetKey/GetKeyDown`, `ReInput.controllers.GetAnyButtonDown()` and `OnGUI` `KeyDown`. |
-| `SendInput` Space at the start screen | Seen the same way, and the game's own `PressAnyKeyToStartGame.Update` advanced to the main menu. |
+| `SendInput` Space at the start screen | Seen the same way. The game's own `PressAnyKeyToStartGame.Update` reached the main menu, but it advances on any button and the F9 probes ran first, so this run didn't show that Space did it. The plugin has since held the start screen back until the Space probe, which hasn't run on Linux yet. |
 | Harmony prefixes on `Input.GetKey(KeyCode)` / `GetKeyDown(KeyCode)` (synthetic LeftAlt + PageUp) | `PlayerManager.Update` toggled `showCollisionValues`, so game code calls the patched methods and doesn't inline them. |
 | Focus | The game window was in the foreground at the start screen without any help. |
 
@@ -190,7 +190,30 @@ What follows from this:
 - **Tier 3 (OS input) is viable on Proton**, so it's very likely viable on Windows too, where `SendInput` is the native path. Windows itself is still to be checked.
 - **Tier 2 legacy `Input` patching is viable.**
 - Rewired action injection (risk 3) now matters only for deterministic in-process tests, not for reaching gameplay at all.
-- **The game needs a display.** With the monitor off, Unity logs `MonitorFromWindow failed: Success.` in `Player.log` and stalls before the first scene, so BepInEx never loads plugins. The runner should look for that line in `Player.log` (`AppData/LocalLow/Steelpan Interactive/Zeepkist/`) and fail fast with "no display", rather than time out.
+- **The game needs a display.** With the monitor off, Unity logs `MonitorFromWindow failed: Success.` in `Player.log` and either stalls before the first scene, so BepInEx never loads plugins, or loads them and takes longer than the spike's 90 s wait to reach the start screen. The runner should look for that line in `Player.log` (`AppData/LocalLow/Steelpan Interactive/Zeepkist/`) and fail fast with "no display", rather than time out.
+
+### Running it on Windows (#2)
+
+This takes the .NET 10 SDK, and Steam running with Zeepkist installed. It makes two runs, from the repo root:
+
+```powershell
+dotnet build spikes\InputAndYaml\Zeepkist.Tester.Spike.csproj -c Release
+
+# The game in front: leave the mouse and keyboard alone until the script ends
+powershell -ExecutionPolicy Bypass -File spikes\InputAndYaml\run.ps1 $HOME\spike-out\front
+
+# The game behind another window: start this with an empty Notepad focused and keep Notepad in front until the script ends
+powershell -ExecutionPolicy Bypass -File spikes\InputAndYaml\run.ps1 $HOME\spike-out\behind
+```
+
+For the second run, note whether the game's window comes to the front by itself when it appears. If it does, go back to Notepad by clicking it, or with Alt+Tab if the game is full screen. Key presses can land in Notepad, which is why it should be empty. The game has `runInBackground` on, so it should keep going behind Notepad.
+
+In `results.json` of the second run:
+- `focus.game_window_is_foreground` has to be `false`. If it's `true`, `SetForegroundWindow` was never called, so run it again with a new folder and get back to Notepad sooner.
+- `focus.set_foreground_returned` and `focus.game_window_is_foreground_after` answer whether `SetForegroundWindow` works from inside the game.
+- Each input probe has its own `game_window_is_foreground`, which says whether it ran in front or behind.
+
+Each folder gets `LogOutput.log` and `Player.log`, plus `results.json` unless the game never got as far as the plugin. A `LogOutput.log` without this run's id is left over from an earlier run. When a probe gets stuck, `results.json` has what ran before it and the error under `exception`. These files, the script's output and whether the game came to the front by itself are what the Windows column comes from.
 
 ## 6. Decided
 

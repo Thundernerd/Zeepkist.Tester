@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -47,7 +48,8 @@ public class Plugin : BaseUnityPlugin
         if (expected == null || !expected.TryGetValue("runId", out var id) || id != _runId)
             return;
 
-        Log($"run {_runId} starting");
+        Log($"run {_runId} starting, runInBackground {Application.runInBackground}");
+        _results["run_in_background"] = Application.runInBackground;
         _harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         _harmony.PatchAll();
         _results["yaml"] = YamlProbe();
@@ -72,17 +74,25 @@ public class Plugin : BaseUnityPlugin
         Finish();
     }
 
+    /// <summary>
+    /// Steps through nested routines itself, because an exception in one that Unity runs never reaches this catch and the results would be lost.
+    /// </summary>
     private IEnumerator Guarded(IEnumerator routine)
     {
-        while (true)
+        var routines = new Stack<IEnumerator>();
+        routines.Push(routine);
+        while (routines.Count > 0)
         {
             object current;
             try
             {
-                if (!routine.MoveNext())
-                    yield break;
+                if (!routines.Peek().MoveNext())
+                {
+                    routines.Pop();
+                    continue;
+                }
 
-                current = routine.Current;
+                current = routines.Peek().Current;
             }
             catch (Exception exception)
             {
@@ -91,7 +101,10 @@ public class Plugin : BaseUnityPlugin
                 yield break;
             }
 
-            yield return current;
+            if (current is IEnumerator nested)
+                routines.Push(nested);
+            else
+                yield return current;
         }
     }
 
@@ -103,6 +116,7 @@ public class Plugin : BaseUnityPlugin
         yield return new WaitForSecondsRealtime(1);
 
         _results["focus"] = FocusProbe();
+        Log($"focus: {JsonConvert.SerializeObject(_results["focus"])}");
         _results["display"] = $"{Screen.width}x{Screen.height} {Screen.fullScreenMode}";
 
         PlayerManager.Instance.modPanelHasAlreadyBeenDisplayed = true;
@@ -112,7 +126,8 @@ public class Plugin : BaseUnityPlugin
         yield return MouseProbe(mouse);
         _results["sendinput_mouse"] = mouse;
 
-        // F9 isn't bound at the start screen, so it shows each input path without side effects
+        // The start screen advances on any button, F9 too, so it sits out the F9 probes and only Space can advance it
+        startScreen.enabled = false;
         var vk = new Dictionary<string, object>();
         yield return KeyProbe(KeyCode.F9, 0x78, 0x43, Native.KeyMode.VirtualKey, vk);
         _results["sendinput_key_vk"] = vk;
@@ -122,7 +137,9 @@ public class Plugin : BaseUnityPlugin
         _results["sendinput_key_scancode"] = scan;
 
         // The start screen advances on Rewired's GetAnyButtonDown, so this checks the game reacts to it, not just Rewired's API
+        startScreen.enabled = true;
         var space = new Dictionary<string, object>();
+        space["start_screen_advanced_before"] = startScreen.didit;
         yield return KeyProbe(KeyCode.Space, 0x20, 0x39, Native.KeyMode.Both, space);
         space["start_screen_advanced"] = startScreen.didit;
         _results["sendinput_space_start_screen"] = space;
@@ -150,13 +167,17 @@ public class Plugin : BaseUnityPlugin
             return result;
         }
 
-        var active = Native.GetActiveWindow();
+        var window = Native.GameWindow();
         var foreground = Native.GetForegroundWindow();
-        result["game_window_is_foreground"] = active == foreground;
-        if (active != foreground)
+        result["game_window_found"] = window != IntPtr.Zero;
+        if (window == IntPtr.Zero)
+            return result;
+
+        result["game_window_is_foreground"] = window == foreground;
+        if (window != foreground)
         {
-            result["set_foreground_returned"] = Native.SetForegroundWindow(active);
-            result["game_window_is_foreground_after"] = Native.GetActiveWindow() == Native.GetForegroundWindow();
+            result["set_foreground_returned"] = Native.SetForegroundWindow(window);
+            result["game_window_is_foreground_after"] = window == Native.GetForegroundWindow();
         }
 
         return result;
@@ -166,6 +187,7 @@ public class Plugin : BaseUnityPlugin
     {
         var legacyBefore = Input.mousePosition;
         var rewiredBefore = ReInput.controllers.Mouse.screenPosition;
+        result["game_window_is_foreground"] = Native.GameWindow() == Native.GetForegroundWindow();
         result["legacy_before"] = Describe(legacyBefore);
         result["rewired_before"] = Describe(rewiredBefore);
 
@@ -190,6 +212,7 @@ public class Plugin : BaseUnityPlugin
     {
         _guiKeyDowns.Clear();
         bool legacy = false, legacyDown = false, rewired = false, rewiredDown = false, rewiredAny = false;
+        result["game_window_is_foreground"] = Native.GameWindow() == Native.GetForegroundWindow();
         result["sent_down"] = Native.SendKey(vk, scan, mode, up: false);
         for (var i = 0; i < 20; i++)
         {
@@ -393,8 +416,11 @@ internal static class Native
     private const uint MouseEventAbsolute = 0x8000;
     private const uint MouseEventVirtualDesk = 0x4000;
 
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string className, string title);
+
     [DllImport("user32.dll")]
-    public static extern IntPtr GetActiveWindow();
+    private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
 
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
@@ -413,6 +439,23 @@ internal static class Native
 
     [DllImport("user32.dll")]
     private static extern int GetSystemMetrics(int index);
+
+    /// <summary>
+    /// The game's own window. GetActiveWindow can't tell: it returns null while another application is in front.
+    /// </summary>
+    public static IntPtr GameWindow()
+    {
+        var self = (uint)Process.GetCurrentProcess().Id;
+        var window = IntPtr.Zero;
+        while ((window = FindWindowEx(IntPtr.Zero, window, "UnityWndClass", null)) != IntPtr.Zero)
+        {
+            GetWindowThreadProcessId(window, out var owner);
+            if (owner == self)
+                return window;
+        }
+
+        return IntPtr.Zero;
+    }
 
     public static string SendKey(ushort vk, ushort scan, KeyMode mode, bool up)
     {
@@ -441,7 +484,7 @@ internal static class Native
     /// </summary>
     public static string MoveMouseToWindowFraction(Vector2 fraction)
     {
-        var window = GetActiveWindow();
+        var window = GameWindow();
         if (!GetClientRect(window, out var rect))
             return "GetClientRect failed";
 
