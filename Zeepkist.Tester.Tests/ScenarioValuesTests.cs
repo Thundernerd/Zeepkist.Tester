@@ -1,0 +1,163 @@
+using TNRD.Zeepkist.Tester.Sdk;
+using Xunit;
+using static TNRD.Zeepkist.Tester.Tests.TestSteps;
+
+namespace TNRD.Zeepkist.Tester.Tests;
+
+public class ScenarioValuesTests
+{
+    private readonly Context _context = new Context();
+
+    [Fact]
+    public void Get_AfterSet_GivesTheValueThatNameDefined()
+    {
+        var lamp = new BlockValue { Uid = "uid-1" };
+        var name = new Name<BlockValue>("lamp");
+        var reference = new Ref<BlockValue>("lamp");
+
+        name.Set(_context, lamp);
+
+        Assert.Same(lamp, reference.Get(_context));
+    }
+
+    [Fact]
+    public void Set_NameAlreadyDefined_FailsTheStepNamingIt()
+    {
+        var name = new Name<BlockValue>("lamp");
+        name.Set(_context, new BlockValue());
+
+        var exception = Assert.Throws<StepFailedException>(() => name.Set(_context, new BlockValue()));
+
+        Assert.Equal("The name 'lamp' is already defined, as a block.", exception.Message);
+    }
+
+    [Fact]
+    public void Set_NameAlreadyDefinedAsAnotherKind_FailsTheStepToo()
+    {
+        new Name<WindowValue>("lamp").Set(_context, new WindowValue());
+
+        var exception = Assert.Throws<StepFailedException>(() => new Name<BlockValue>("lamp").Set(_context, new BlockValue()));
+
+        Assert.Equal("The name 'lamp' is already defined, as a window.", exception.Message);
+    }
+
+    [Fact]
+    public void Set_NullValue_FailsTheStepNamingIt()
+    {
+        var exception = Assert.Throws<StepFailedException>(() => new Name<BlockValue>("lamp").Set(_context, null));
+
+        Assert.Equal("The name 'lamp' has to be defined with a value, not null.", exception.Message);
+    }
+
+    [Fact]
+    public void Get_NameNotDefined_FailsTheStepNamingIt()
+    {
+        var exception = Assert.Throws<StepFailedException>(() => new Ref<BlockValue>("lamp").Get(_context));
+
+        Assert.Equal("The name 'lamp' isn't defined by an earlier step.", exception.Message);
+    }
+
+    [Fact]
+    public void Get_NameOfAnotherKind_FailsTheStepNamingBothKinds()
+    {
+        new Name<WindowValue>("lamp").Set(_context, new WindowValue());
+
+        var exception = Assert.Throws<StepFailedException>(() => new Ref<BlockValue>("lamp").Get(_context));
+
+        Assert.Equal("The name 'lamp' is a window, not a block.", exception.Message);
+    }
+
+    [Fact]
+    public void Get_OnAnotherScenariosValues_DoesNotFindTheName()
+    {
+        new Name<BlockValue>("lamp").Set(_context, new BlockValue());
+
+        Assert.Throws<StepFailedException>(() => new Ref<BlockValue>("lamp").Get(new Context()));
+    }
+
+    [Fact]
+    public void Substitute_DefinedName_WritesItsSubstituteMember()
+    {
+        Define("lamp", "uid-1");
+        Define("switch_2", "uid-2");
+
+        var text = _context.Values.Substitute("toggler(targets: placed(\"${lamp}\", \"${switch_2}\"))");
+
+        Assert.Equal("toggler(targets: placed(\"uid-1\", \"uid-2\"))", text);
+    }
+
+    [Theory]
+    [InlineData("no names", "no names")]
+    [InlineData("", "")]
+    [InlineData("$${lamp}", "${lamp}")]
+    [InlineData("$${", "${")]
+    [InlineData("$${lamp} ${lamp}", "${lamp} uid-1")]
+    [InlineData("$$${lamp}", "$${lamp}")]
+    [InlineData("$ $$ $5 {lamp} }", "$ $$ $5 {lamp} }")]
+    public void Substitute_Escapes_WriteALiteral(string text, string written)
+    {
+        Define("lamp", "uid-1");
+
+        Assert.Equal(written, _context.Values.Substitute(text));
+    }
+
+    [Fact]
+    public void Substitute_ValueThatLooksLikeAName_IsNotSubstitutedAgain()
+    {
+        Define("lamp", "${other}");
+
+        Assert.Equal("${other}", _context.Values.Substitute("${lamp}"));
+    }
+
+    [Fact]
+    public void Substitute_NameNotDefined_FailsTheStepNamingIt()
+    {
+        var exception = Assert.Throws<StepFailedException>(() => _context.Values.Substitute("a ${lamp} b"));
+
+        Assert.Equal("The name 'lamp' isn't defined by an earlier step.", exception.Message);
+    }
+
+    [Fact]
+    public void Substitute_KindWithoutASubstituteMember_FailsTheStepNamingIt()
+    {
+        new Name<WindowValue>("main").Set(_context, new WindowValue());
+
+        var exception = Assert.Throws<StepFailedException>(() => _context.Values.Substitute("${main}"));
+
+        Assert.Equal("${main} can't be written: a window has no Substitute member.", exception.Message);
+    }
+
+    [Fact]
+    public void Substitute_MemberIsNull_FailsTheStepNamingIt()
+    {
+        Define("lamp", null);
+
+        var exception = Assert.Throws<StepFailedException>(() => _context.Values.Substitute("${lamp}"));
+
+        Assert.Equal("${lamp} can't be written: the block's Uid is null.", exception.Message);
+    }
+
+    [Theory]
+    [InlineData("${")]
+    [InlineData("${lamp")]
+    [InlineData("${}")]
+    [InlineData("a ${my lamp} b")]
+    public void Substitute_NoNameAfterTheOpening_FailsTheStepSayingHowToEscapeIt(string text)
+    {
+        Define("lamp", "uid-1");
+
+        var exception = Assert.Throws<StepFailedException>(() => _context.Values.Substitute(text));
+
+        Assert.Equal("A ${ has no name and } after it. Write $${ for a literal ${.", exception.Message);
+    }
+
+    private void Define(string name, string uid)
+    {
+        new Name<BlockValue>(name).Set(_context, new BlockValue { Uid = uid });
+    }
+
+    private sealed class Context : IStepContext
+    {
+        public IValues Values { get; } = new ScenarioValues();
+    }
+}

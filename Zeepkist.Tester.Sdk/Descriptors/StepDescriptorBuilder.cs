@@ -154,6 +154,12 @@ public sealed class StepDescriptorBuilder
         if (_scalarTypes.TryGetValue(type.FullName, out var scalar))
             return scalar;
 
+        if (IsGeneric(type, typeof(Name<>).FullName))
+            return BuildNamedValue(ArgumentKind.Name, Name<object>.Pattern, type, argument, enclosing);
+
+        if (IsGeneric(type, typeof(Ref<>).FullName))
+            return BuildNamedValue(ArgumentKind.Ref, Ref<object>.Pattern, type, argument, enclosing);
+
         if (type.IsEnum)
             return new ArgumentType { Kind = ArgumentKind.Enum, EnumValues = [.. EnumMembers(type).Select(WrittenEnumValue)] };
 
@@ -172,6 +178,28 @@ public sealed class StepDescriptorBuilder
             Documentation = Summaries($"T:{DocName(type)}"),
             Arguments = BuildArguments(type, [.. enclosing, type]),
         };
+    }
+
+    private static ArgumentType BuildNamedValue(ArgumentKind kind, string pattern, Type type, string argument, List<Type> enclosing)
+    {
+        var valueType = type.GetGenericArguments()[0];
+        var valueKind = FindAttribute<ValueKindAttribute>(valueType)
+            ?? throw new StepDefinitionException($"Argument '{argument}' ({enclosing.Last().FullName}) names a {valueType.FullName}, which has no [ValueKind] attribute.");
+
+        var name = ConstructorValue<string>(valueKind);
+        RequireKebabCase($"Value kind '{name}'", name, valueType);
+
+        var substitute = NamedValue<string>(valueKind, nameof(ValueKindAttribute.Substitute));
+        if (substitute != null && !IsStringProperty(valueType, substitute))
+            throw new StepDefinitionException($"Value kind Substitute '{substitute}' ({valueType.FullName}) isn't a public string property of it.");
+
+        return new ArgumentType { Kind = kind, Pattern = pattern, ValueKind = name, Substitute = substitute };
+    }
+
+    private static bool IsStringProperty(Type type, string name)
+    {
+        var property = type.GetProperty(name);
+        return property != null && property.CanRead && property.PropertyType.FullName == typeof(string).FullName;
     }
 
     private static bool DerivesFromStep(Type type)

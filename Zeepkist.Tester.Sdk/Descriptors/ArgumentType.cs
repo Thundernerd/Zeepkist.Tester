@@ -20,6 +20,16 @@ public sealed class ArgumentType
     public IReadOnlyList<string> EnumValues { get; init; } = [];
 
     /// <summary>
+    /// For a <see cref="ArgumentKind.Name"/> or <see cref="ArgumentKind.Ref"/>: the kind of value, from <see cref="ValueKindAttribute.Name"/>.
+    /// </summary>
+    public string ValueKind { get; init; }
+
+    /// <summary>
+    /// For a <see cref="ArgumentKind.Name"/> or <see cref="ArgumentKind.Ref"/>: the member <c>${name}</c> writes, or null when this kind can't be written that way.
+    /// </summary>
+    public string Substitute { get; init; }
+
+    /// <summary>
     /// For a <see cref="ArgumentKind.List"/>: the type of its items.
     /// </summary>
     public ArgumentType ItemType { get; init; }

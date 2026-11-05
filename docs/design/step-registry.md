@@ -2,7 +2,7 @@
 
 The typed list of steps that the YAML parser, the editor schema, the step reference docs, `ztest check`, `ztest convert` and C# tests all come from. It replaces ZeepLogicScript's `StepList` + `StepArgument` + the hand-kept step table + `StepListTests`. Background: [generic-tester.md](../research/generic-tester.md) §4 and §7, and [scenario-format.md](../research/scenario-format.md).
 
-Status: sketch. The attributes, argument types and descriptors are built (#3), and so is reading them offline (#4); the rest isn't, and its names are placeholders.
+Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4) and named values (#5); the rest isn't, and its names are placeholders.
 
 ## The one constraint that shapes it
 
@@ -114,7 +114,9 @@ public sealed class SetBlockSetting : Step
 ```
 
 - Names last for the scenario. Defining a name twice is an error, as today.
-- `${name}` is substituted only in `string`/`Text` arguments, and only when the name's kind has a `Substitute` member. A `${name}` that isn't defined by an earlier step fails `ztest check` with its line. `$${` writes a literal `${`.
+- `${name}` is substituted only in `string`/`Text` arguments, and only when the name's kind has a `Substitute` member, a public string property. A `${name}` that isn't defined by an earlier step fails `ztest check` with its line. `$${` writes a literal `${`, and any other `${` without a name and `}` after it is an error.
+- In the game, a mistake with a name throws `StepFailedException`, which stops the step and fails it with the exception's message, so `Run` needs no check after `Block.Get(context)`. The scenario runner (#13) records that as the step's failure. It also makes one `ScenarioValues` per scenario, and calls `StepArguments.Substitute` on each step just before running it, on a freshly bound step, since this replaces what the arguments held.
+- Descriptors record this for `ztest check`: `ArgumentKind.Name` defines a name and `ArgumentKind.Ref` uses one, each with its `ValueKind` and its `Substitute` member.
 - `ztest check` follows the steps in order, so it knows which names exist at each line. Inside `for` bodies it adds the loop variable for the body only.
 
 ## The context

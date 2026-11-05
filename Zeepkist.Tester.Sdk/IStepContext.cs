@@ -5,4 +5,8 @@ namespace TNRD.Zeepkist.Tester.Sdk;
 /// </summary>
 public interface IStepContext
 {
+    /// <summary>
+    /// The named values of the running scenario.
+    /// </summary>
+    public IValues Values { get; }
 }
