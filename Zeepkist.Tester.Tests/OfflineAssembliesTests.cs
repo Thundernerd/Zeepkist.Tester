@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using TNRD.Zeepkist.Tester.Cli;
 using TNRD.Zeepkist.Tester.Sdk;
 using Xunit;
@@ -29,10 +31,10 @@ public class OfflineAssembliesTests
 
         Assert.Equal(["wait", "place-block", "zls.drag-window-edge", "every-type", "undo"], offline.Select(step => step.FullName));
         Assert.Equal("Waits, such as for the level to run a little before a screenshot.", offline[0].Documentation);
-        Assert.Equivalent(atRuntime, offline, strict: true);
+        Assert.Equal(JsonSerializer.Serialize(atRuntime), JsonSerializer.Serialize(offline));
     }
 
-    private static IEnumerable<System.Type> StepsIn(IEnumerable<System.Type> types)
+    private static IEnumerable<Type> StepsIn(IEnumerable<Type> types)
     {
         return types.Where(type => type.GetCustomAttributesData().Any(data => data.AttributeType.FullName == typeof(StepAttribute).FullName));
     }

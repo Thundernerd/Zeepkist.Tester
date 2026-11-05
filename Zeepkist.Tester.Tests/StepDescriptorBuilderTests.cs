@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Reflection;
 using System.Text.RegularExpressions;
 using TNRD.Zeepkist.Tester.Cli;
 using TNRD.Zeepkist.Tester.Sdk;
@@ -211,7 +210,7 @@ public class StepDescriptorBuilderTests
     [Fact]
     public void Build_WithSummaries_DocumentsTheStepAndItsArguments()
     {
-        var builder = AsTester(ReadSummaries(typeof(TestSteps).Assembly));
+        var builder = AsTester(XmlDocs.Read([typeof(TestSteps).Assembly.Location]));
 
         var descriptor = builder.Build(typeof(TestSteps.Wait));
 
@@ -222,7 +221,7 @@ public class StepDescriptorBuilderTests
     [Fact]
     public void Build_WithSummaries_DocumentsNestedClassesAndTheirArguments()
     {
-        var builder = AsTester(ReadSummaries(typeof(TestSteps).Assembly));
+        var builder = AsTester(XmlDocs.Read([typeof(TestSteps).Assembly.Location]));
 
         var item = builder.Build(typeof(TestSteps.DragWindowEdge)).Arguments[0].Type.ItemType;
 
@@ -255,13 +254,5 @@ public class StepDescriptorBuilderTests
     private static StepDescriptorBuilder AsTester(Func<string, string> summaries)
     {
         return new StepDescriptorBuilder { TesterAssemblyName = typeof(TestSteps).Assembly.GetName().Name, Summaries = summaries };
-    }
-
-    /// <summary>
-    /// The XML doc file the compiler wrote next to the assembly, by member id.
-    /// </summary>
-    private static Func<string, string> ReadSummaries(Assembly assembly)
-    {
-        return XmlDocs.Read([assembly.Location]);
     }
 }
