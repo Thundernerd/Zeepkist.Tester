@@ -1,0 +1,89 @@
+﻿{
+  "run_in_background": true,
+  "yaml": {
+    "assembly": "YamlDotNet, Version=18.0.0.0, Culture=neutral, PublicKeyToken=ec19458f3c15af5e",
+    "location": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Zeepkist\\BepInEx\\plugins\\Sideloaded\\Plugins\\Zeepkist.Tester.Spike\\YamlDotNet.dll",
+    "loaded_yamldotnet_assemblies": [
+      "YamlDotNet, Version=18.0.0.0, Culture=neutral, PublicKeyToken=ec19458f3c15af5e @ C:\\Program Files (x86)\\Steam\\steamapps\\common\\Zeepkist\\BepInEx\\plugins\\Sideloaded\\Plugins\\Zeepkist.Tester.Spike\\YamlDotNet.dll"
+    ],
+    "step_count": 5,
+    "steps": [
+      "line 3 col 5: scalar 'open-window'",
+      "line 4 col 5: map scalar 'place-block' => map scalar 'function' => scalar 'lamp', scalar 'as' => scalar 'lamp'",
+      "line 5 col 5: map scalar 'library-read-failed' => scalar 'on'",
+      "line 6 col 5: map scalar 'set-text' => scalar 'function edge(x) -> rising\\n    rising = x\\nend\\n'",
+      "line 10 col 5: map scalar 'wait' => scalar '2'"
+    ],
+    "error_probe": "line 3 col 5: While parsing a block mapping, did not find expected key.",
+    "ok": true
+  },
+  "focus": {
+    "game_window_found": true,
+    "game_window_is_foreground": false,
+    "set_foreground_returned": false,
+    "game_window_is_foreground_after": false
+  },
+  "display": "1920x1080 Windowed",
+  "sendinput_mouse": {
+    "game_window_is_foreground": false,
+    "legacy_before": "(1488,514)",
+    "rewired_before": "(1488,514)",
+    "sent_0.25_0.25": "screen (2080,461) sent",
+    "sent_0.75_0.6": "screen (3040,839) sent",
+    "after_each_move": [
+      "legacy (479,810) rewired (479,810) target (0.25, 0.25)",
+      "legacy (1439,432) rewired (1439,432) target (0.75, 0.60)"
+    ],
+    "legacy_moved": true,
+    "rewired_moved": true
+  },
+  "sendinput_key_vk": {
+    "game_window_is_foreground": false,
+    "sent_down": "sent",
+    "sent_up": "sent",
+    "legacy_input_getkey": false,
+    "legacy_input_getkeydown": false,
+    "rewired_keyboard_getkey": true,
+    "rewired_keyboard_getkeydown": true,
+    "rewired_any_button_down": true,
+    "ongui_keydown": false
+  },
+  "sendinput_key_scancode": {
+    "game_window_is_foreground": false,
+    "sent_down": "sent",
+    "sent_up": "sent",
+    "legacy_input_getkey": false,
+    "legacy_input_getkeydown": false,
+    "rewired_keyboard_getkey": true,
+    "rewired_keyboard_getkeydown": true,
+    "rewired_any_button_down": true,
+    "ongui_keydown": false
+  },
+  "sendinput_space_start_screen": {
+    "start_screen_advanced_before": false,
+    "game_window_is_foreground": false,
+    "sent_down": "sent",
+    "sent_up": "sent",
+    "legacy_input_getkey": false,
+    "legacy_input_getkeydown": false,
+    "rewired_keyboard_getkey": true,
+    "rewired_keyboard_getkeydown": true,
+    "rewired_any_button_down": true,
+    "ongui_keydown": false,
+    "start_screen_advanced": true
+  },
+  "harmony_input": {
+    "before": false,
+    "after": true,
+    "game_code_saw_patched_input": true
+  },
+  "log": [
+    "run 20261105-103707 starting, runInBackground True",
+    "yaml: {\"assembly\":\"YamlDotNet, Version=18.0.0.0, Culture=neutral, PublicKeyToken=ec19458f3c15af5e\",\"location\":\"C:\\\\Program Files (x86)\\\\Steam\\\\steamapps\\\\common\\\\Zeepkist\\\\BepInEx\\\\plugins\\\\Sideloaded\\\\Plugins\\\\Zeepkist.Tester.Spike\\\\YamlDotNet.dll\",\"loaded_yamldotnet_assemblies\":[\"YamlDotNet, Version=18.0.0.0, Culture=neutral, PublicKeyToken=ec19458f3c15af5e @ C:\\\\Program Files (x86)\\\\Steam\\\\steamapps\\\\common\\\\Zeepkist\\\\BepInEx\\\\plugins\\\\Sideloaded\\\\Plugins\\\\Zeepkist.Tester.Spike\\\\YamlDotNet.dll\"],\"step_count\":5,\"steps\":[\"line 3 col 5: scalar 'open-window'\",\"line 4 col 5: map scalar 'place-block' => map scalar 'function' => scalar 'lamp', scalar 'as' => scalar 'lamp'\",\"line 5 col 5: map scalar 'library-read-failed' => scalar 'on'\",\"line 6 col 5: map scalar 'set-text' => scalar 'function edge(x) -> rising\\\\n    rising = x\\\\nend\\\\n'\",\"line 10 col 5: map scalar 'wait' => scalar '2'\"],\"error_probe\":\"line 3 col 5: While parsing a block mapping, did not find expected key.\",\"ok\":true}",
+    "focus: {\"game_window_found\":true,\"game_window_is_foreground\":false,\"set_foreground_returned\":false,\"game_window_is_foreground_after\":false}",
+    "key F9 VirtualKey: {\"game_window_is_foreground\":false,\"sent_down\":\"sent\",\"sent_up\":\"sent\",\"legacy_input_getkey\":false,\"legacy_input_getkeydown\":false,\"rewired_keyboard_getkey\":true,\"rewired_keyboard_getkeydown\":true,\"rewired_any_button_down\":true,\"ongui_keydown\":false}",
+    "key F9 ScanCode: {\"game_window_is_foreground\":false,\"sent_down\":\"sent\",\"sent_up\":\"sent\",\"legacy_input_getkey\":false,\"legacy_input_getkeydown\":false,\"rewired_keyboard_getkey\":true,\"rewired_keyboard_getkeydown\":true,\"rewired_any_button_down\":true,\"ongui_keydown\":false}",
+    "key Space Both: {\"start_screen_advanced_before\":false,\"game_window_is_foreground\":false,\"sent_down\":\"sent\",\"sent_up\":\"sent\",\"legacy_input_getkey\":false,\"legacy_input_getkeydown\":false,\"rewired_keyboard_getkey\":true,\"rewired_keyboard_getkeydown\":true,\"rewired_any_button_down\":true,\"ongui_keydown\":false}"
+  ],
+  "done": true
+}
