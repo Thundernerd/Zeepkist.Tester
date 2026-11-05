@@ -23,14 +23,15 @@ internal static class OfflineRegistry
 
         using var assemblies = new OfflineAssemblies(ReferenceFolders.For([.. paths, testerPath]));
         var tester = assemblies.Load(testerPath);
-        var testPlugins = paths.Select(assemblies.Load).Where(StepDescriptorBuilder.IsTestPlugin).Where(assembly => assembly != tester).Distinct().ToList();
+        var testPlugins = paths.Select(assemblies.Load).Where(StepDescriptorBuilder.IsTestPlugin).Where(assembly => assembly != tester).Distinct();
+        var withSteps = testPlugins.Prepend(tester).ToList();
 
         var builder = new StepDescriptorBuilder
         {
             TesterAssemblyName = tester.GetName().Name,
-            Summaries = XmlDocs.Read(testPlugins.Prepend(tester).Select(assembly => assembly.Location)),
+            Summaries = XmlDocs.Read(withSteps.Select(assembly => assembly.Location)),
         };
 
-        return builder.BuildAll(testPlugins.Prepend(tester).SelectMany(StepDescriptorBuilder.FindSteps));
+        return builder.BuildAll(withSteps.SelectMany(StepDescriptorBuilder.FindSteps));
     }
 }
