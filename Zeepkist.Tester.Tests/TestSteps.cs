@@ -132,6 +132,102 @@ public static class TestSteps
         }
     }
 
+    /// <summary>A block placed by a step, by its UID.</summary>
+    [ValueKind("block", Substitute = nameof(Uid))]
+    public sealed class BlockValue
+    {
+        public string Uid { get; set; }
+    }
+
+    /// <summary>A kind whose values can't be written into text.</summary>
+    [ValueKind("window")]
+    public sealed class WindowValue
+    {
+    }
+
+    /// <summary>A step with each way to define and use a named value.</summary>
+    [Step("named")]
+    public sealed class Named : Step
+    {
+        [Arg]
+        public Name<BlockValue> Defines { get; set; }
+
+        [Arg]
+        public Name<WindowValue>? MaybeDefines { get; set; }
+
+        [Arg]
+        public Ref<BlockValue> Uses { get; set; }
+
+        [Arg]
+        public List<Ref<WindowValue>> UsesEach { get; set; }
+
+        public override IEnumerator Run(IStepContext context)
+        {
+            yield break;
+        }
+    }
+
+    /// <summary>One item of a nested argument, with text of its own.</summary>
+    public sealed class Message
+    {
+        [Arg]
+        public string Line { get; set; }
+
+        [Arg]
+        public List<Text> Details { get; set; }
+    }
+
+    /// <summary>A step with each type of argument that can hold <c>${name}</c>, and others that look like they could.</summary>
+    [Step("written")]
+    public sealed class Written : Step
+    {
+        [Arg]
+        public string String { get; set; }
+
+        [Arg]
+        public string NoString { get; set; }
+
+        [Arg]
+        public Text Text { get; set; }
+
+        [Arg]
+        public Text? MaybeText { get; set; }
+
+        [Arg]
+        public Text? NoText { get; set; }
+
+        [Arg]
+        public List<string> Strings { get; set; }
+
+        [Arg]
+        public Message Nested { get; set; }
+
+        [Arg]
+        public List<Message> NestedItems { get; set; }
+
+        [Arg]
+        public FileName FileName { get; set; }
+
+        [Arg]
+        public Keys Keys { get; set; }
+
+        [Arg]
+        public Name<BlockValue> Defines { get; set; }
+
+        [Arg]
+        public Ref<BlockValue> Uses { get; set; }
+
+        [Arg]
+        public int GetOnly => 1;
+
+        public string NotAnArgument { get; set; }
+
+        public override IEnumerator Run(IStepContext context)
+        {
+            yield break;
+        }
+    }
+
     /// <summary>Undoes the last change.</summary>
     [Step("undo")]
     public sealed class Undo : Step

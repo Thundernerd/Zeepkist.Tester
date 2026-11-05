@@ -208,6 +208,59 @@ public class StepDescriptorBuilderTests
     }
 
     [Fact]
+    public void Build_Name_RecordsThatItDefinesAValueOfItsKind()
+    {
+        var defines = Argument(typeof(TestSteps.Named), "defines");
+
+        Assert.Equal(ArgumentKind.Name, defines.Type.Kind);
+        Assert.Equal("block", defines.Type.ValueKind);
+        Assert.Equal("Uid", defines.Type.Substitute);
+    }
+
+    [Fact]
+    public void Build_NullableName_IsANameToo()
+    {
+        var defines = Argument(typeof(TestSteps.Named), "maybe-defines");
+
+        Assert.Equal(ArgumentKind.Name, defines.Type.Kind);
+        Assert.Equal("window", defines.Type.ValueKind);
+        Assert.False(defines.IsRequired);
+    }
+
+    [Fact]
+    public void Build_Ref_RecordsThatItUsesAValueOfItsKind()
+    {
+        var uses = Argument(typeof(TestSteps.Named), "uses");
+
+        Assert.Equal(ArgumentKind.Ref, uses.Type.Kind);
+        Assert.Equal("block", uses.Type.ValueKind);
+    }
+
+    [Fact]
+    public void Build_KindWithoutSubstitute_HasNone()
+    {
+        var items = Argument(typeof(TestSteps.Named), "uses-each").Type.ItemType;
+
+        Assert.Equal(ArgumentKind.Ref, items.Kind);
+        Assert.Equal("window", items.ValueKind);
+        Assert.Null(items.Substitute);
+    }
+
+    [Theory]
+    [InlineData("defines", "lamp_2-b", true)]
+    [InlineData("defines", "", false)]
+    [InlineData("defines", "my lamp", false)]
+    [InlineData("defines", "${lamp}", false)]
+    [InlineData("uses", "lamp_2-b", true)]
+    [InlineData("uses", "my lamp", false)]
+    public void Build_NameAndRef_TakeASafeName(string argument, string name, bool matches)
+    {
+        var pattern = Argument(typeof(TestSteps.Named), argument).Pattern;
+
+        Assert.Equal(matches, Regex.IsMatch(name, pattern));
+    }
+
+    [Fact]
     public void Build_WithSummaries_DocumentsTheStepAndItsArguments()
     {
         var builder = AsTester(XmlDocs.Read([typeof(TestSteps).Assembly.Location]));

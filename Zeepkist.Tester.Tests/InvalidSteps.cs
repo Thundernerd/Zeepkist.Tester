@@ -133,6 +133,61 @@ public static class InvalidSteps
         public Recursive Root { get; set; }
     }
 
+    public sealed class NoValueKind
+    {
+    }
+
+    [Step("name-without-kind")]
+    public sealed class NameWithoutKind : Base
+    {
+        [Arg]
+        public Name<NoValueKind> Value { get; set; }
+    }
+
+    [Step("ref-without-kind")]
+    public sealed class RefWithoutKind : Base
+    {
+        [Arg]
+        public Ref<NoValueKind> Value { get; set; }
+    }
+
+    [ValueKind("Not_Kebab")]
+    public sealed class KindNotKebab
+    {
+    }
+
+    [Step("kind-not-kebab")]
+    public sealed class HasKindNotKebab : Base
+    {
+        [Arg]
+        public Name<KindNotKebab> Value { get; set; }
+    }
+
+    [ValueKind("no-member", Substitute = "Missing")]
+    public sealed class SubstituteMissing
+    {
+    }
+
+    [Step("substitute-missing")]
+    public sealed class HasSubstituteMissing : Base
+    {
+        [Arg]
+        public Name<SubstituteMissing> Value { get; set; }
+    }
+
+    [ValueKind("number-member", Substitute = nameof(Number))]
+    public sealed class SubstituteNotAString
+    {
+        public int Number { get; set; }
+    }
+
+    [Step("substitute-not-a-string")]
+    public sealed class HasSubstituteNotAString : Base
+    {
+        [Arg]
+        public Name<SubstituteNotAString> Value { get; set; }
+    }
+
     public sealed class NoStepAttribute : Base
     {
     }

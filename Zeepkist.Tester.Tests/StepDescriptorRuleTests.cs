@@ -109,6 +109,28 @@ public class StepDescriptorRuleTests
         AssertFails(typeof(InvalidSteps.HasRecursive), $"{InvalidStepsType}+Recursive contains itself through argument 'children'.");
     }
 
+    [Theory]
+    [InlineData(typeof(InvalidSteps.NameWithoutKind), "NameWithoutKind")]
+    [InlineData(typeof(InvalidSteps.RefWithoutKind), "RefWithoutKind")]
+    public void Build_NamedValueOfATypeWithoutValueKind_Fails(Type stepType, string typeName)
+    {
+        AssertFails(stepType, $"Argument 'value' ({InvalidStepsType}+{typeName}) names a {InvalidStepsType}+NoValueKind, which has no [ValueKind] attribute.");
+    }
+
+    [Fact]
+    public void Build_ValueKindNotInKebabCase_Fails()
+    {
+        AssertFails(typeof(InvalidSteps.HasKindNotKebab), $"Value kind 'Not_Kebab' ({InvalidStepsType}+KindNotKebab) isn't in kebab case, such as 'place-block'.");
+    }
+
+    [Theory]
+    [InlineData(typeof(InvalidSteps.HasSubstituteMissing), "Missing", "SubstituteMissing")]
+    [InlineData(typeof(InvalidSteps.HasSubstituteNotAString), "Number", "SubstituteNotAString")]
+    public void Build_SubstituteThatIsNotAStringProperty_Fails(Type stepType, string member, string typeName)
+    {
+        AssertFails(stepType, $"Value kind Substitute '{member}' ({InvalidStepsType}+{typeName}) isn't a public string property of it.");
+    }
+
     [Fact]
     public void Build_TypeWithoutStepAttribute_Fails()
     {

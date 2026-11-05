@@ -29,7 +29,7 @@ public class OfflineAssembliesTests
         var testSteps = assemblies.Load(testsPath).GetType(typeof(TestSteps).FullName);
         var offline = builder.BuildAll(StepsIn(testSteps.GetNestedTypes()));
 
-        Assert.Equal(["wait", "place-block", "zls.drag-window-edge", "every-type", "undo"], offline.Select(step => step.FullName));
+        Assert.Equal(["wait", "place-block", "zls.drag-window-edge", "every-type", "named", "written", "undo"], offline.Select(step => step.FullName));
         Assert.Equal("Waits, such as for the level to run a little before a screenshot.", offline[0].Documentation);
         Assert.Equal(JsonSerializer.Serialize(atRuntime), JsonSerializer.Serialize(offline));
     }

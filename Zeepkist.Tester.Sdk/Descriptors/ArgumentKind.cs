@@ -14,6 +14,17 @@ public enum ArgumentKind
     Pixels,
     Keys,
     FileName,
+
+    /// <summary>
+    /// Defines a named value.
+    /// </summary>
+    Name,
+
+    /// <summary>
+    /// Uses a named value.
+    /// </summary>
+    Ref,
+
     Enum,
     List,
     Object,
