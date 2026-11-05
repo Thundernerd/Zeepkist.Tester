@@ -23,6 +23,13 @@ internal sealed class RunStep
 
     public double Seconds { get; set; }
 
+    public override string ToString()
+    {
+        var scenario = Scenario.Length > 0 ? $"{Scenario}:{Line} " : string.Empty;
+        var compared = Expected == null ? string.Empty : $" (expected: {Expected}, actual: {Actual})";
+        return $"{scenario}{Name} {(Passed ? "PASS" : "FAIL")} {Detail}{compared}".TrimEnd();
+    }
+
     public static RunStep Pass(string name)
     {
         return new RunStep { Name = name, Passed = true };

@@ -36,14 +36,14 @@ internal sealed class Screenshots
             GL.Clear(true, true, color);
 
         var texture = ScreenCapture.CaptureScreenshotAsTexture();
-        var blank = BlankCapture.IsBlank(texture.GetRawTextureData(), (int)GraphicsFormatUtility.GetBlockSize(texture.graphicsFormat), out var pixel);
+        var blank = BlankCapture.IsBlank(texture.GetRawTextureData(), (int)GraphicsFormatUtility.GetBlockSize(texture.graphicsFormat), out var blankColor);
         File.WriteAllBytes(_results.ScreenshotPath(name), texture.EncodeToPNG());
         Object.Destroy(texture);
-        LastBlankColor = blank ? pixel : null;
+        LastBlankColor = blank ? blankColor : null;
         if (blank)
         {
-            _results.MarkBlank(name, pixel);
-            _logger.LogWarning($"{TestRun.Marker} screenshot {name} is blank: every pixel is {pixel}");
+            _results.MarkBlank(name, blankColor);
+            _logger.LogWarning($"{TestRun.Marker} screenshot {name} is blank: every pixel is {blankColor}");
         }
         else
         {

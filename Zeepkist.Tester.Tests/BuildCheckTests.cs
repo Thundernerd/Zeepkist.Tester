@@ -6,8 +6,8 @@ namespace TNRD.Zeepkist.Tester.Tests;
 public class BuildCheckTests
 {
     private static readonly string _pluginsFolder = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "Sideloaded", "Plugins"));
-    private static readonly ModUnderTest _mod = new() { Guid = "Some.Mod", OldGuids = ["net.someone.some.mod"] };
-    private static readonly LoadedPlugin _deployed = new("Some.Mod", "Some Mod", Path.Combine(_pluginsFolder, "Some.Mod", "Some.Mod.dll"));
+    private static readonly ModUnderTest _mod = new ModUnderTest { Guid = "Some.Mod", OldGuids = ["net.someone.some.mod"] };
+    private static readonly LoadedPlugin _deployed = new LoadedPlugin("Some.Mod", "Some Mod", Path.Combine(_pluginsFolder, "Some.Mod", "Some.Mod.dll"));
 
     [Fact]
     public void TheModLoadedFromWhereItWasDeployed_WithNoOtherCopy_HasNoProblem()

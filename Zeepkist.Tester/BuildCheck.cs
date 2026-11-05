@@ -14,9 +14,6 @@ namespace TNRD.Zeepkist.Tester;
 /// </summary>
 internal static class BuildCheck
 {
-    /// <summary>
-    /// A step for each of the request's mods.
-    /// </summary>
     public static List<RunStep> Run(RunRequest request, string testerFolder)
     {
         var pluginsFolder = Path.GetDirectoryName(testerFolder);

@@ -53,11 +53,6 @@ internal sealed class RunResults
         BlankScreenshots[FileName(name)] = color;
     }
 
-    private static string FileName(string screenshot)
-    {
-        return screenshot + ".png";
-    }
-
     public void Add(RunStep step)
     {
         Steps.Add(step);
@@ -69,6 +64,11 @@ internal sealed class RunResults
         Done = true;
         Passed = Steps.Count > 0 && !AnyStepFailed;
         Write();
+    }
+
+    private static string FileName(string screenshot)
+    {
+        return screenshot + ".png";
     }
 
     /// <summary>

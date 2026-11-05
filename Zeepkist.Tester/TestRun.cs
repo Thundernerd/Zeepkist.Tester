@@ -19,7 +19,7 @@ internal sealed class TestRun : IDisposable
     private readonly ExceptionLog _exceptions;
     private readonly RunRequest _request;
     private readonly string _folder;
-    private readonly GameEvents _game = new();
+    private readonly GameEvents _game = new GameEvents();
     private readonly Screenshots _screenshots;
 
     public TestRun(ManualLogSource logger, RunResults results, ExceptionLog exceptions, RunRequest request, string folder)
@@ -80,13 +80,10 @@ internal sealed class TestRun : IDisposable
     private void Step(RunStep step)
     {
         _results.Add(step);
-        var scenario = step.Scenario.Length > 0 ? $"{step.Scenario}:{step.Line} " : string.Empty;
-        var expected = step.Expected == null ? string.Empty : $" (expected: {step.Expected}, actual: {step.Actual})";
-        var line = $"{Marker} {scenario}{step.Name} {(step.Passed ? "PASS" : "FAIL")} {step.Detail}{expected}".TrimEnd();
         if (step.Passed)
-            _logger.LogInfo(line);
+            _logger.LogInfo($"{Marker} {step}");
         else
-            _logger.LogError(line);
+            _logger.LogError($"{Marker} {step}");
     }
 
     private void OnLogMessage(string message, string stackTrace, LogType type)
