@@ -173,21 +173,25 @@ Other mods depend on ZeepSDK too, so the runner should deploy the ZeepSDK build 
 4. **MoonSharp yield from a CLR callback** inside nested calls, and how much of Zua's registered API can be reused from a separate `Script` (option A). UserData is a single shared registry, so registered types carry over. Functions don't, because `ZuaFunctionCache` is internal.
 5. **Start states other than the editor.** Free play via `RacingApi.LoadTrackInFreePlayAsync` is there. Online/multiplayer is out of scope (Photon, other players).
 
-## 5a. Spike results (2026-11-04, Linux + Proton Experimental)
+## 5a. Spike results (Linux + Proton Experimental 2026-11-04, Windows 2026-11-05)
 
-`spikes/InputAndYaml/` is a throwaway plugin with `run.sh` and `run.ps1` to run it, to be deleted once #2 has run it on Windows: this section keeps the results and git history keeps the code. The plugin runs only with `-ztest-spike <id>` and a matching `run.json`. It probes at the start screen and main menu, writes `results.json` and quits. Every probe passed:
+`spikes/InputAndYaml/` is a throwaway plugin with `run.sh` and `run.ps1` to run it, to be deleted once #2 has run it on Windows: this section keeps the results and git history keeps the code. The plugin runs only with `-ztest-spike <id>` and a matching `run.json`. It probes at the start screen and main menu, writes `results.json` and quits. Every probe passed on Linux, and on Windows with the game in front. With the game behind another window on Windows, keys reach Rewired only.
 
-| Probe | Result |
-| --- | --- |
-| YamlDotNet 18.1.0 (`net47` build) next to the plugin | Loads (assembly version 18.0.0.0). It's the only YamlDotNet in the process among the installed mods. Every step node has its line and column. `on` stays the string `'on'` in the representation model. A `\|` block keeps a nested `end`. A malformed file gives `line 3 col 5: While parsing a block mapping, did not find expected key.` |
-| `SendInput` absolute mouse move to 25%/75% of the client rect | Legacy `Input.mousePosition` and Rewired `Mouse.screenPosition` both land within 1 px of the target. This works with the window on a second monitor (screen x 2080). |
-| `SendInput` F9, virtual-key only / scan code only | Seen by all of `Input.GetKey/GetKeyDown`, Rewired `Keyboard.GetKey/GetKeyDown`, `ReInput.controllers.GetAnyButtonDown()` and `OnGUI` `KeyDown`. |
-| `SendInput` Space at the start screen | Seen the same way. The game's own `PressAnyKeyToStartGame.Update` reached the main menu, but it advances on any button and the F9 probes ran first, so this run didn't show that Space did it. The plugin has since held the start screen back until the Space probe, which hasn't run on Linux yet. |
-| Harmony prefixes on `Input.GetKey(KeyCode)` / `GetKeyDown(KeyCode)` (synthetic LeftAlt + PageUp) | `PlayerManager.Update` toggled `showCollisionValues`, so game code calls the patched methods and doesn't inline them. |
-| Focus | The game window was in the foreground at the start screen without any help. |
+The Windows results are in `docs/tests/spike-out/`. The folder names are the runs' intent, not what happened: **the game started behind another window in both runs**, and only `behind/` brought it forward, so `front/` is the run that stayed behind. In the `behind/` run the window came to the front by itself when it appeared, yet it was behind again by the time the plugin checked at the start screen. Only `results.json` is kept, without the logs.
+
+| Probe | Linux + Proton | Windows |
+| --- | --- | --- |
+| YamlDotNet 18.1.0 (`net47` build) next to the plugin | Loads (assembly version 18.0.0.0). It's the only YamlDotNet in the process among the installed mods. Every step node has its line and column. `on` stays the string `'on'` in the representation model. A `\|` block keeps a nested `end`. A malformed file gives `line 3 col 5: While parsing a block mapping, did not find expected key.` | The same, in both runs. |
+| `SendInput` absolute mouse move to 25%/75% of the client rect | Legacy `Input.mousePosition` and Rewired `Mouse.screenPosition` both land within 1 px of the target. This works with the window on a second monitor (screen x 2080). | The same, in front and behind: legacy `Input` and Rewired both land within 1 px of the target. |
+| `SendInput` F9, virtual-key only / scan code only | Seen by all of `Input.GetKey/GetKeyDown`, Rewired `Keyboard.GetKey/GetKeyDown`, `ReInput.controllers.GetAnyButtonDown()` and `OnGUI` `KeyDown`. | **In front:** the same. **Behind:** only Rewired sees them (`Keyboard.GetKey/GetKeyDown`, `GetAnyButtonDown`). Legacy `Input` and `OnGUI` don't. |
+| `SendInput` Space at the start screen | Seen the same way. The game's own `PressAnyKeyToStartGame.Update` reached the main menu, but it advances on any button and the F9 probes ran first, so this run didn't show that Space did it. The plugin has since held the start screen back until the Space probe, which hasn't run on Linux yet. | With the start screen held back during the F9 probes, it hadn't advanced before Space and had after it, so Space did it. It also advanced **behind**, through Rewired. |
+| Harmony prefixes on `Input.GetKey(KeyCode)` / `GetKeyDown(KeyCode)` (synthetic LeftAlt + PageUp) | `PlayerManager.Update` toggled `showCollisionValues`, so game code calls the patched methods and doesn't inline them. | The same, in both runs. |
+| Focus | The game window was in the foreground at the start screen without any help. | Not in the foreground at the start screen in either run. `SetForegroundWindow` from inside the game **failed in one run** (returned false, stayed behind) and **worked in the other**. Why they differ is unknown. |
 
 What follows from this:
-- **Tier 3 (OS input) is viable on Proton**, so it's very likely viable on Windows too, where `SendInput` is the native path. Windows itself is still to be checked.
+- **Tier 3 (OS input) is viable on Proton and on Windows, but only with the game in front.** Behind another window, legacy `Input` and `OnGUI` see no keys, so the level editor and Imui would miss them.
+- **The game can't count on getting to the front on Windows.** It wasn't there by itself in either run, and `SetForegroundWindow` worked in only one. A run needs another way to get focus, or has to stop with a clear reason (#19).
+- **Behind, keys are half-delivered.** Rewired still reads them, so the game can react (Space advanced the start screen) while the same keys go to whichever window is in front. So the check before sending is a safety matter as well. A player's own typing in another window also reaches Rewired during a run.
 - **Tier 2 legacy `Input` patching is viable.**
 - Rewired action injection (risk 3) now matters only for deterministic in-process tests, not for reaching gameplay at all.
 - **The game needs a display.** With the monitor off, Unity logs `MonitorFromWindow failed: Success.` in `Player.log` and either stalls before the first scene, so BepInEx never loads plugins, or loads them and takes longer than the spike's 90 s wait to reach the start screen. The runner should look for that line in `Player.log` (`AppData/LocalLow/Steelpan Interactive/Zeepkist/`) and fail fast with "no display", rather than time out.
@@ -246,7 +250,7 @@ What changes from the bash runner:
 - **Game data:** `%APPDATA%\Zeepkist` (on Linux, the same folder inside the Proton prefix). Mod data, `Autosaves` and `Backups` are backed up from there.
 - **Launch:** `steam.exe -applaunch 1440670 -ztest <runId>`. Detect the game by the `Zeepkist.exe` process. Steam's launch failures are in `<Steam>\logs\console_log.txt` on both platforms.
 - **Lock between runs:** a lock file under `%LOCALAPPDATA%`, or a named mutex, instead of `flock`.
-- **OS input:** `SendInput` works natively and is the reference platform for the OS driver. Windows doesn't let a background process steal focus (`SetForegroundWindow` restrictions), so the in-game driver brings its own window forward before sending. It also fails the step, saying why, when `GetForegroundWindow()` isn't the game's window, rather than typing into whatever has focus.
+- **OS input:** `SendInput` works natively and is the reference platform for the OS driver. Windows doesn't let a background process steal focus (`SetForegroundWindow` restrictions), so the in-game driver tries to bring its own window forward before sending, which the spike showed doesn't always work (§5a). It also fails the step, saying why, when `GetForegroundWindow()` isn't the game's window, rather than typing into whatever has focus.
 - **Proton** is the second platform: the same code, with the prefix path and whatever the `SendInput`-under-Wine spike finds.
 
 ## 9. Getting it to mod authors
