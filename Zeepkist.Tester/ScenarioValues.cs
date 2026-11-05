@@ -46,10 +46,10 @@ internal sealed class ScenarioValues : IValues
 
     public string Substitute(string text)
     {
-        return _substitutions.Replace(text, Write);
+        return _substitutions.Replace(text, Replacement);
     }
 
-    private string Write(Match match)
+    private string Replacement(Match match)
     {
         if (match.Value == "$${")
             return "${";
@@ -59,12 +59,11 @@ internal sealed class ScenarioValues : IValues
             throw new StepFailedException("A ${ has no name and } after it. Write $${ for a literal ${.");
 
         var defined = Find(name.Value);
-        var member = defined.ValueType.GetCustomAttribute<ValueKindAttribute>()?.Substitute;
-        if (member == null)
+        if (defined.SubstituteMember == null)
             throw new StepFailedException($"{match.Value} can't be written: a {defined.Kind} has no Substitute member.");
 
-        return (string)defined.ValueType.GetProperty(member).GetValue(defined.Value)
-            ?? throw new StepFailedException($"{match.Value} can't be written: the {defined.Kind}'s {member} is null.");
+        return defined.Substitute
+            ?? throw new StepFailedException($"{match.Value} can't be written: the {defined.Kind}'s {defined.SubstituteMember} is null.");
     }
 
     private Defined Find(string name)
@@ -93,5 +92,9 @@ internal sealed class ScenarioValues : IValues
         public Type ValueType { get; }
 
         public string Kind => KindOf(ValueType);
+
+        public string SubstituteMember => ValueType.GetCustomAttribute<ValueKindAttribute>()?.Substitute;
+
+        public string Substitute => (string)ValueType.GetProperty(SubstituteMember).GetValue(Value);
     }
 }

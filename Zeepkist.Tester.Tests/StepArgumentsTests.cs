@@ -6,7 +6,7 @@ namespace TNRD.Zeepkist.Tester.Tests;
 
 public class StepArgumentsTests
 {
-    private const string Written = "${lamp}";
+    private const string Lamp = "${lamp}";
     private const string Uid = "uid-1";
 
     private readonly ScenarioValues _values = new ScenarioValues();
@@ -19,7 +19,7 @@ public class StepArgumentsTests
     [Fact]
     public void Substitute_StringAndTextArguments_WritesTheName()
     {
-        var step = new Written { String = Written, Text = "a\n${lamp}\nb", MaybeText = Written };
+        var step = new Written { String = Lamp, Text = "a\n${lamp}\nb", MaybeText = Lamp };
 
         StepArguments.Substitute(step, _values);
 
@@ -33,9 +33,9 @@ public class StepArgumentsTests
     {
         var step = new Written
         {
-            Strings = [Written, "other"],
-            Nested = new Message { Line = Written, Details = [Written] },
-            NestedItems = [new Message { Line = Written }],
+            Strings = [Lamp, "other"],
+            Nested = new Message { Line = Lamp, Details = [Lamp] },
+            NestedItems = [new Message { Line = Lamp }],
         };
 
         StepArguments.Substitute(step, _values);
@@ -63,7 +63,7 @@ public class StepArgumentsTests
     [Fact]
     public void Substitute_NullListItem_StaysNull()
     {
-        var step = new Written { Strings = [null, Written] };
+        var step = new Written { Strings = [null, Lamp] };
 
         StepArguments.Substitute(step, _values);
 
@@ -83,14 +83,14 @@ public class StepArgumentsTests
     [Fact]
     public void Substitute_OtherArgumentTypes_AreLeftAlone()
     {
-        var step = new Written { FileName = Written, Keys = new Keys(Written), Defines = Written, Uses = Written };
+        var step = new Written { FileName = Lamp, Keys = new Keys(Lamp), Defines = Lamp, Uses = Lamp };
 
         StepArguments.Substitute(step, _values);
 
-        Assert.Equal(Written, step.FileName.Value);
-        Assert.Equal(Written, step.Keys.Value);
-        Assert.Equal(Written, step.Defines.Value);
-        Assert.Equal(Written, step.Uses.Value);
+        Assert.Equal(Lamp, step.FileName.Value);
+        Assert.Equal(Lamp, step.Keys.Value);
+        Assert.Equal(Lamp, step.Defines.Value);
+        Assert.Equal(Lamp, step.Uses.Value);
     }
 
     [Fact]

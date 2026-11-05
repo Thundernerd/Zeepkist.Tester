@@ -155,10 +155,10 @@ public sealed class StepDescriptorBuilder
             return scalar;
 
         if (IsGeneric(type, typeof(Name<>).FullName))
-            return BuildNamedValue(ArgumentKind.Name, Name<object>.Pattern, type, argument, enclosing);
+            return BuildNamedValue(ArgumentKind.Name, type, argument, enclosing);
 
         if (IsGeneric(type, typeof(Ref<>).FullName))
-            return BuildNamedValue(ArgumentKind.Ref, Ref<object>.Pattern, type, argument, enclosing);
+            return BuildNamedValue(ArgumentKind.Ref, type, argument, enclosing);
 
         if (type.IsEnum)
             return new ArgumentType { Kind = ArgumentKind.Enum, EnumValues = [.. EnumMembers(type).Select(WrittenEnumValue)] };
@@ -180,20 +180,20 @@ public sealed class StepDescriptorBuilder
         };
     }
 
-    private static ArgumentType BuildNamedValue(ArgumentKind kind, string pattern, Type type, string argument, List<Type> enclosing)
+    private static ArgumentType BuildNamedValue(ArgumentKind argumentKind, Type type, string argument, List<Type> enclosing)
     {
         var valueType = type.GetGenericArguments()[0];
-        var valueKind = FindAttribute<ValueKindAttribute>(valueType)
+        var kindAttribute = FindAttribute<ValueKindAttribute>(valueType)
             ?? throw new StepDefinitionException($"Argument '{argument}' ({enclosing.Last().FullName}) names a {valueType.FullName}, which has no [ValueKind] attribute.");
 
-        var name = ConstructorValue<string>(valueKind);
-        RequireKebabCase($"Value kind '{name}'", name, valueType);
+        var kind = ConstructorValue<string>(kindAttribute);
+        RequireKebabCase($"Value kind '{kind}'", kind, valueType);
 
-        var substitute = NamedValue<string>(valueKind, nameof(ValueKindAttribute.Substitute));
+        var substitute = NamedValue<string>(kindAttribute, nameof(ValueKindAttribute.Substitute));
         if (substitute != null && !IsStringProperty(valueType, substitute))
             throw new StepDefinitionException($"Value kind Substitute '{substitute}' ({valueType.FullName}) isn't a public string property of it.");
 
-        return new ArgumentType { Kind = kind, Pattern = pattern, ValueKind = name, Substitute = substitute };
+        return new ArgumentType { Kind = argumentKind, Pattern = Name<object>.Pattern, ValueKind = kind, Substitute = substitute };
     }
 
     private static bool IsStringProperty(Type type, string name)

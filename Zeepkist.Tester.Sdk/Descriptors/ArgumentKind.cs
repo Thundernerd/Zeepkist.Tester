@@ -24,6 +24,7 @@ public enum ArgumentKind
     /// Uses a named value.
     /// </summary>
     Ref,
+
     Enum,
     List,
     Object,

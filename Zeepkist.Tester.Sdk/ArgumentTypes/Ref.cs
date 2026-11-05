@@ -6,8 +6,6 @@ namespace TNRD.Zeepkist.Tester.Sdk;
 public readonly struct Ref<T>
     where T : class
 {
-    public const string Pattern = Name<T>.Pattern;
-
     public Ref(string value)
     {
         Value = value;
