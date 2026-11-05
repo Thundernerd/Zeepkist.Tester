@@ -10,11 +10,15 @@
   <ItemGroup>
     <!-- Zeepkist.Tester.Sdk's types expose these, but only compiles against them and doesn't pass them on -->
     <PackageReference Include="BepInEx.BaseLib" Version="5.4.20" />
+    <!-- The harness only compiles against this, as the game ships it; its results and run request need it at runtime here -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Zeepkist.GameLibs" Version="$(GameLibsVersion)" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Zeepkist.Tester.Sdk\Zeepkist.Tester.Sdk.csproj" />
+    <!-- Only the parts of the harness that don't touch the game run here -->
+    <ProjectReference Include="..\Zeepkist.Tester\Zeepkist.Tester.csproj" />
     <ProjectReference Include="..\Zeepkist.Tester.Cli\Zeepkist.Tester.Cli.csproj" />
     <ProjectReference Include="..\Zeepkist.Tester.Tests.SampleMod\Zeepkist.Tester.Tests.SampleMod.csproj" />
   </ItemGroup>
