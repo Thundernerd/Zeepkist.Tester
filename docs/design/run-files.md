@@ -32,7 +32,7 @@ In the `out` folder next to the plugin, rewritten after every step, so a crash s
 | `Steps` | Each with `Name`, `Passed`, `Detail`, `Scenario`, `Line`, `Expected`, `Actual`, `Seconds`. `Expected` and `Actual` are null except on checks, and steps outside a scenario have an empty `Scenario` and a `Line` of 0. |
 | `Screenshots` | File names, in `out` too. |
 | `BlankScreenshots` | File name to color, for those where every pixel is the same color. |
-| `Display` | The game's resolution and window mode. |
+| `Display` | The game's resolution, window mode and screen size, as the run ended. |
 | `Exceptions` | Each with `Scenario`, `Message`, `Frame` (the first stack line) and `Count`, grouped by message and frame per scenario. They don't fail the run. |
 
 ## The log

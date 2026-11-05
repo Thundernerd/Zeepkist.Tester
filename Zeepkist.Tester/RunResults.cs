@@ -30,7 +30,7 @@ internal sealed class RunResults
     public Dictionary<string, string> BlankScreenshots { get; } = [];
 
     /// <summary>
-    /// The game's resolution and window mode, so a run at an unexpected size stands out.
+    /// The game's resolution, window mode and screen size, so a run at an unexpected size stands out.
     /// </summary>
     public string Display { get; set; } = "";
 

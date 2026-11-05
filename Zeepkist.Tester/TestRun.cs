@@ -67,13 +67,15 @@ internal sealed class TestRun : IDisposable
     {
         // BepInEx flushes its log file every couple of seconds, and the copies it skipped are logged before plugins load
         yield return new WaitForSecondsRealtime(3);
-        _results.Display = Display();
-        _logger.LogInfo($"{Marker} display {_results.Display}");
+        RecordDisplay();
         foreach (var step in BuildCheck.Run(_request, _folder))
             Step(step);
+    }
 
-        if (!_results.AnyStepFailed)
-            yield return _screenshots.Take("start");
+    private void RecordDisplay()
+    {
+        _results.Display = Display();
+        _logger.LogInfo($"{Marker} display {_results.Display}");
     }
 
     /// <summary>
@@ -106,6 +108,8 @@ internal sealed class TestRun : IDisposable
         Application.logMessageReceived -= OnLogMessage;
         try
         {
+            // The game puts its saved resolution in place after it starts, so this is what the run ran at
+            RecordDisplay();
             _results.Finish();
             _logger.LogInfo($"{Marker} run {_results.RunId} {(_results.Passed ? "passed" : "failed")}");
         }

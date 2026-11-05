@@ -16,6 +16,9 @@ internal static class BuildCheck
 {
     public static List<RunStep> Run(RunRequest request, string testerFolder)
     {
+        if (request.Mods.Count == 0)
+            return [RunStep.Fail("right build", "run.json names no mods under test")];
+
         var pluginsFolder = Path.GetDirectoryName(testerFolder);
         var loaded = Chainloader.PluginInfos.Values
             .Select(plugin => new LoadedPlugin(plugin.Metadata.GUID, plugin.Metadata.Name, plugin.Location))
