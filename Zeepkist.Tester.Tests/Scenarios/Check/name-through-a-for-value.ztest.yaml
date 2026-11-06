@@ -1,0 +1,5 @@
+steps:
+  - for: { b: [one, two] }
+    steps:
+      - named: { defines: "${b}" }
+      - named: { uses: one }

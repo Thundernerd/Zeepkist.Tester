@@ -1,7 +1,8 @@
 steps:
   - for: { h: [64, on, "240"] }
     steps:
-      - wait: ${h}
+      - written:
+          string: ${h}
       - for: { b: [lamp] }
         steps:
           - undo

@@ -1,0 +1,3 @@
+steps:
+  - use-auto
+  - make-auto

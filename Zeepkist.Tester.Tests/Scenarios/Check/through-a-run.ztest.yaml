@@ -1,0 +1,5 @@
+steps:
+  - run: shared/opens-the-window.ztest.yaml
+  - new-script
+  - run: shared/closes-the-window.ztest.yaml
+  - new-script

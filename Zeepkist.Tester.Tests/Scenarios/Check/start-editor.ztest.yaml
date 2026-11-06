@@ -1,0 +1,3 @@
+start: editor
+steps:
+  - open-window

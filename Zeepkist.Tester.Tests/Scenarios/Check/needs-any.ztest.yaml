@@ -1,0 +1,4 @@
+steps:
+  - needs-either
+  - test-mode
+  - needs-either

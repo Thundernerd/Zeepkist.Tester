@@ -1,0 +1,4 @@
+steps:
+  - wait: ${lamp}
+  - named: { defines: lamp }
+  - place-block: "${lamp}"

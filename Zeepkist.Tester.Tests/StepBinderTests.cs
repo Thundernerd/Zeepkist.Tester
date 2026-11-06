@@ -122,65 +122,30 @@ public class StepBinderTests
     public void EachStepOfAFixture_BindsToItsOwnType()
     {
         var steps = ScenarioSteps.Parse("step-forms").Steps.Cast<StepNode>()
-            .Where(node => node.Step.FullName != "wait")
             .Select(node => StepBinder.Bind(node, ScenarioSteps.TypeOf(node), _values))
             .ToList();
 
         Assert.IsType<TestSteps.Undo>(steps[0]);
-        Assert.Equal("my-lamp", Assert.IsType<TestSteps.PlaceBlock>(steps[2]).As);
-        Assert.Equal(2, Assert.IsType<TestSteps.DragWindowEdge>(steps[5]).Moves.Count);
-        Assert.Equal("first\n  second\n", Assert.IsType<TestSteps.Written>(steps[7]).Text.Value);
+        Assert.Equal("my-lamp", Assert.IsType<TestSteps.PlaceBlock>(steps[3]).As);
+        Assert.Equal(2, Assert.IsType<TestSteps.DragWindowEdge>(steps[6]).Moves.Count);
+        Assert.Equal("first\n  second\n", Assert.IsType<TestSteps.Written>(steps[8]).Text.Value);
     }
 
     [Theory]
-    [InlineData("wait: soon", 11, "'seconds' of wait takes a length of time such as 2, 0.5 or 500ms, not 'soon'.")]
-    [InlineData("wait: -1", 11, "'seconds' of wait takes a length of time such as 2, 0.5 or 500ms, not '-1'.")]
-    [InlineData("wait: \u0663", 11, "'seconds' of wait takes a length of time such as 2, 0.5 or 500ms, not '\u0663'.")]
-    [InlineData("place-block: { function: LAMP }", 30, "'function' of place-block has to match ^[a-z_]+$, not 'LAMP'.")]
-    [InlineData("place-block: { function: lamp, how-many: two }", 46, "'how-many' of place-block takes a whole number, not 'two'.")]
-    [InlineData("place-block: { function: lamp, how-many: 1.5 }", 46, "'how-many' of place-block takes a whole number, not '1.5'.")]
-    [InlineData("place-block: { function: lamp, how-many: 9 }", 46, "'how-many' of place-block has to be between 1 and 8, not '9'.")]
-    [InlineData("place-block: { function: lamp, offset: far }", 44, "'offset' of place-block takes a whole number, not 'far'.")]
-    [InlineData("every-type: { float: much }", 26, "'float' of every-type takes a number, not 'much'.")]
-    [InlineData("every-type: { float: Infinity }", 26, "'float' of every-type takes a number, not 'Infinity'.")]
-    [InlineData("every-type: { bool: on }", 25, "'bool' of every-type takes true or false, not 'on'.")]
-    [InlineData("every-type: { axis: diagonal }", 25, "'axis' of every-type takes horizontal, global_velocity or page-up, not 'diagonal'.")]
-    [InlineData("every-type: { keys: ctrl+ }", 25, "'keys' of every-type has to match")]
-    [InlineData("every-type: { chords: [ctrl+] }", 28, "'chords' of every-type has to match")]
-    [InlineData("every-type: { file-name: a/b }", 30, "'file-name' of every-type has to match ^[A-Za-z0-9_-]+$, not 'a/b'.")]
-    [InlineData("named: { defines: \"a b\" }", 23, "'defines' of named has to match ^[A-Za-z0-9_-]+$, not 'a b'.")]
-    [InlineData("named: { uses-each: [\"a b\"] }", 26, "'uses-each' of named has to match ^[A-Za-z0-9_-]+$, not 'a b'.")]
-    [InlineData("zls.drag-window-edge: { moves: [] }", 36, "'moves' of zls.drag-window-edge needs at least 1 item, not 0.")]
-    [InlineData("zls.drag-window-edge: [{ by: 1, over: 700 }]", 43, "'over' of 'moves' of zls.drag-window-edge has to be between 1 and 600, not '700'.")]
+    [InlineData("wait: ${h}", 11, "'seconds' of wait takes a length of time such as 2, 0.5 or 500ms, not 'soon'.")]
+    [InlineData("every-type:\n      axis: ${h}", 13, "'axis' of every-type takes horizontal, global_velocity or page-up, not 'soon'.")]
+    [InlineData("place-block: { function: \"${n}\" }", 30, "'function' of place-block has to match ^[a-z_]+$, not 'LAMP'.")]
     [InlineData("wait: ${nope}", 11, "The name 'nope' isn't defined by an earlier step.")]
-    [InlineData("wait: ${", 11, "A ${ has no name and } after it. Write $${ for a literal ${.")]
-    public void AValueThatDoesntFit_FailsTheStep_WithItsLocationAndWhatsWrong(string written, int column, string problem)
+    public void AValueOnlyKnownWhenItRuns_FailsTheStep_WithItsLocationAndWhatsWrong(string written, int column, string problem)
     {
+        _values.Define("h", new TestSteps.BlockValue { Uid = "soon" });
+        _values.Define("n", new TestSteps.BlockValue { Uid = "LAMP" });
         var node = Read(written);
 
         var exception = Assert.Throws<StepFailedException>(() => StepBinder.Bind(node, ScenarioSteps.TypeOf(node), _values));
 
-        Assert.StartsWith($"bind.ztest.yaml:2:{column}: {problem}", exception.Message);
-    }
-
-    [Fact]
-    public void SecondsTooLongForAFloat_FailTheStep()
-    {
-        var node = Read($"wait: {new string('9', 400)}");
-
-        var exception = Assert.Throws<StepFailedException>(() => StepBinder.Bind(node, typeof(TestSteps.Wait), _values));
-
-        Assert.Contains("takes a length of time", exception.Message);
-    }
-
-    [Fact]
-    public void AValueWithALineBreakAtItsEnd_DoesntMatchAPattern()
-    {
-        var node = Read("every-type:\n      file-name: |\n        shot\n");
-
-        var exception = Assert.Throws<StepFailedException>(() => StepBinder.Bind(node, ScenarioSteps.TypeOf(node), _values));
-
-        Assert.Contains("'file-name' of every-type has to match", exception.Message);
+        Assert.EndsWith($":{column}: {problem}", exception.Message);
+        Assert.StartsWith("bind.ztest.yaml:", exception.Message);
     }
 
     [Theory]

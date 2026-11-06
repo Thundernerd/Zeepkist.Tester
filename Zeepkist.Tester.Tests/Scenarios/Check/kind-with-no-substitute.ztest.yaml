@@ -1,0 +1,3 @@
+steps:
+  - named: { maybe-defines: main }
+  - place-block: "${main}"

@@ -6,7 +6,7 @@ namespace TNRD.Zeepkist.Tester.Sdk;
 public readonly struct Name<T>
     where T : class
 {
-    public const string Pattern = "^[A-Za-z0-9_-]+$";
+    public const string Pattern = "^" + Substitution.NameCharacters + "$";
 
     public Name(string value)
     {

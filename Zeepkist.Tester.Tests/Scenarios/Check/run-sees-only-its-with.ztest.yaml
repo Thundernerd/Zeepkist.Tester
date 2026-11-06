@@ -1,0 +1,3 @@
+steps:
+  - named: { defines: lamp }
+  - run: shared/needs-lamp.ztest.yaml

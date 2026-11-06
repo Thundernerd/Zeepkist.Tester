@@ -1,0 +1,4 @@
+steps:
+  - make-special: fancy
+  - use-thing: fancy
+  - use-special: fancy

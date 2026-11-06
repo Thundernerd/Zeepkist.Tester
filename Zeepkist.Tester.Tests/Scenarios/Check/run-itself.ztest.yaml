@@ -1,0 +1,2 @@
+steps:
+  - run: run-itself.ztest.yaml

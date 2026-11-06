@@ -1,0 +1,5 @@
+steps:
+  - named: { defines: h }
+  - for: { h: [1] }
+    steps:
+      - undo

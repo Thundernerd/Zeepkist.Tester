@@ -30,6 +30,16 @@ dotnet test
 
 The build should finish with zero warnings. CI treats any warning as an error.
 
+## Checking scenarios
+
+`ztest check` finds mistakes in scenarios with no game: unknown steps and arguments, values that don't fit, names used before they're defined and missing `run:` files as errors, and steps whose required state doesn't hold as warnings. It prints `file:line:col: error|warning: message` and exits with 1 on errors.
+
+```sh
+ztest check Scenarios/window.ztest.yaml --plugin bin/Debug/net472/MyMod.InGameTests.dll
+ztest check                # the "scenarios" folder and "testPlugin" of the nearest zeepkist-test.json
+ztest check --registry     # states no step enters, and other smells in the steps and states themselves
+```
+
 ## License
 
 [MIT](LICENSE)

@@ -104,8 +104,8 @@ public class ScenarioParserTests
     {
         var step = StepAt("step-forms", 1);
 
-        Assert.Equal("wait", step.Step.FullName);
-        Assert.Equal("on", Text(step.Arguments, "seconds"));
+        Assert.Equal("place-block", step.Step.FullName);
+        Assert.Equal("on", Text(step.Arguments, "function"));
     }
 
     [Fact]
@@ -196,7 +196,7 @@ public class ScenarioParserTests
         Assert.Equal("h", node.Variable);
         Assert.Equal(["64", "on", "240"], node.Values);
         Assert.Equal(2, node.Location.Line);
-        Assert.Equal("${h}", Text(Assert.IsType<StepNode>(node.Steps[0]).Arguments, "seconds"));
+        Assert.Equal("${h}", Text(Assert.IsType<StepNode>(node.Steps[0]).Arguments, "string"));
         Assert.Equal("undo", Assert.IsType<StepNode>(Assert.IsType<ForNode>(node.Steps[1]).Steps[0]).Step.FullName);
     }
 

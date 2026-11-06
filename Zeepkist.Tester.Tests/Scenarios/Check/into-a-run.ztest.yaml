@@ -1,0 +1,2 @@
+steps:
+  - run: shared/compiles.ztest.yaml

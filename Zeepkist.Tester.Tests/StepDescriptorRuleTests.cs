@@ -16,6 +16,12 @@ public class StepDescriptorRuleTests
     }
 
     [Fact]
+    public void Build_APatternThatIsntARegularExpression_Fails()
+    {
+        AssertFails(typeof(InvalidSteps.BadPattern), $"Argument 'text' ({InvalidStepsType}+BadPattern) has the pattern '[', which isn't a regular expression.");
+    }
+
+    [Fact]
     public void Build_TwoPrimaryArguments_Fails()
     {
         AssertFails(typeof(InvalidSteps.TwoPrimaries), $"{InvalidStepsType}+TwoPrimaries has more than one Primary argument: 'first' and 'second'.");

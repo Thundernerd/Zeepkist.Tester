@@ -267,6 +267,10 @@ public sealed class StepDescriptorBuilder
 
             var type = BuildType(property.PropertyType, name, enclosing);
             var range = FindAttribute<InRangeAttribute>(property);
+            var pattern = ConstructorValue<string>(FindAttribute<PatternAttribute>(property));
+            if (pattern != null)
+                RequireRegularExpression(pattern, name, owner);
+
             arguments.Add(new ArgumentDescriptor
             {
                 Name = name,
@@ -276,7 +280,7 @@ public sealed class StepDescriptorBuilder
                 IsPrimary = NamedValue<bool>(argAttribute, nameof(ArgAttribute.Primary)),
                 IsRequired = FindAttribute(property, RequiredMemberAttributeName) != null,
                 Default = WrittenDefault(argAttribute),
-                Pattern = ConstructorValue<string>(FindAttribute<PatternAttribute>(property)) ?? type.Pattern,
+                Pattern = pattern ?? type.Pattern,
                 Minimum = ConstructorValue<double?>(range),
                 Maximum = (double?)range?.ConstructorArguments[1].Value,
                 MinItems = ConstructorValue<int?>(FindAttribute<MinItemsAttribute>(property)),
@@ -288,6 +292,18 @@ public sealed class StepDescriptorBuilder
             throw new StepDefinitionException($"{owner.FullName} has more than one Primary argument: {string.Join(" and ", primaries)}.");
 
         return arguments;
+    }
+
+    private static void RequireRegularExpression(string pattern, string argument, Type owner)
+    {
+        try
+        {
+            _ = new Regex(pattern);
+        }
+        catch (ArgumentException)
+        {
+            throw new StepDefinitionException($"Argument '{argument}' ({owner.FullName}) has the pattern '{pattern}', which isn't a regular expression.");
+        }
     }
 
     private ArgumentType BuildType(Type type, string argument, List<Type> enclosing)
@@ -337,7 +353,20 @@ public sealed class StepDescriptorBuilder
         if (substitute != null && !IsStringProperty(valueType, substitute))
             throw new StepDefinitionException($"Value kind Substitute '{substitute}' ({valueType.FullName}) isn't a public string property of it.");
 
-        return new ArgumentType { Kind = argumentKind, Pattern = Name<object>.Pattern, ValueKind = kind, Substitute = substitute };
+        return new ArgumentType { Kind = argumentKind, Pattern = Name<object>.Pattern, ValueKind = kind, BaseValueKinds = BaseKinds(valueType), Substitute = substitute };
+    }
+
+    private static List<string> BaseKinds(Type valueType)
+    {
+        var kinds = new List<string>();
+        for (var baseType = valueType.BaseType; baseType != null; baseType = baseType.BaseType)
+        {
+            var attribute = FindAttribute<ValueKindAttribute>(baseType);
+            if (attribute != null)
+                kinds.Add(ConstructorValue<string>(attribute));
+        }
+
+        return kinds;
     }
 
     private static bool IsStringProperty(Type type, string name)
