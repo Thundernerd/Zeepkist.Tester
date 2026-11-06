@@ -18,6 +18,11 @@ public static class InvalidSteps
         }
     }
 
+    [Step("repeat", Namespace = "zls")]
+    public sealed class NamedLikeAControlNode : Base
+    {
+    }
+
     [Step("two-primaries")]
     public sealed class TwoPrimaries : Base
     {
