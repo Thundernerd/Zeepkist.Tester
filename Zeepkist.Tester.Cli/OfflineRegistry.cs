@@ -7,16 +7,16 @@ using TNRD.Zeepkist.Tester.Sdk;
 namespace TNRD.Zeepkist.Tester.Cli;
 
 /// <summary>
-/// Reads the steps of the tester and of test plugins from their built DLLs, without running them or the game.
+/// Reads the steps and states of the tester and of test plugins from their built DLLs, without running them or the game.
 /// </summary>
 internal static class OfflineRegistry
 {
     /// <summary>
-    /// The tester's steps, then those of each assembly in <paramref name="assemblyPaths"/> that has a <see cref="TestPluginAttribute"/>.
+    /// The tester's steps and states, then those of each assembly in <paramref name="assemblyPaths"/> that has a <see cref="TestPluginAttribute"/>.
     /// </summary>
     /// <param name="assemblyPaths">Built DLLs. Those that aren't test plugins are skipped.</param>
     /// <param name="testerPath">The tester's plugin. Defaults to the copy that ships next to the CLI.</param>
-    public static IReadOnlyList<StepDescriptor> Read(IEnumerable<string> assemblyPaths, string testerPath = null)
+    public static StepRegistry Read(IEnumerable<string> assemblyPaths, string testerPath = null)
     {
         testerPath ??= Path.Combine(AppContext.BaseDirectory, "Zeepkist.Tester.dll");
         var paths = assemblyPaths.ToList();
@@ -32,6 +32,6 @@ internal static class OfflineRegistry
             Summaries = XmlDocs.Read(withSteps.Select(assembly => assembly.Location)),
         };
 
-        return builder.BuildAll(withSteps.SelectMany(StepDescriptorBuilder.FindSteps));
+        return builder.BuildRegistry(withSteps.SelectMany(StepDescriptorBuilder.FindSteps), withSteps.SelectMany(StepDescriptorBuilder.FindStates));
     }
 }

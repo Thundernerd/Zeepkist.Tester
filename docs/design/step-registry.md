@@ -2,7 +2,7 @@
 
 The typed list of steps that the YAML parser, the editor schema, the step reference docs, `ztest check`, `ztest convert` and C# tests all come from. It replaces ZeepLogicScript's `StepList` + `StepArgument` + the hand-kept step table + `StepListTests`. Background: [generic-tester.md](../research/generic-tester.md) §4 and §7, and [scenario-format.md](../research/scenario-format.md).
 
-Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4) and named values (#5); the rest isn't, and its names are placeholders.
+Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4), named values (#5) and the states with their runtime check (#6); the rest isn't, and its names are placeholders.
 
 ## The one constraint that shapes it
 
@@ -313,6 +313,8 @@ public sealed class FieldFocused : IState { /* … */ }
 
 `Within` makes states nest. Leaving a state leaves every state within it: `close-window` ends `zls.script-selected` too, and `test-mode` ends everything within `editor`.
 
+A state class needs a public constructor that takes nothing, because the harness makes one to call `IsMet`. Its namespace works as a step's does, including the empty one being reserved for the tester's own.
+
 ### Steps declare what they need and what they change
 
 ```csharp
@@ -333,11 +335,13 @@ public sealed class CloseWindow : Step { /* … */ }
 public sealed class TestMode : Step { /* … */ }
 ```
 
-`[Requires]` takes several states, all of which must hold. For "either", an `[RequiresAny(typeof(A), typeof(B))]` form covers it.
+`[Requires]` takes several states, all of which must hold. For "either", an `[RequiresAny(typeof(A), typeof(B))]` form covers it. Each of these attributes can be written more than once, and each `[RequiresAny]` is met separately.
+
+Descriptors record all of this by each state's full name: `StepDescriptor.Requires`, `Enters` and `Leaves`, where each entry of `Requires` is a list of alternatives, and `StepRegistry.States` with each state's `Within`, `Hint` and docs. A step or state that names a type with no `[State]`, or a cycle in `Within`, is a `StepDefinitionException`.
 
 ### Checked in two places
 
-- **In the game, before `Run`:** the harness calls `IsMet` for each required state, and on a miss fails the step without running it: `zls.compile needs zls.script-selected: Add zls.new-script or zls.select-script first.` That replaces the hand-written `Require…` calls and gives every step the same message. `Run` can still check things a state can't express, such as whether a named Script exists.
+- **In the game, before `Run`:** the harness calls `IsMet` for each required state and for the states it's within, outermost first, and on a miss fails the step without running it: `zls.compile needs zls.script-selected: Add zls.new-script or zls.select-script first.` With the window closed that names `zls.window-open` instead, the state to get into first, even if `ScriptSelected.IsMet` still says yes. When none of a `[RequiresAny]` holds, it names each one: `needs a or b: <a's hint> <b's hint>`. The hint's backticks, there for the step reference, are left out of the message. That replaces the hand-written `Require…` calls and gives every step the same message. `Run` can still check things a state can't express, such as whether a named Script exists.
 - **Offline, in `ztest check`:**
   - It follows the scenario from its `start:` state, through each step's `Enters` and `Leaves`. A step whose required state doesn't hold at that point is reported with its line and the hint.
   - `run:` sub-scenarios are followed into.
