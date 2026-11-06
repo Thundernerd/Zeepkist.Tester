@@ -66,6 +66,11 @@ public static class InvalidStates
         }
     }
 
+    [State("open-generic", Namespace = "zls")]
+    public sealed class OpenGeneric<T> : Base
+    {
+    }
+
     [State("within-unknown", Namespace = "zls", Within = typeof(NoStateAttribute))]
     public sealed class WithinUnknown : Base
     {
@@ -127,6 +132,12 @@ public static class InvalidStates
     [Step("leaves-unknown", Namespace = "zls")]
     [Leaves(typeof(NoStateAttribute))]
     public sealed class LeavesUnknown : StepBase
+    {
+    }
+
+    [Step("requires-null", Namespace = "zls")]
+    [Requires(typeof(Good), null)]
+    public sealed class RequiresNull : StepBase
     {
     }
 

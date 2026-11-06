@@ -173,8 +173,8 @@ public sealed class StepDescriptorBuilder
         if (!stateType.GetInterfaces().Any(type => type.FullName == typeof(IState).FullName))
             throw new StepDefinitionException($"{stateType.FullName} has [State] but doesn't implement IState.");
 
-        if (stateType.IsAbstract || stateType.GetConstructor(Type.EmptyTypes) == null)
-            throw new StepDefinitionException($"{stateType.FullName} has [State] but can't be made: it has to be a concrete class with a public constructor that takes nothing.");
+        if (stateType.IsAbstract || stateType.ContainsGenericParameters || stateType.GetConstructor(Type.EmptyTypes) == null)
+            throw new StepDefinitionException($"{stateType.FullName} has [State] but can't be made: it has to be a concrete, non-generic class with a public constructor that takes nothing.");
 
         var name = ConstructorValue<string>(stateAttribute);
         RequireKebabCase($"State name '{name}'", name, stateType);
@@ -236,6 +236,9 @@ public sealed class StepDescriptorBuilder
 
     private static void RequireState(Type type, string where)
     {
+        if (type == null)
+            throw new StepDefinitionException($"{where} names null, which isn't a state.");
+
         if (FindAttribute<StateAttribute>(type) == null)
             throw new StepDefinitionException($"{where} names {type.FullName}, which has no [State] attribute.");
     }

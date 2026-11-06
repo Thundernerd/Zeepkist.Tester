@@ -52,9 +52,10 @@ public class StateDescriptorRuleTests
     [Theory]
     [InlineData(typeof(InvalidStates.Abstract), "Abstract")]
     [InlineData(typeof(InvalidStates.TakesArguments), "TakesArguments")]
+    [InlineData(typeof(InvalidStates.OpenGeneric<>), "OpenGeneric`1")]
     public void BuildState_TheHarnessCannotMakeOne_Fails(Type stateType, string typeName)
     {
-        AssertStateFails(stateType, $"{Invalid}+{typeName} has [State] but can't be made: it has to be a concrete class with a public constructor that takes nothing.");
+        AssertStateFails(stateType, $"{Invalid}+{typeName} has [State] but can't be made: it has to be a concrete, non-generic class with a public constructor that takes nothing.");
     }
 
     [Fact]
@@ -97,6 +98,12 @@ public class StateDescriptorRuleTests
     public void Build_StepNamesNoStates_Fails(Type stepType, string attribute, string typeName)
     {
         AssertStepFails(stepType, $"[{attribute}] on {Invalid}+{typeName} names no states.");
+    }
+
+    [Fact]
+    public void Build_StepNamesNull_Fails()
+    {
+        AssertStepFails(typeof(InvalidStates.RequiresNull), $"[Requires] on {Invalid}+RequiresNull names null, which isn't a state.");
     }
 
     [Fact]
