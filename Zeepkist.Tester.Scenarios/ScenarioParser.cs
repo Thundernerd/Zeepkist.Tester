@@ -17,7 +17,7 @@ internal sealed class ScenarioParser
 {
     private const string SingleValueOnly = " A ${name} only stands in for a single value, never a whole list or map.";
 
-    private static readonly Regex _name = new Regex(Name<object>.Pattern);
+    private static readonly Regex _namePattern = new Regex(Name<object>.Pattern.Replace("$", @"\z"));
 
     // Each start state, with the only argument it takes and whether it needs it
     private static readonly Dictionary<string, (string Argument, bool Required)> _startStates = new Dictionary<string, (string, bool)>()
@@ -385,7 +385,7 @@ internal sealed class ScenarioParser
     private string ReadName(YamlNode node, string what)
     {
         var name = ReadKey(node);
-        if (!_name.IsMatch(name))
+        if (!_namePattern.IsMatch(name))
             throw Fail(node, $"'{name}' can't be {what}: it has to match {Name<object>.Pattern}.");
 
         return name;
@@ -399,7 +399,7 @@ internal sealed class ScenarioParser
     /// <summary>
     /// A map's entries by key, where a key that isn't <paramref name="allowed"/> is an error.
     /// </summary>
-    private Dictionary<string, YamlNode> ReadKeys(YamlNode node, string owner, IReadOnlyCollection<string> allowed, string word)
+    private Dictionary<string, YamlNode> ReadKeys(YamlNode node, string owner, IReadOnlyCollection<string> allowed, string keyKind)
     {
         if (node is not YamlMappingNode map)
             throw Fail(node, $"{owner} takes a map, not {Describe(node)}.");
@@ -409,11 +409,11 @@ internal sealed class ScenarioParser
         {
             var key = ReadKey(entry.Key);
             if (!allowed.Contains(key))
-                throw Fail(entry.Key, $"{owner} has no {word} '{key}'. {(allowed.Count == 0 ? "It takes none." : $"It takes: {string.Join(", ", allowed)}.")}");
+                throw Fail(entry.Key, $"{owner} has no {keyKind} '{key}'. {(allowed.Count == 0 ? "It takes none." : $"It takes: {string.Join(", ", allowed)}.")}");
 
             // YamlDotNet's own check for this tells a key with a tag from one without
             if (entries.ContainsKey(key))
-                throw Fail(entry.Key, $"{owner} has the {word} '{key}' twice.");
+                throw Fail(entry.Key, $"{owner} has the {keyKind} '{key}' twice.");
 
             entries.Add(key, entry.Value);
         }

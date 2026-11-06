@@ -35,7 +35,7 @@ internal static class YamlCheck
     public static RunStep Run(Assembly plugin)
     {
         var yaml = typeof(YamlStream).Assembly;
-        var actual = $"{Scalar()}, {SyntaxError()}, {Place(yaml, plugin)}";
+        var actual = $"{ParsedScalar()}, {SyntaxError()}, {WhereYamlDotNetIs(yaml, plugin)}";
         return new RunStep
         {
             Name = "yaml parser",
@@ -46,7 +46,7 @@ internal static class YamlCheck
         };
     }
 
-    private static string Scalar()
+    private static string ParsedScalar()
     {
         var node = (StepNode)Parse("steps:\n  - check: on\n").Steps[0];
         var step = (CheckStep)StepBinder.Bind(node, typeof(CheckStep), new ScenarioValues());
@@ -75,7 +75,7 @@ internal static class YamlCheck
     /// <summary>
     /// BepInEx loads every plugin into one AppDomain, so a YamlDotNet that isn't merged in can be another mod's.
     /// </summary>
-    private static string Place(Assembly yaml, Assembly plugin)
+    private static string WhereYamlDotNetIs(Assembly yaml, Assembly plugin)
     {
         return yaml == plugin ? "merged into the plugin" : "not merged into the plugin";
     }

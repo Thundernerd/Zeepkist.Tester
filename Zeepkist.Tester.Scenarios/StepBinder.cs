@@ -92,95 +92,29 @@ internal sealed class StepBinder
     private static object ConvertText(Type type, ArgumentDescriptor argument, ArgumentType argumentType, string text, SourceLocation location, string what)
     {
         type = Nullable.GetUnderlyingType(type) ?? type;
+        var value = new WrittenValue(argument, text, location, what);
         switch (argumentType.Kind)
         {
             case ArgumentKind.Int:
-                return ParseInt(argument, text, location, what);
+                return value.ToInt();
             case ArgumentKind.Pixels:
-                return new Pixels(ParseInt(argument, text, location, what));
+                return new Pixels(value.ToInt());
             case ArgumentKind.Float:
-                if (!TryParseFloat(text, out var number))
-                    throw Fail(location, $"{what} takes a number, not '{text}'.");
-
-                RequireRange(number, argument, text, location, what);
-                return (float)number;
+                return value.ToFloat();
             case ArgumentKind.Seconds:
-                return new Seconds(ParseSeconds(argument, text, location, what));
+                return new Seconds(value.ToSeconds());
             case ArgumentKind.Bool:
-                return text == "true" || (text == "false" ? false : throw Fail(location, $"{what} takes true or false, not '{text}'."));
+                return value.ToBool();
             case ArgumentKind.Enum:
-                var index = argumentType.EnumValues.ToList().IndexOf(text);
-                if (index < 0)
-                    throw Fail(location, $"{what} takes {Choices(argumentType.EnumValues)}, not '{text}'.");
-
-                return type.GetFields(BindingFlags.Public | BindingFlags.Static)[index].GetValue(null);
+                return type.GetFields(BindingFlags.Public | BindingFlags.Static)[value.IndexIn(argumentType.EnumValues)].GetValue(null);
             case ArgumentKind.String:
-                RequirePattern(argument, argumentType, text, location, what);
+                value.RequirePattern(argumentType);
                 return text;
             default:
                 // TextBlock, Keys, FileName, Name<T> and Ref<T> each hold the text
-                RequirePattern(argument, argumentType, text, location, what);
+                value.RequirePattern(argumentType);
                 return Activator.CreateInstance(type, text);
         }
-    }
-
-    private static int ParseInt(ArgumentDescriptor argument, string text, SourceLocation location, string what)
-    {
-        if (!int.TryParse(text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number))
-            throw Fail(location, $"{what} takes a whole number, not '{text}'.");
-
-        RequireRange(number, argument, text, location, what);
-        return number;
-    }
-
-    private static float ParseSeconds(ArgumentDescriptor argument, string text, SourceLocation location, string what)
-    {
-        var match = _seconds.Match(text);
-        if (!match.Success || !TryParseFloat(match.Groups["number"].Value, out var number))
-            throw Fail(location, $"{what} takes a length of time such as 2, 0.5 or 500ms, not '{text}'.");
-
-        var seconds = match.Groups["unit"].Value == "ms" ? number / 1000 : number;
-        RequireRange(seconds, argument, text, location, what);
-        return (float)seconds;
-    }
-
-    /// <summary>
-    /// Reads a float as a double, so a range compares what was written and not the nearest float to it.
-    /// </summary>
-    private static bool TryParseFloat(string text, out double number)
-    {
-        return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out number) && !float.IsNaN((float)number) && !float.IsInfinity((float)number);
-    }
-
-    private static void RequireRange(double number, ArgumentDescriptor argument, string text, SourceLocation location, string what)
-    {
-        if (number < argument.Minimum || number > argument.Maximum)
-            throw Fail(location, $"{what} has to be between {argument.Minimum.Value.ToString(CultureInfo.InvariantCulture)} and {argument.Maximum.Value.ToString(CultureInfo.InvariantCulture)}, not '{text}'.");
-    }
-
-    /// <summary>
-    /// A list's items have their pattern on their own type, unless the argument gives one.
-    /// </summary>
-    private static void RequirePattern(ArgumentDescriptor argument, ArgumentType argumentType, string text, SourceLocation location, string what)
-    {
-        var pattern = argument.Pattern ?? argumentType.Pattern;
-        if (pattern != null && !Regex.IsMatch(text, ToEndOfText(pattern)))
-            throw Fail(location, $"{what} has to match {pattern}, not '{text}'.");
-    }
-
-    /// <summary>
-    /// A pattern is written for the schema too, where <c>$</c> is the end of the text. Here it also matches before a line break at the end, as a <c>|</c> block has.
-    /// </summary>
-    private static string ToEndOfText(string pattern)
-    {
-        return pattern.EndsWith("$", StringComparison.Ordinal) && !pattern.EndsWith(@"\$", StringComparison.Ordinal)
-            ? pattern.Substring(0, pattern.Length - 1) + @"\z"
-            : pattern;
-    }
-
-    private static string Choices(IReadOnlyList<string> values)
-    {
-        return values.Count < 2 ? string.Join(string.Empty, values) : $"{string.Join(", ", values.Take(values.Count - 1))} or {values[values.Count - 1]}";
     }
 
     private static string DefaultText(object value)
@@ -191,5 +125,106 @@ internal sealed class StepBinder
     private static StepFailedException Fail(SourceLocation location, string problem)
     {
         return new StepFailedException($"{location}: {problem}");
+    }
+
+    /// <summary>
+    /// One value's text, with what its checks need to say what's wrong with it.
+    /// </summary>
+    private sealed class WrittenValue
+    {
+        private readonly ArgumentDescriptor _argument;
+        private readonly string _text;
+        private readonly SourceLocation _location;
+        private readonly string _what;
+
+        public WrittenValue(ArgumentDescriptor argument, string text, SourceLocation location, string what)
+        {
+            _argument = argument;
+            _text = text;
+            _location = location;
+            _what = what;
+        }
+
+        public int ToInt()
+        {
+            if (!int.TryParse(_text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number))
+                throw Fail(_location, $"{_what} takes a whole number, not '{_text}'.");
+
+            RequireRange(number);
+            return number;
+        }
+
+        public float ToFloat()
+        {
+            if (!TryParseFloat(_text, out var number))
+                throw Fail(_location, $"{_what} takes a number, not '{_text}'.");
+
+            RequireRange(number);
+            return (float)number;
+        }
+
+        public float ToSeconds()
+        {
+            var match = _seconds.Match(_text);
+            if (!match.Success || !TryParseFloat(match.Groups["number"].Value, out var number))
+                throw Fail(_location, $"{_what} takes a length of time such as 2, 0.5 or 500ms, not '{_text}'.");
+
+            var seconds = match.Groups["unit"].Value == "ms" ? number / 1000 : number;
+            RequireRange(seconds);
+            return (float)seconds;
+        }
+
+        public bool ToBool()
+        {
+            return _text == "true" || (_text == "false" ? false : throw Fail(_location, $"{_what} takes true or false, not '{_text}'."));
+        }
+
+        public int IndexIn(IReadOnlyList<string> enumValues)
+        {
+            var index = enumValues.ToList().IndexOf(_text);
+            if (index < 0)
+                throw Fail(_location, $"{_what} takes {Choices(enumValues)}, not '{_text}'.");
+
+            return index;
+        }
+
+        /// <summary>
+        /// A list's items have their pattern on their own type, unless the argument gives one.
+        /// </summary>
+        public void RequirePattern(ArgumentType argumentType)
+        {
+            var pattern = _argument.Pattern ?? argumentType.Pattern;
+            if (pattern != null && !Regex.IsMatch(_text, ToEndOfText(pattern)))
+                throw Fail(_location, $"{_what} has to match {pattern}, not '{_text}'.");
+        }
+
+        private void RequireRange(double number)
+        {
+            if (number < _argument.Minimum || number > _argument.Maximum)
+                throw Fail(_location, $"{_what} has to be between {_argument.Minimum.Value.ToString(CultureInfo.InvariantCulture)} and {_argument.Maximum.Value.ToString(CultureInfo.InvariantCulture)}, not '{_text}'.");
+        }
+
+        /// <summary>
+        /// Reads a float as a double, so a range compares what was written and not the nearest float to it.
+        /// </summary>
+        private static bool TryParseFloat(string text, out double number)
+        {
+            return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out number) && !float.IsNaN((float)number) && !float.IsInfinity((float)number);
+        }
+
+        /// <summary>
+        /// A pattern is written for the schema too, where <c>$</c> is the end of the text. Here it also matches before a line break at the end, as a <c>|</c> block has.
+        /// </summary>
+        private static string ToEndOfText(string pattern)
+        {
+            return pattern.EndsWith("$", StringComparison.Ordinal) && !pattern.EndsWith(@"\$", StringComparison.Ordinal)
+                ? pattern.Substring(0, pattern.Length - 1) + @"\z"
+                : pattern;
+        }
+
+        private static string Choices(IReadOnlyList<string> values)
+        {
+            return values.Count < 2 ? string.Join(string.Empty, values) : $"{string.Join(", ", values.Take(values.Count - 1))} or {values[values.Count - 1]}";
+        }
     }
 }
