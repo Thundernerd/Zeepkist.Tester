@@ -27,6 +27,8 @@ public static class CheckSteps
             typeof(MakeSpecial),
             typeof(UseThing),
             typeof(UseSpecial),
+            typeof(MakeAuto),
+            typeof(UseAuto),
         },
         Type.EmptyTypes);
 
@@ -151,5 +153,19 @@ public static class CheckSteps
     {
         [Arg(Primary = true)]
         public Ref<SpecialThing> Uses { get; set; }
+    }
+
+    [Step("make-auto")]
+    public sealed class MakeAuto : EmptyStep
+    {
+        [Arg(Default = "auto")]
+        public Name<Thing>? Defines { get; set; }
+    }
+
+    [Step("use-auto")]
+    public sealed class UseAuto : EmptyStep
+    {
+        [Arg(Default = "auto")]
+        public Ref<Thing>? Uses { get; set; }
     }
 }

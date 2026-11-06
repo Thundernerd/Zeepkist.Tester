@@ -231,6 +231,8 @@ internal sealed class ScenarioCheck
         {
             if (written.Values.TryGetValue(argument.Name, out var value))
                 FollowValue(argument.Type, value, scope, defines);
+            else if (argument.Default != null && argument.Type.Kind is ArgumentKind.Name or ArgumentKind.Ref)
+                FollowName(argument.Type, WrittenValue.DefaultText(argument.Default), written.Location, scope, defines);
         }
     }
 
@@ -267,18 +269,22 @@ internal sealed class ScenarioCheck
             return;
         }
 
-        var name = Substitution.Replace(scalar.Text, written => scope.Find(written).Value);
+        FollowName(type, Substitution.Replace(scalar.Text, written => scope.Find(written).Value), scalar.Location, scope, defines);
+    }
+
+    private void FollowName(ArgumentType type, string name, SourceLocation location, Scope scope, List<(string, ArgumentType, SourceLocation)> defines)
+    {
         if (type.Kind == ArgumentKind.Name)
         {
-            defines.Add((name, type, scalar.Location));
+            defines.Add((name, type, location));
             return;
         }
 
         var value = scope.Find(name);
         if (value == null && !scope.MayDefineUnknownNames)
-            Report(scalar.Location, true, NotDefined(name));
+            Report(location, true, NotDefined(name));
         else if (value != null && !value.Kinds.Contains(type.ValueKind))
-            Report(scalar.Location, true, $"The name '{name}' is a {value.Kind}, not a {type.ValueKind}.");
+            Report(location, true, $"The name '{name}' is a {value.Kind}, not a {type.ValueKind}.");
     }
 
     /// <summary>

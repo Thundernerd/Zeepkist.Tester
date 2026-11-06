@@ -52,6 +52,9 @@ public class ScenarioCheckTests
         { "for-with-one-value-does-not", [] },
         { "body-state-goes-on-after-it", [] },
         { "clean", [] },
+        { "default-name-then-ref", [] },
+        { "default-ref-before-its-name", ["2:5: error: The name 'auto' " + NotDefined] },
+        { "default-name-twice", ["3:5: error: The name 'auto' is already defined, as a thing."] },
         { "ref-of-a-base-kind", [] },
         { "ref-of-a-derived-kind", ["3:18: error: The name 'plain' is a thing, not a special-thing."] },
     };
