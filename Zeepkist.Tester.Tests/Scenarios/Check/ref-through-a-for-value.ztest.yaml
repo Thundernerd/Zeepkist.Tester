@@ -1,0 +1,5 @@
+steps:
+  - named: { defines: lamp }
+  - for: { b: [lamp, gate] }
+    steps:
+      - named: { uses: "${b}" }

@@ -1,0 +1,2 @@
+steps:
+  - run: run-cycle-b.ztest.yaml

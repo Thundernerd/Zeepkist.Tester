@@ -34,7 +34,7 @@ internal static class StepPreconditions
         {
             var unmet = alternatives.Select(state => OutermostUnmet(state, context)).TakeWhile(state => state != null).ToList();
             if (unmet.Count == alternatives.Length)
-                throw new StepFailedException(Message(step, unmet.Distinct().Select(_builder.BuildState).ToList()));
+                throw new StepFailedException(step.NeedsMessage(unmet.Distinct().Select(_builder.BuildState)));
         }
     }
 
@@ -61,14 +61,5 @@ internal static class StepPreconditions
             return outer;
 
         return ((IState)Activator.CreateInstance(state)).IsMet(context) ? null : state;
-    }
-
-    private static string Message(StepDescriptor step, List<StateDescriptor> unmet)
-    {
-        var names = string.Join(" or ", unmet.Select(state => state.FullName));
-
-        // A hint is written for the step reference too, where backticks mean code. In a run's results they'd be noise
-        var hints = string.Join(" ", unmet.Select(state => state.Hint).Where(hint => hint != null)).Replace("`", string.Empty);
-        return hints.Length == 0 ? $"{step.FullName} needs {names}." : $"{step.FullName} needs {names}: {hints}";
     }
 }

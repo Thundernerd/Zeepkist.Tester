@@ -1,0 +1,5 @@
+steps:
+  - run: shared/uses-what-it-is-given.ztest.yaml
+    with: { block: a, time: 1 }
+  - place-block: "${lamp}"
+  - place-block: "${block}"

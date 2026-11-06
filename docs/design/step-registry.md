@@ -2,7 +2,7 @@
 
 The typed list of steps that the YAML parser, the editor schema, the step reference docs, `ztest check`, `ztest convert` and C# tests all come from. It replaces ZeepLogicScript's `StepList` + `StepArgument` + the hand-kept step table + `StepListTests`. Background: [generic-tester.md](../research/generic-tester.md) §4 and §7, and [scenario-format.md](../research/scenario-format.md).
 
-Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4), named values (#5) and the states with their runtime check (#6); the rest isn't, and its names are placeholders.
+Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4), named values (#5), the states with their runtime check (#6), the parser (#7) and `ztest check` (#8); the rest isn't, and its names are placeholders.
 
 ## The one constraint that shapes it
 
@@ -343,9 +343,9 @@ Descriptors record all of this by each state's full name: `StepDescriptor.Requir
 
 - **In the game, before `Run`:** the harness calls `IsMet` for each required state and for the states it's within, outermost first, and on a miss fails the step without running it: `zls.compile needs zls.script-selected: Add zls.new-script or zls.select-script first.` With the window closed that names `zls.window-open` instead, the state to get into first, even if `ScriptSelected.IsMet` still says yes. When none of a `[RequiresAny]` holds, it names each one: `needs a or b: <a's hint> <b's hint>`. The hint's backticks, there for the step reference, are left out of the message. That replaces the hand-written `Require…` calls and gives every step the same message. `Run` can still check things a state can't express, such as whether a named Script exists.
 - **Offline, in `ztest check`:**
-  - It follows the scenario from its `start:` state, through each step's `Enters` and `Leaves`. A step whose required state doesn't hold at that point is reported with its line and the hint.
-  - `run:` sub-scenarios are followed into.
-  - A `for` or `repeat` body is checked once, then again starting from the state it ends in, so a body that closes the window it needs is caught.
+  - It follows the scenario from its `start:` state, through each step's `Enters` and `Leaves`. A step whose required state doesn't hold at that point is reported with its line and the hint. `start:` holds the state with the name it gives, and a header without `start:` starts in `editor`.
+  - `run:` sub-scenarios are followed into, from the state of the step before them. A `start:` in a `run:` file isn't followed.
+  - A `for` or `repeat` body is checked once, then again starting from the state it ends in, so a body that closes the window it needs is caught. A `for` is followed once per value, and a `repeat` of at least 2 twice. A body that only runs once is only checked once.
   - These are reported as **warnings**, not errors, because the offline model is only as good as the declarations. A step whose effect depends on the game (`back-to-editor` after a failed `test-mode`) can leave the model out of step with the game, and the runtime check is the one that counts.
   - States a mod declares but no step `Enters` are listed as a warning by `ztest check --registry`, so a missing declaration shows up early.
 
@@ -397,7 +397,7 @@ The runner handles the control nodes itself; they aren't registry steps, but the
 
 - It only stands in for a single value, never for a whole list or map, so it doesn't grow into an expression language.
 - The generated schema also accepts a `${…}` wherever it expects a non-text type, so the editor is less strict about those values.
-- `ztest check` tries each `for` value against the argument's type, because the values are literals. It can't know a step's value from `as:` or a value from `with:`, so a bad one fails when the step runs, with a message giving the argument and the value.
+- Loading a scenario checks every value without a `${…}`, in the game and in `ztest check`, so `wait: soon` fails with its `file:line:col` before a run reaches it. It also tries each `for` value against the type of each argument its variable is used in, because the values are literals. It can't know a step's value from `as:` or a value from `with:`, so a bad one fails when the step runs, with a message giving the argument and the value.
 
 **Each pass of a body has its own scope.** A name defined in a `for` or `repeat` body lasts until that pass ends, and the next pass starts fresh:
 
@@ -453,8 +453,10 @@ public sealed class WindowTests
 | `.ztest/schema.json` | `ztest schema` (also every `ztest` run) | Core + the repo's `[TestPlugin]` assemblies. Each step is a `oneOf` branch: a bare string, `{name: scalar}` for `Primary`, or `{name: {…}}` with `additionalProperties: false`. |
 | `.vscode/settings.json` `yaml.schemas` entry | `ztest init` | `**/*.ztest.yaml` → the schema |
 | Step reference (Markdown) | `ztest docs` | `<summary>` docs, arguments, types, defaults, an example per step from `[Example("…")]` |
-| Offline checks | `ztest check <files>` | The registry; reports `file:line:col` |
+| Offline checks | `ztest check [files or folders...] [--plugin <dll>]...`, `ztest check --registry` | The registry; reports `file:line:col: error\|warning: message`, and exits with 1 on errors |
 | `.zlstest` → YAML | `ztest convert` | The registry plus a `[LineSyntax("<function> [as <as>]")]` attribute per old step; see below |
+
+`ztest check` with no files checks the `scenarios` folder of the nearest `zeepkist-test.json`, and reads the steps of its `testPlugin`, a project or a DLL, unless `--plugin` names others. Of the files it's given, one that another runs is only followed from there, because it may need what that passes in through `with:`. It reports a file's first problem from loading, and then every problem with names and states.
 
 ## Moving ZLS's steps over
 

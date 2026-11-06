@@ -11,7 +11,13 @@ internal sealed class ScenarioException : Exception
         : base($"{location}: {problem}")
     {
         Location = location;
+        Problem = problem;
     }
 
     public SourceLocation Location { get; }
+
+    /// <summary>
+    /// What's wrong, without where.
+    /// </summary>
+    public string Problem { get; }
 }

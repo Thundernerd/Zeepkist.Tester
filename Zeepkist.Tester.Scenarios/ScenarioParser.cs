@@ -27,6 +27,11 @@ internal sealed class ScenarioParser
         ["free-play"] = ("uid", true),
     };
 
+    /// <summary>
+    /// What <c>start:</c> can name, each of which is also the state a scenario starts in.
+    /// </summary>
+    public static IReadOnlyCollection<string> StartStates => _startStates.Keys;
+
     private readonly string _file;
     private readonly Dictionary<string, StepDescriptor> _steps;
     private readonly List<YamlSequenceNode> _bodiesRead = [];

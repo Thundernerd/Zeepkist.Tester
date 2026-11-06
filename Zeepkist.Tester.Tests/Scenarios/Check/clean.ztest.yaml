@@ -1,0 +1,26 @@
+description: Everything ztest check follows, used correctly
+steps:
+  - named: { defines: lamp }
+  - named: { uses: lamp, maybe-defines: main }
+  - named: { uses-each: [main, main] }
+  - place-block: "${lamp}"
+  - open-window
+  - for: { h: [1, 2] }
+    steps:
+      - wait: ${h}
+      - named: { defines: "shot-${h}" }
+      - named: { uses: "shot-${h}" }
+  - repeat: 2
+    steps:
+      - named: { defines: again }
+      - new-script
+      - compile
+  - for: { b: [lamp] }
+    steps:
+      - named: { uses: "${b}" }
+  - run: shared/uses-what-it-is-given.ztest.yaml
+    with: { block: "${lamp}", time: 2 }
+  - test-mode
+  - back-to-editor
+  - run: shared/needs-the-window-and-opens-it.ztest.yaml
+  - run: shared/needs-the-window-and-opens-it.ztest.yaml

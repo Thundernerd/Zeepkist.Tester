@@ -1,0 +1,2 @@
+steps:
+  - run: shared/nope.ztest.yaml

@@ -1,0 +1,3 @@
+steps:
+  - run: shared/broken.ztest.yaml
+  - run: shared/broken.ztest.yaml

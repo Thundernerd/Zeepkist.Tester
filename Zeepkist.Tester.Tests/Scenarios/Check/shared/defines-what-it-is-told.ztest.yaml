@@ -1,0 +1,4 @@
+steps:
+  - named: { defines: "${called}" }
+  - named: { uses: lamp }
+  - place-block: "${lamp}"

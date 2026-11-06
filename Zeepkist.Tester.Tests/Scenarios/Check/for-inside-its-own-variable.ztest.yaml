@@ -1,0 +1,6 @@
+steps:
+  - for: { h: [1] }
+    steps:
+      - for: { h: [2] }
+        steps:
+          - undo

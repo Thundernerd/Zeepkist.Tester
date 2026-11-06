@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace TNRD.Zeepkist.Tester.Sdk;
 
@@ -39,4 +40,17 @@ public sealed class StepDescriptor
     /// The name a scenario writes without <c>use:</c>, such as <c>wait</c> or <c>zls.compile</c>.
     /// </summary>
     public string FullName => Namespace.Length == 0 ? Name : $"{Namespace}.{Name}";
+
+    /// <summary>
+    /// What to say when the states the step needs don't hold, in the game and in <c>ztest check</c>.
+    /// </summary>
+    public string NeedsMessage(IEnumerable<StateDescriptor> unmet)
+    {
+        var states = unmet.ToList();
+        var names = string.Join(" or ", states.Select(state => state.FullName));
+
+        // A hint is written for the step reference too, where backticks mean code. In a message they'd be noise
+        var hints = string.Join(" ", states.Select(state => state.Hint).Where(hint => hint != null)).Replace("`", string.Empty);
+        return hints.Length == 0 ? $"{FullName} needs {names}." : $"{FullName} needs {names}: {hints}";
+    }
 }

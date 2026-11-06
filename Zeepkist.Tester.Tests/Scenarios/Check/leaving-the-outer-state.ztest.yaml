@@ -1,0 +1,7 @@
+steps:
+  - open-window
+  - new-script
+  - test-mode
+  - compile
+  - back-to-editor
+  - compile

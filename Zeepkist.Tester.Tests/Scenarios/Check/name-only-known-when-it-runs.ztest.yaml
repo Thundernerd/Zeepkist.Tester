@@ -1,0 +1,3 @@
+steps:
+  - run: shared/defines-what-it-is-told.ztest.yaml
+    with: { called: lamp }

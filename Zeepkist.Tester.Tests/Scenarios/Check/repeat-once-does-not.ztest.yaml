@@ -1,0 +1,6 @@
+steps:
+  - open-window
+  - repeat: 1
+    steps:
+      - new-script
+      - close-window

@@ -1,0 +1,4 @@
+steps:
+  - for: { b: [lamp] }
+    steps:
+      - named: { uses: b }

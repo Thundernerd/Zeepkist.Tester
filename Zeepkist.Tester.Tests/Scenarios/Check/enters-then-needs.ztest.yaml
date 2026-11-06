@@ -1,0 +1,4 @@
+steps:
+  - open-window
+  - new-script
+  - compile

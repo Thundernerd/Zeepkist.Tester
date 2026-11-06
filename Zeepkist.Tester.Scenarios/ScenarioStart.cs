@@ -7,6 +7,11 @@ namespace TNRD.Zeepkist.Tester.Scenarios;
 /// </summary>
 internal sealed class ScenarioStart
 {
+    /// <summary>
+    /// Where a scenario whose header has no <c>start:</c> starts.
+    /// </summary>
+    public const string DefaultName = "editor";
+
     public ScenarioStart(string name, IReadOnlyDictionary<string, string> arguments)
     {
         Name = name;

@@ -1,0 +1,4 @@
+steps:
+  - named: { uses: lamp }
+  - named: { defines: lamp }
+  - named: { uses: lamp }
