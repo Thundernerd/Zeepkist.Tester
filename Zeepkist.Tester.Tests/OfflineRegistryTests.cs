@@ -18,21 +18,41 @@ public class OfflineRegistryTests
     [Fact]
     public void Read_TestPlugin_GivesWhatRuntimeReflectionGives()
     {
-        var atRuntime = new StepDescriptorBuilder { Summaries = XmlDocs.Read([_modPath]) }.BuildAll([typeof(Compile), typeof(GameImports), typeof(NamedValues), typeof(OwnNamespace)]);
+        var builder = new StepDescriptorBuilder { TesterAssemblyName = typeof(CoreStep).Assembly.GetName().Name, Summaries = XmlDocs.Read([_modPath, _sampleTesterPath]) };
+        var atRuntime = builder.BuildRegistry([typeof(Compile), typeof(GameImports), typeof(NamedValues), typeof(OwnNamespace), typeof(SwapPanel)], [typeof(CoreState), typeof(PanelOpen)]);
 
-        var offline = OfflineRegistry.Read([_modPath], _sampleTesterPath).Where(step => step.Namespace.Length > 0).ToList();
+        var read = OfflineRegistry.Read([_modPath], _sampleTesterPath);
+        var offline = read.Steps.Where(step => step.Namespace.Length > 0).ToList();
 
-        Assert.Equal(["sample.compile", "sample.game-imports", "sample.named-values", "other.own-namespace"], offline.Select(step => step.FullName));
+        Assert.Equal(["sample.compile", "sample.game-imports", "sample.named-values", "other.own-namespace", "sample.swap-panel"], offline.Select(step => step.FullName));
         Assert.Equal("Its constructors are there to compile on net472: `required` with `SetsRequiredMembersAttribute`.", offline[0].Documentation);
         Assert.Equal("The function to compile.", offline[0].Arguments[0].Documentation);
         Assert.True(offline[0].Arguments[0].IsRequired);
-        Assert.Equal(JsonSerializer.Serialize(atRuntime), JsonSerializer.Serialize(offline));
+        Assert.Equal(JsonSerializer.Serialize(atRuntime.Steps), JsonSerializer.Serialize(offline));
+        Assert.Equal(JsonSerializer.Serialize(atRuntime.States), JsonSerializer.Serialize(read.States));
+    }
+
+    [Fact]
+    public void Read_StatesOfAModAndOfTheTester_RecordsThemAndWhatStepsDoWithThem()
+    {
+        var registry = OfflineRegistry.Read([_modPath], _sampleTesterPath);
+
+        Assert.Equal(["core.core-state", "sample.panel-open"], registry.States.Select(state => state.FullName));
+        var panelOpen = registry.States[1];
+        Assert.Equal("core.core-state", panelOpen.Within);
+        Assert.Equal("Add `sample.open-panel` first.", panelOpen.Hint);
+        Assert.Equal("The panel is open.", panelOpen.Documentation);
+
+        var step = registry.Steps.Single(descriptor => descriptor.Name == "swap-panel");
+        Assert.Equal([["core.core-state"], ["sample.panel-open", "core.core-state"]], step.Requires);
+        Assert.Equal(["sample.panel-open"], step.Enters);
+        Assert.Equal(["core.core-state"], step.Leaves);
     }
 
     [Fact]
     public void Read_NamedValues_RecordsWhichArgumentsDefineAndUseThem()
     {
-        var step = OfflineRegistry.Read([_modPath], _sampleTesterPath).Single(descriptor => descriptor.Name == "named-values");
+        var step = OfflineRegistry.Read([_modPath], _sampleTesterPath).Steps.Single(descriptor => descriptor.Name == "named-values");
 
         var defines = step.Arguments[0];
         Assert.Equal(ArgumentKind.Name, defines.Type.Kind);
@@ -44,7 +64,7 @@ public class OfflineRegistryTests
     [Fact]
     public void Read_StepNextToTheGamesImports_FindsItsInRangeAndTextBlock()
     {
-        var step = OfflineRegistry.Read([_modPath], _sampleTesterPath).Single(descriptor => descriptor.Name == "game-imports");
+        var step = OfflineRegistry.Read([_modPath], _sampleTesterPath).Steps.Single(descriptor => descriptor.Name == "game-imports");
 
         Assert.Equal(1, step.Arguments[0].Minimum);
         Assert.Equal(8, step.Arguments[0].Maximum);
@@ -54,7 +74,7 @@ public class OfflineRegistryTests
     [Fact]
     public void Read_TheTestersAssembly_GivesItsStepsWithoutATestPlugin()
     {
-        var step = Assert.Single(OfflineRegistry.Read([], _sampleTesterPath));
+        var step = Assert.Single(OfflineRegistry.Read([], _sampleTesterPath).Steps);
 
         Assert.Equal("core-step", step.FullName);
         Assert.Equal(string.Empty, step.Namespace);
@@ -66,7 +86,7 @@ public class OfflineRegistryTests
     {
         var notAPlugin = typeof(StepDescriptor).Assembly.Location;
 
-        var step = Assert.Single(OfflineRegistry.Read([notAPlugin, _sampleTesterPath], _sampleTesterPath));
+        var step = Assert.Single(OfflineRegistry.Read([notAPlugin, _sampleTesterPath], _sampleTesterPath).Steps);
 
         Assert.Equal("core-step", step.FullName);
     }
@@ -74,7 +94,7 @@ public class OfflineRegistryTests
     [Fact]
     public void Read_WithoutATesterPath_UsesTheTesterNextToTheCli()
     {
-        var names = OfflineRegistry.Read([_modPath]).Select(step => step.FullName);
+        var names = OfflineRegistry.Read([_modPath]).Steps.Select(step => step.FullName);
 
         Assert.Contains("sample.compile", names);
     }

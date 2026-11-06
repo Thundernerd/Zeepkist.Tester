@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Zeepkist.Tester.Sdk\Zeepkist.Tester.Sdk.csproj" />
+    <!-- As a mod references the tester, for states to nest in -->
+    <ProjectReference Include="..\Zeepkist.Tester.Tests.SampleCore\Zeepkist.Tester.Tests.SampleCore.csproj" />
   </ItemGroup>
 
 </Project>
