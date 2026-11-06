@@ -117,7 +117,7 @@ public sealed class SetBlockSetting : Step
 - `${name}` works in any single YAML value, whatever the argument's type. It's substituted before the value is converted (see *Control nodes and names*). It needs a name whose kind has a `Substitute` member, a public string property. A `${name}` that isn't defined by an earlier step fails `ztest check` with its line. `$${` writes a literal `${`, and any other `${` without a name and `}` after it is an error.
 - In the game, a mistake with a name throws `StepFailedException`, which stops the step and fails it with the exception's message, so `Run` needs no check after `Block.Get(context)`. The scenario runner (#13) records that as the step's failure. It also makes one `ScenarioValues` per scenario, with a scope for each body. Substitution moves into binding (#7, #13), so `StepArguments.Substitute` from #5 goes away.
 - Descriptors record this for `ztest check`: `ArgumentKind.Name` defines a name and `ArgumentKind.Ref` uses one, each with its `ValueKind` and its `Substitute` member.
-- `ztest check` follows the steps in order, so it knows which names exist at each line, with a scope for each `for`, `repeat` and `run:` body.
+- `ztest check` follows the steps in order, so it knows which names exist at each line, with a scope for each `for`, `repeat` and `run:` body. A `Name` whose value only a run can know could define anything, so names used after it in that scope aren't called undefined.
 
 ## The context
 
@@ -456,7 +456,7 @@ public sealed class WindowTests
 | Offline checks | `ztest check [files or folders...] [--plugin <dll>]...`, `ztest check --registry` | The registry; reports `file:line:col: error\|warning: message`, and exits with 1 on errors |
 | `.zlstest` → YAML | `ztest convert` | The registry plus a `[LineSyntax("<function> [as <as>]")]` attribute per old step; see below |
 
-`ztest check` with no files checks the `scenarios` folder of the nearest `zeepkist-test.json`, and reads the steps of its `testPlugin`, a project or a DLL, unless `--plugin` names others. Of the files it's given, one that another runs is only followed from there, because it may need what that passes in through `with:`. It reports a file's first problem from loading, and then every problem with names and states.
+`ztest check` with no files checks the `scenarios` folder of the nearest `zeepkist-test.json`, and reads the steps of its `testPlugin`, a project or a DLL, unless `--plugin` names others. Of the files it's given, one that another runs is only followed from there, because it may need what that passes in through `with:`. It reports a file's first problem from loading, and then every problem with names and states. It stops following a scenario, with a warning, after a million steps of nested loops and `run:` files, and a value used in nested `for`s tries its first 1000 combinations.
 
 ## Moving ZLS's steps over
 
