@@ -1,0 +1,5 @@
+start:
+  editor: { level: a }
+  main-menu: {}
+steps:
+  - undo

@@ -1,0 +1,2 @@
+steps:
+  - every-type: { times: 2 }

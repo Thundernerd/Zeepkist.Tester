@@ -7,6 +7,11 @@ public sealed class ArgumentDescriptor
 {
     public required string Name { get; init; }
 
+    /// <summary>
+    /// The property a scenario's value is written to.
+    /// </summary>
+    public required string PropertyName { get; init; }
+
     public required ArgumentType Type { get; init; }
 
     public string Documentation { get; init; }

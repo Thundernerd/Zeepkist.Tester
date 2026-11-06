@@ -1,0 +1,3 @@
+input: telepathy
+steps:
+  - undo

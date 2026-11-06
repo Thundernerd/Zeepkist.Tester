@@ -1,0 +1,13 @@
+steps:
+  - for: { h: [64, on, "240"] }
+    steps:
+      - wait: ${h}
+      - for: { b: [lamp] }
+        steps:
+          - undo
+  - repeat: 3
+    steps:
+      - undo
+  - run: shared/open-lights.ztest.yaml
+  - run: shared/place-lamp.ztest.yaml
+    with: { function: lamp, uid: "${lamp}" }

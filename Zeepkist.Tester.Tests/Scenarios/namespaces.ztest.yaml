@@ -1,0 +1,6 @@
+use: [zls, other, clashing]
+steps:
+  - zls.compile
+  - other.compile
+  - clashing.wait
+  - undo

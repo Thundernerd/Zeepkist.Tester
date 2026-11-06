@@ -1,0 +1,4 @@
+steps:
+  - repeat: often
+    steps:
+      - undo

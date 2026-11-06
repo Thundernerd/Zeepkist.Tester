@@ -1,0 +1,2 @@
+steps:
+  - zls.drag-window-edge: [{ by: 1, under: 2 }]

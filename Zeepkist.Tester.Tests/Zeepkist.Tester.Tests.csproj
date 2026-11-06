@@ -25,4 +25,8 @@
     <ProjectReference Include="..\Zeepkist.Tester.Tests.SampleMod\Zeepkist.Tester.Tests.SampleMod.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Scenarios\**\*.ztest.yaml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

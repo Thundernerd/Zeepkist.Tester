@@ -1,0 +1,4 @@
+steps:
+  - for: { w: [1], h: [2] }
+    steps:
+      - undo

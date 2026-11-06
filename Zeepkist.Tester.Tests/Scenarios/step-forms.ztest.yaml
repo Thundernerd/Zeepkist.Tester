@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=../.ztest/schema.json
+description: Each way to write a step
+use: [zls]
+start: editor
+input: in-process
+steps:
+  - undo
+  - wait: on
+  - place-block: lamp
+  - place-block: { function: lamp, as: my-lamp, how-many: 2 }
+  - zls.drag-window-edge: 300
+  - zls.drag-window-edge: { by: 50, over: 3 }
+  - drag-window-edge: [{ by: -1000, over: 10 }, 200]
+  - zls.drag-window-edge: { moves: [-50], sideways: true }
+  - written:
+      text: |
+        first
+          second

@@ -1,0 +1,4 @@
+steps:
+  - for: { h: [] }
+    steps:
+      - undo

@@ -3,7 +3,6 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.Versioning;
 using TNRD.Zeepkist.Tester.Scenarios;
-using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
 
 namespace TNRD.Zeepkist.Tester;
@@ -31,7 +30,7 @@ internal static class YamlCheck
 
     private static string Scalar()
     {
-        var root = (YamlMappingNode)ScenarioYaml.Load(new StringReader("steps:\n  - wait: on\n")).Documents[0].RootNode;
+        var root = (YamlMappingNode)ScenarioYaml.Load("test", new StringReader("steps:\n  - wait: on\n")).Documents[0].RootNode;
         var step = (YamlMappingNode)((YamlSequenceNode)root["steps"])[0];
         var value = (YamlScalarNode)step["wait"];
         return $"'{value.Value}' at {value.Start.Line}:{value.Start.Column}";
@@ -41,12 +40,12 @@ internal static class YamlCheck
     {
         try
         {
-            ScenarioYaml.Load(new StringReader("steps:\n  - wait: 2\n    - broken\n"));
+            ScenarioYaml.Load("test", new StringReader("steps:\n  - wait: 2\n    - broken\n"));
             return "no syntax error";
         }
-        catch (YamlException exception)
+        catch (ScenarioException exception)
         {
-            return $"syntax error at {exception.Start.Line}:{exception.Start.Column}";
+            return $"syntax error at {exception.Location.Line}:{exception.Location.Column}";
         }
     }
 

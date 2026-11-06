@@ -127,6 +127,7 @@ public sealed class StepDescriptorBuilder
             arguments.Add(new ArgumentDescriptor
             {
                 Name = name,
+                PropertyName = property.Name,
                 Type = type,
                 Documentation = Summaries($"P:{DocName(property.DeclaringType)}.{property.Name}"),
                 IsPrimary = NamedValue<bool>(argAttribute, nameof(ArgAttribute.Primary)),

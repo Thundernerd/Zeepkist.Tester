@@ -1,0 +1,4 @@
+steps:
+  - for: { "a b": [1] }
+    steps:
+      - undo

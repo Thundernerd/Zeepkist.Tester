@@ -1,0 +1,2 @@
+steps:
+  - every-type: { keys: { a: b } }

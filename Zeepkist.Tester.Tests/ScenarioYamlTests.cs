@@ -10,7 +10,7 @@ public class ScenarioYamlTests
     [Fact]
     public void AScalar_StaysTheTextItWasWritten_AndKnowsWhereItIs()
     {
-        var stream = ScenarioYaml.Load(new StringReader("steps:\n  - wait: on\n"));
+        var stream = ScenarioYaml.Load("test", new StringReader("steps:\n  - wait: on\n"));
 
         var root = (YamlMappingNode)stream.Documents[0].RootNode;
         var step = (YamlMappingNode)((YamlSequenceNode)root["steps"])[0];
