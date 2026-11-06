@@ -42,7 +42,7 @@ public class OfflineRegistryTests
     }
 
     [Fact]
-    public void Read_StepNextToTheGamesImports_FindsItsRangeAndTextBlock()
+    public void Read_StepNextToTheGamesImports_FindsItsInRangeAndTextBlock()
     {
         var step = OfflineRegistry.Read([_modPath], _sampleTesterPath).Single(descriptor => descriptor.Name == "game-imports");
 

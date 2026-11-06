@@ -11,7 +11,7 @@ using UnityEngine.UI;
 
 namespace TNRD.Zeepkist.Tester.Tests.SampleMod;
 
-/// <summary>Uses the SDK's names next to the namespaces a step file is likely to import.</summary>
+/// <summary>Uses [InRange], TextBlock and other SDK names next to the namespaces a step file is likely to import.</summary>
 [Step("game-imports")]
 public sealed class GameImports : Step
 {
