@@ -146,6 +146,35 @@ public class ScenarioCheckTests
     }
 
     [Fact]
+    public void ANameFromALiteralWith_IsKnown_SoATypoNextToItIsStillFound()
+    {
+        using var folder = new TemporaryFolder();
+        var caller = Write(folder, "a.ztest.yaml", "steps:\n  - run: b.ztest.yaml\n    with: { n: lamp }\n");
+        var called = Write(folder, "b.ztest.yaml", "steps:\n  - named: { defines: \"${n}\", uses: typo }\n  - named: { uses: lamp }\n  - named: { uses: other }\n");
+
+        var problems = ScenarioCheck.Run([caller], CheckSteps.Registry).Select(problem => problem.ToString());
+
+        Assert.Equal(
+            [
+                $"{called}:2:37: error: The name 'typo' {NotDefined} (run from {caller}:2:5)",
+                $"{called}:4:20: error: The name 'other' {NotDefined} (run from {caller}:2:5)",
+            ],
+            problems);
+    }
+
+    [Fact]
+    public void ANameThatIsntKnown_MayMakeLaterUsesRight_ButNotThoseInItsOwnStep()
+    {
+        using var folder = new TemporaryFolder();
+        var caller = Write(folder, "a.ztest.yaml", "steps:\n  - named: { defines: lamp }\n  - run: b.ztest.yaml\n    with: { n: \"${lamp}\" }\n");
+        var called = Write(folder, "b.ztest.yaml", "steps:\n  - named: { defines: \"${n}\", uses: typo }\n  - named: { uses: anything }\n");
+
+        var problem = Assert.Single(ScenarioCheck.Run([caller], CheckSteps.Registry));
+
+        Assert.Equal($"{called}:2:37: error: The name 'typo' {NotDefined} (run from {caller}:3:5)", problem.ToString());
+    }
+
+    [Fact]
     public void AFileThatCantBeRead_IsAnError()
     {
         var file = Fixture("nope");

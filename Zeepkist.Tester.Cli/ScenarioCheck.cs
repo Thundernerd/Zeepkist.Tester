@@ -177,12 +177,12 @@ internal sealed class ScenarioCheck
 
     private void FollowRun(string file, RunNode run, Scope scope, HashSet<string> held)
     {
-        // A run: file sees only what its with: passes in, whose values can't be known here
+        // A run: file sees only what its with: passes in. Its text is known unless it uses a value only a run can know
         var given = new Scope(null);
         foreach (var entry in run.With)
         {
-            CheckNames(entry.Value, scope);
-            given.Define(entry.Key, new NamedValue([TextKind], true, null));
+            var text = CheckNames(entry.Value, scope) ? Substitution.Replace(entry.Value.Text, written => scope.Find(written).Value) : null;
+            given.Define(entry.Key, new NamedValue([TextKind], true, text));
         }
 
         var target = RunTarget(file, run);
@@ -215,6 +215,13 @@ internal sealed class ScenarioCheck
         FollowArguments(node.Step.Arguments, node.Arguments, scope, defines);
         foreach (var (name, type, location) in defines)
         {
+            if (name == null)
+            {
+                // It can define any name, so what's used after it can't be called undefined
+                scope.DefinesUnknownNames = true;
+                continue;
+            }
+
             var defined = scope.Find(name);
             if (defined != null)
                 Report(location, true, AlreadyDefined(name, defined));
@@ -262,9 +269,8 @@ internal sealed class ScenarioCheck
 
         if (!isKnown)
         {
-            // It can define any name, so what's used after it can't be called undefined
             if (type.Kind == ArgumentKind.Name)
-                scope.DefinesUnknownNames = true;
+                defines.Add((null, type, scalar.Location));
 
             return;
         }
@@ -380,7 +386,7 @@ internal sealed class ScenarioCheck
     }
 
     /// <summary>
-    /// A named value as far as it's known offline. Its value is the text a <c>for</c> variable has in this pass, and otherwise null.
+    /// A named value as far as it's known offline. Its value is the text of a <c>for</c> variable in this pass or of a literal in <c>with:</c>, and otherwise null.
     /// </summary>
     private sealed class NamedValue
     {
