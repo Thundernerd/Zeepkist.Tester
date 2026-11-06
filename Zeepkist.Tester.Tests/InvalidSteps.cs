@@ -18,6 +18,14 @@ public static class InvalidSteps
         }
     }
 
+    [Step("bad-pattern", Namespace = "zls")]
+    public sealed class BadPattern : Base
+    {
+        [Arg]
+        [Pattern("[")]
+        public string Text { get; set; }
+    }
+
     [Step("repeat", Namespace = "zls")]
     public sealed class NamedLikeAControlNode : Base
     {

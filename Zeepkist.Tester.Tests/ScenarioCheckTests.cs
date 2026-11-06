@@ -174,6 +174,19 @@ public class ScenarioCheckTests
         Assert.Equal($"{called}:2:37: error: The name 'typo' {NotDefined} (run from {caller}:3:5)", problem.ToString());
     }
 
+    [Theory]
+    [InlineData("\"\"", "")]
+    [InlineData("\"a\\0b\"", "a\0b")]
+    public void ARunOfAPathThatCantExist_IsAMissingFile(string written, string text)
+    {
+        using var folder = new TemporaryFolder();
+        var file = Write(folder, "a.ztest.yaml", $"steps:\n  - run: {written}\n");
+
+        var problem = Assert.Single(ScenarioCheck.Run([file], CheckSteps.Registry));
+
+        Assert.Equal($"{file}:2:5: error: run: can't find '{text}' from this file.", problem.ToString());
+    }
+
     [Fact]
     public void AFileThatCantBeRead_IsAnError()
     {

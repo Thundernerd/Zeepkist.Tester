@@ -267,6 +267,10 @@ public sealed class StepDescriptorBuilder
 
             var type = BuildType(property.PropertyType, name, enclosing);
             var range = FindAttribute<InRangeAttribute>(property);
+            var pattern = ConstructorValue<string>(FindAttribute<PatternAttribute>(property));
+            if (pattern != null)
+                RequireRegularExpression(pattern, name, owner);
+
             arguments.Add(new ArgumentDescriptor
             {
                 Name = name,
@@ -276,7 +280,7 @@ public sealed class StepDescriptorBuilder
                 IsPrimary = NamedValue<bool>(argAttribute, nameof(ArgAttribute.Primary)),
                 IsRequired = FindAttribute(property, RequiredMemberAttributeName) != null,
                 Default = WrittenDefault(argAttribute),
-                Pattern = ConstructorValue<string>(FindAttribute<PatternAttribute>(property)) ?? type.Pattern,
+                Pattern = pattern ?? type.Pattern,
                 Minimum = ConstructorValue<double?>(range),
                 Maximum = (double?)range?.ConstructorArguments[1].Value,
                 MinItems = ConstructorValue<int?>(FindAttribute<MinItemsAttribute>(property)),
@@ -288,6 +292,18 @@ public sealed class StepDescriptorBuilder
             throw new StepDefinitionException($"{owner.FullName} has more than one Primary argument: {string.Join(" and ", primaries)}.");
 
         return arguments;
+    }
+
+    private static void RequireRegularExpression(string pattern, string argument, Type owner)
+    {
+        try
+        {
+            _ = new Regex(pattern);
+        }
+        catch (ArgumentException)
+        {
+            throw new StepDefinitionException($"Argument '{argument}' ({owner.FullName}) has the pattern '{pattern}', which isn't a regular expression.");
+        }
     }
 
     private ArgumentType BuildType(Type type, string argument, List<Type> enclosing)

@@ -93,7 +93,7 @@ internal sealed class CheckCommand
         {
             return Fail(exception.Message);
         }
-        catch (Exception exception) when (exception is IOException or BadImageFormatException or TypeLoadException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or BadImageFormatException or TypeLoadException)
         {
             return Fail($"Can't read the plugins: {exception.Message}");
         }

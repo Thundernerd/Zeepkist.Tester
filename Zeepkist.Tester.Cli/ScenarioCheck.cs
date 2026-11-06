@@ -86,7 +86,7 @@ internal sealed class ScenarioCheck
         {
             Add(new CheckProblem(exception.Location, true, exception.Problem));
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
             Add(new CheckProblem(new SourceLocation(file, 1, 1), true, $"Can't read the file: {exception.Message}"));
         }
@@ -356,9 +356,12 @@ internal sealed class ScenarioCheck
         return Path.Combine(Path.GetDirectoryName(file), run.File.Replace('/', Path.DirectorySeparatorChar));
     }
 
+    /// <summary>
+    /// A path written in a file can be one no file can have, which <see cref="Path.GetFullPath(string)"/> throws for.
+    /// </summary>
     private static string Key(string file)
     {
-        return Path.GetFullPath(file);
+        return File.Exists(file) ? Path.GetFullPath(file) : file;
     }
 
     private static string NotDefined(string name)

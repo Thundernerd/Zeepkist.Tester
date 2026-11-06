@@ -150,6 +150,22 @@ public sealed class ProgramTests : IDisposable
         Assert.StartsWith("error: Can't read the plugins:", _output.ToString());
     }
 
+    [Fact]
+    public void Check_APluginThatIsAFolder_FailsWithoutAStackTrace()
+    {
+        var file = Write("a.ztest.yaml", "steps:\n  - undo\n");
+
+        Assert.Equal(1, Run("check", file, "--plugin", _folder.Path));
+        Assert.StartsWith("error: Can't read the plugins:", _output.ToString());
+    }
+
+    [Fact]
+    public void Check_AnEmptyPath_IsAnErrorAndNotAStackTrace()
+    {
+        Assert.Equal(1, Run("check", string.Empty));
+        Assert.Contains(":1:1: error: Can't read the file:", _output.ToString());
+    }
+
     [Theory]
     [InlineData("--plugin")]
     [InlineData("--nope")]
