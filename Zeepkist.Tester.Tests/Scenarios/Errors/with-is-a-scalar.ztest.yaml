@@ -1,0 +1,3 @@
+steps:
+  - run: a.ztest.yaml
+    with: b

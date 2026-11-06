@@ -71,7 +71,7 @@ internal sealed class TestRun : IDisposable
         foreach (var step in BuildCheck.Run(_request, _folder))
             Step(step);
 
-        Step(YamlCheck.Run());
+        Step(YamlCheck.Run(typeof(YamlCheck).Assembly));
     }
 
     private void RecordDisplay()

@@ -10,6 +10,12 @@ public class StepDescriptorRuleTests
     private const string InvalidStepsType = "TNRD.Zeepkist.Tester.Tests.InvalidSteps";
 
     [Fact]
+    public void Build_StepNamedLikeAControlNode_Fails()
+    {
+        AssertFails(typeof(InvalidSteps.NamedLikeAControlNode), $"Step name 'repeat' ({InvalidStepsType}+NamedLikeAControlNode) is reserved for a scenario's control nodes: for, repeat and run.");
+    }
+
+    [Fact]
     public void Build_TwoPrimaryArguments_Fails()
     {
         AssertFails(typeof(InvalidSteps.TwoPrimaries), $"{InvalidStepsType}+TwoPrimaries has more than one Primary argument: 'first' and 'second'.");

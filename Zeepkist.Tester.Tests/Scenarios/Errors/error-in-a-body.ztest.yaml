@@ -1,0 +1,6 @@
+steps:
+  - repeat: 2
+    steps:
+      - for: { h: [1] }
+        steps:
+          - nope

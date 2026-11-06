@@ -1,0 +1,3 @@
+steps: &all
+  - repeat: 2
+    steps: *all

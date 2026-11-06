@@ -12,6 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.48" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Zeepkist.Tester.Scenarios\Zeepkist.Tester.Scenarios.csproj" />
     <ProjectReference Include="..\Zeepkist.Tester.Sdk\Zeepkist.Tester.Sdk.csproj" />
   </ItemGroup>

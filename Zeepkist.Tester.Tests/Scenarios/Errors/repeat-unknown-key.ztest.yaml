@@ -1,0 +1,5 @@
+steps:
+  - repeat: 2
+    times: 3
+    steps:
+      - undo

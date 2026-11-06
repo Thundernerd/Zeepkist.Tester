@@ -1,0 +1,5 @@
+use:
+  - zls
+  - nope
+steps:
+  - undo

@@ -353,7 +353,7 @@ The states are also in the generated docs: each step's entry says what it needs 
 
 ## Scenario file
 
-The parser lives in `Zeepkist.Tester.Scenarios`, a netstandard2.0 project that both the plugin (net472) and `ztest check` (net10.0) reference. NuGet still picks YamlDotNet's build per consumer: the plugin gets `net47`, and the CLI and the unit tests get `net10.0`. So the unit tests don't run the build the game does, and a run's `yaml parser` step does.
+The parser lives in `Zeepkist.Tester.Scenarios`, a netstandard2.0 project that both the plugin (net472) and `ztest check` (net10.0) reference. NuGet still picks YamlDotNet's build per consumer: the plugin gets `net47`, and the CLI and the unit tests get `net10.0`. So the unit tests don't run the build the game does, and a run's `yaml parser` step does. The build merges the plugin, the parser and YamlDotNet's `net47` build with ILRepack into `Zeepkist.Tester/bin/<configuration>/net472/plugin/`, with YamlDotNet internal so another mod's copy can't clash. That folder, with the SDK next to the merged DLL, is what a run deploys. The tests and the CLI keep using the separate DLLs.
 
 ```yaml
 # yaml-language-server: $schema=../.ztest/schema.json

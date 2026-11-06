@@ -5,6 +5,8 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>TNRD.Zeepkist.Tester.Scenarios</RootNamespace>
     <Product>Zeepkist Tester Scenarios</Product>
+    <!-- Zeepkist.Tester.Sdk targets .NET Framework; its descriptors and step types run wherever this does -->
+    <NoWarn>$(NoWarn);NU1702</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +17,10 @@
 
   <ItemGroup>
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zeepkist.Tester.Sdk\Zeepkist.Tester.Sdk.csproj" />
   </ItemGroup>
 
 </Project>

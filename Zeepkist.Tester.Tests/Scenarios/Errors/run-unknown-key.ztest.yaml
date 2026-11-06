@@ -1,0 +1,4 @@
+steps:
+  - run: a.ztest.yaml
+    steps:
+      - undo
