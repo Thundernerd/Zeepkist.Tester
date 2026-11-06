@@ -42,8 +42,8 @@ A fixed set, so the CLI can describe and check each one without running anything
 
 | C# type | YAML | Schema | Notes |
 | --- | --- | --- | --- |
-| `string` | scalar | `string` | One line. `${name}` is substituted. |
-| `TextBlock` | `\|` block or scalar | `string` | Several lines, such as a Script's text. `${name}` is substituted. |
+| `string` | scalar | `string` | One line. |
+| `TextBlock` | `\|` block or scalar | `string` | Several lines, such as a Script's text. |
 | `int`, `float`, `bool` | scalar | `integer` / `number` / `boolean` | `bool` takes only `true`/`false`, never `on`/`yes`. |
 | `Seconds` | `2`, `0.5`, `500ms` | `number` or `^\d+(\.\d+)?(ms\|s)$` | |
 | `Pixels` | `-1000` | `integer` | Negative is allowed. |
@@ -113,11 +113,11 @@ public sealed class SetBlockSetting : Step
     toggler(p.horn, targets: placed("${lamp}"))
 ```
 
-- Names last for the scenario. Defining a name twice is an error, as today.
-- `${name}` is substituted only in `string`/`TextBlock` arguments, and only when the name's kind has a `Substitute` member, a public string property. A `${name}` that isn't defined by an earlier step fails `ztest check` with its line. `$${` writes a literal `${`, and any other `${` without a name and `}` after it is an error.
-- In the game, a mistake with a name throws `StepFailedException`, which stops the step and fails it with the exception's message, so `Run` needs no check after `Block.Get(context)`. The scenario runner (#13) records that as the step's failure. It also makes one `ScenarioValues` per scenario, and calls `StepArguments.Substitute` on each step just before running it, on a freshly bound step, since this replaces what the arguments held.
+- Names last for the scenario, except inside a `for`, `repeat` or `run:` (see *Control nodes and names*). Defining a name that's already defined is an error, as today.
+- `${name}` works in any single YAML value, whatever the argument's type. It's substituted before the value is converted (see *Control nodes and names*). It needs a name whose kind has a `Substitute` member, a public string property. A `${name}` that isn't defined by an earlier step fails `ztest check` with its line. `$${` writes a literal `${`, and any other `${` without a name and `}` after it is an error.
+- In the game, a mistake with a name throws `StepFailedException`, which stops the step and fails it with the exception's message, so `Run` needs no check after `Block.Get(context)`. The scenario runner (#13) records that as the step's failure. It also makes one `ScenarioValues` per scenario, with a scope for each body. Substitution moves into binding (#7, #13), so `StepArguments.Substitute` from #5 goes away.
 - Descriptors record this for `ztest check`: `ArgumentKind.Name` defines a name and `ArgumentKind.Ref` uses one, each with its `ValueKind` and its `Substitute` member.
-- `ztest check` follows the steps in order, so it knows which names exist at each line. Inside `for` bodies it adds the loop variable for the body only.
+- `ztest check` follows the steps in order, so it knows which names exist at each line, with a scope for each `for`, `repeat` and `run:` body.
 
 ## The context
 
@@ -378,6 +378,41 @@ The runner handles the control nodes itself; they aren't registry steps, but the
 | `repeat` | `- repeat: 3` + `steps:` |
 | `run` | `- run: shared/open-lights.ztest.yaml` with optional `with: { name: value }`. Its steps report under the caller, with the file and line of both. |
 
+### Control nodes and names
+
+**`${x}` works in any single value.** The harness keeps each argument's YAML text, substitutes it, and only then converts it to the argument's type, so `int`, `Seconds`, `FileName`, an enum, `Name` and `Ref` all take it:
+
+```yaml
+- for: { h: [64, 120, 240] }
+  steps:
+    - set-window-height: ${h}
+    - screenshot: scripts-${h}
+```
+
+- It only stands in for a single value, never for a whole list or map, so it doesn't grow into an expression language.
+- The generated schema also accepts a `${…}` wherever it expects a non-text type, so the editor is less strict about those values.
+- `ztest check` tries each `for` value against the argument's type, because the values are literals. It can't know a step's value from `as:` or a value from `with:`, so a bad one fails when the step runs, with a message giving the argument and the value.
+
+**Each pass of a body has its own scope.** A name defined in a `for` or `repeat` body lasts until that pass ends, and the next pass starts fresh:
+
+```yaml
+- repeat: 3
+  steps:
+    - place-block: { function: lamp, as: lamp }
+    - set-block-setting: { block: lamp, setting: invert, value: "true" }
+```
+
+- A body can read names from outside it. Defining one of those names again in the body is the same "already defined" error, so nothing gets silently hidden.
+- A name defined in a body can't be used after it. The blocks stay in the level, but their names are gone. Needing them afterwards takes a C# test, or writing those steps out.
+- A `run:` file has its own scope too, and sees only what its `with:` passes in, so a shared file doesn't depend on who calls it.
+
+**A loop variable is an ordinary named value.** The SDK has a built-in `text` kind, whose `Substitute` member is the text itself. Each pass defines the `for` variable as one in that pass's scope, and `with:` parameters are the same. All the rules for names then apply to them.
+
+- A value can name another value, because substitution comes first. `block: ${b}` with `for: { b: [lamp, gate] }` becomes `block: lamp`, which looks up the block called `lamp`.
+- A `for` has **one variable**, and more than one key is a load error. `for: { w: [...], h: [...] }` could mean pairs or every combination. Nesting two `for`s gives every combination, and pairs can wait until a scenario needs them.
+
+**Each pass binds fresh steps.** The runner creates new step objects from the YAML text for every pass, so nothing is substituted twice and a `$${` is unescaped once.
+
 ## C# tests
 
 The same steps, from C#, for when a scenario needs real logic:
@@ -403,6 +438,7 @@ public sealed class WindowTests
 - `context.Run(step)` runs a step as one entry in the results, with its own pass or fail.
 - The test method stops at the first failed step, as a scenario does.
 - An `[InGameTest]` shows in the results like a scenario does, named `WindowTests.MinimumHeightKeepsTheFooter`.
+- `${x}` belongs to the YAML format. `context.Run` doesn't change a step's arguments, so one step object can run twice, and `$$` stays what it looks like. A test that needs a named value's text asks for it: `context.Values.Substitute("placed(\"${lamp}\")")`, or `context.Values.Get<BlockValue>("lamp").Uid`. A `${lamp}` pasted from a scenario stays literal text in C#, so the step gets `${lamp}` as written.
 
 ## What's generated from it
 
@@ -426,3 +462,4 @@ public sealed class WindowTests
 - **Namespacing:** the tester's own steps are unprefixed, a mod's steps are prefixed unless `use:` lists them, and a clash is a load error (see *A mod's steps*).
 - **Arguments are properties.** Required ones use C# `required`, so C# tests get compile-time checks after all.
 - **Preconditions are declared:** states, plus `[Requires]`/`[Enters]`/`[Leaves]` on steps, checked in the game before each step and offline as warnings (see *Preconditions*).
+- **Named values in control nodes (#40):** `${x}` works in any single value, substituted before conversion. Each pass of a `for` or `repeat` body and each `run:` file has its own scope. A loop variable is a named value of a built-in `text` kind, with one variable per `for`. Each pass binds fresh steps, and `${x}` doesn't apply to C# tests (see *Control nodes and names*).
