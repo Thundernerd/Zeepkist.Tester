@@ -32,8 +32,8 @@ internal static class StepPreconditions
 
         foreach (var alternatives in Required(stepType))
         {
-            var unmet = alternatives.Select(state => OutermostUnmet(state, context)).ToList();
-            if (!unmet.Contains(null))
+            var unmet = alternatives.Select(state => OutermostUnmet(state, context)).TakeWhile(state => state != null).ToList();
+            if (unmet.Count == alternatives.Length)
                 throw new StepFailedException(Message(step, unmet.Distinct().Select(_builder.BuildState).ToList()));
         }
     }

@@ -128,6 +128,25 @@ public class StepPreconditionsTests
         Assert.Equal("zls.needs-either needs zls.window-open: Add zls.open-window first.", failed?.Message);
     }
 
+    [Fact]
+    public void Run_RequiresAny_StopsAtTheFirstOneThatHolds()
+    {
+        Met(typeof(InEditor), typeof(WindowOpen), typeof(ScriptSelected));
+
+        var (_, failed) = Run(new NeedsEitherOrThrows());
+
+        Assert.Null(failed);
+        Assert.Equal([typeof(NeedsEitherOrThrows)], _context.Ran);
+    }
+
+    [Fact]
+    public void Run_CycleInWithin_FailsAsARuleInsteadOfFollowingIt()
+    {
+        var (_, failed) = Run(new InvalidStates.RequiresBroken());
+
+        Assert.IsType<StepDefinitionException>(failed);
+    }
+
     private void Met(params Type[] states)
     {
         _context.Met.UnionWith(states);
@@ -143,5 +162,20 @@ public class StepPreconditionsTests
             yielded.Add(routine.Current);
 
         return (yielded, failed);
+    }
+
+    [State("throws", Namespace = "zls")]
+    public sealed class Throws : IState
+    {
+        public bool IsMet(IStepContext context)
+        {
+            throw new InvalidOperationException("asked");
+        }
+    }
+
+    [Step("needs-either-or-throws", Namespace = "zls")]
+    [RequiresAny(typeof(ScriptSelected), typeof(Throws))]
+    public sealed class NeedsEitherOrThrows : ContextStep
+    {
     }
 }
