@@ -6,9 +6,9 @@ namespace TNRD.Zeepkist.Tester.Sdk;
 /// The lowest and highest value a number argument can have, both included.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, Inherited = false)]
-public sealed class RangeAttribute : Attribute
+public sealed class InRangeAttribute : Attribute
 {
-    public RangeAttribute(double minimum, double maximum)
+    public InRangeAttribute(double minimum, double maximum)
     {
         Minimum = minimum;
         Maximum = maximum;

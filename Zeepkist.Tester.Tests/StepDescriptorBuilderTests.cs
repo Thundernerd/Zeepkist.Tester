@@ -135,7 +135,7 @@ public class StepDescriptorBuilderTests
     }
 
     [Theory]
-    [InlineData("text", ArgumentKind.Text)]
+    [InlineData("text", ArgumentKind.TextBlock)]
     [InlineData("float", ArgumentKind.Float)]
     [InlineData("bool", ArgumentKind.Bool)]
     [InlineData("keys", ArgumentKind.Keys)]

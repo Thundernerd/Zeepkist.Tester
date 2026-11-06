@@ -3,18 +3,18 @@ namespace TNRD.Zeepkist.Tester.Sdk;
 /// <summary>
 /// Several lines of text, such as a Script's text.
 /// </summary>
-public readonly struct Text
+public readonly struct TextBlock
 {
-    public Text(string value)
+    public TextBlock(string value)
     {
         Value = value;
     }
 
     public string Value { get; }
 
-    public static implicit operator Text(string value)
+    public static implicit operator TextBlock(string value)
     {
-        return new Text(value);
+        return new TextBlock(value);
     }
 
     public override string ToString()

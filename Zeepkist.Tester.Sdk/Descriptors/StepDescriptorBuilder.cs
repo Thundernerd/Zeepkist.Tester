@@ -25,7 +25,7 @@ public sealed class StepDescriptorBuilder
     private static readonly Dictionary<string, ArgumentType> _scalarTypes = new Dictionary<string, ArgumentType>()
     {
         [typeof(string).FullName] = new ArgumentType { Kind = ArgumentKind.String },
-        [typeof(Text).FullName] = new ArgumentType { Kind = ArgumentKind.Text },
+        [typeof(TextBlock).FullName] = new ArgumentType { Kind = ArgumentKind.TextBlock },
         [typeof(int).FullName] = new ArgumentType { Kind = ArgumentKind.Int },
         [typeof(float).FullName] = new ArgumentType { Kind = ArgumentKind.Float },
         [typeof(bool).FullName] = new ArgumentType { Kind = ArgumentKind.Bool },
@@ -123,7 +123,7 @@ public sealed class StepDescriptorBuilder
                 throw new StepDefinitionException($"{owner.FullName} has more than one argument named '{name}'.");
 
             var type = BuildType(property.PropertyType, name, enclosing);
-            var range = FindAttribute<RangeAttribute>(property);
+            var range = FindAttribute<InRangeAttribute>(property);
             arguments.Add(new ArgumentDescriptor
             {
                 Name = name,
