@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Zeepkist.Tester.Scenarios\Zeepkist.Tester.Scenarios.csproj" />
     <ProjectReference Include="..\Zeepkist.Tester.Sdk\Zeepkist.Tester.Sdk.csproj" />
     <!-- Only the parts of the harness that don't touch the game run here -->
     <ProjectReference Include="..\Zeepkist.Tester\Zeepkist.Tester.csproj" />

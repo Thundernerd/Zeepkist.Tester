@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Both the plugin on net472 and the CLI on net10.0 parse scenarios -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>TNRD.Zeepkist.Tester.Scenarios</RootNamespace>
+    <Product>Zeepkist Tester Scenarios</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Zeepkist.Tester" />
+    <InternalsVisibleTo Include="Zeepkist.Tester.Cli" />
+    <InternalsVisibleTo Include="Zeepkist.Tester.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
+  </ItemGroup>
+
+</Project>

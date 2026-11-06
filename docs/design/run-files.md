@@ -20,6 +20,8 @@ Each mod in `mods` has to pass the build check, as a step in the results named `
 - No other plugin with its name or one of its `oldGuids` is loaded.
 - BepInEx's log has no `Skipping [<name> <version>]`, which is how it reports a copy it skipped.
 
+Every run also has a `yaml parser` step, which runs the YamlDotNet build shipped with the plugin and names it in its `Detail`.
+
 ## `out/results.json`
 
 In the `out` folder next to the plugin, rewritten after every step, so a crash still leaves the steps before it. It's written to a temporary file and swapped in, so a reader never sees half a file. A reader should open it sharing read, write and delete, or the swap can fail while it's open.

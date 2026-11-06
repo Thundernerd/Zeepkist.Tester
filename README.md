@@ -22,6 +22,7 @@ dotnet test
 | --- | --- |
 | `Zeepkist.Tester.Sdk` | What mods compile against |
 | `Zeepkist.Tester` | The BepInEx plugin: the harness in the game |
+| `Zeepkist.Tester.Scenarios` | The scenario parser, which the plugin and the CLI share |
 | `Zeepkist.Tester.Cli` | The `ztest` dotnet tool: the runner and offline tools |
 | `Zeepkist.Tester.Tests` | Unit tests |
 | `Zeepkist.Tester.Tests.SampleMod` | A mod's assembly on net472, for the unit tests to build descriptors from |

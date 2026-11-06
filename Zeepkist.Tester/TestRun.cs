@@ -70,6 +70,8 @@ internal sealed class TestRun : IDisposable
         RecordDisplay();
         foreach (var step in BuildCheck.Run(_request, _folder))
             Step(step);
+
+        Step(YamlCheck.Run());
     }
 
     private void RecordDisplay()
