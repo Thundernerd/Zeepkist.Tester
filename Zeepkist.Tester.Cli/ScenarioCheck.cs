@@ -22,6 +22,11 @@ internal sealed class ScenarioCheck
     /// </summary>
     private const string TextKind = "text";
 
+    /// <summary>
+    /// Nested bodies and <c>run:</c> files multiply, and following them all could take longer than a run would.
+    /// </summary>
+    private const int MostNodesFollowed = 1_000_000;
+
     private readonly IReadOnlyList<StepDescriptor> _steps;
     private readonly Dictionary<string, StateDescriptor> _states;
     private readonly Dictionary<string, Scenario> _scenarios = [];
@@ -30,6 +35,7 @@ internal sealed class ScenarioCheck
     private readonly List<CheckProblem> _problems = [];
     private readonly HashSet<string> _reported = [];
     private SourceLocation _ranFrom;
+    private int _nodesFollowed;
 
     private ScenarioCheck(StepRegistry registry)
     {
@@ -124,6 +130,7 @@ internal sealed class ScenarioCheck
 
     private void FollowFromItsStart(Scenario scenario, bool mayBeGivenNames)
     {
+        _nodesFollowed = 0;
         var start = scenario.Start?.Name ?? ScenarioStart.DefaultName;
         Follow(scenario, new Scope(null) { DefinesUnknownNames = mayBeGivenNames }, [start]);
     }
@@ -141,6 +148,15 @@ internal sealed class ScenarioCheck
     {
         foreach (var node in nodes)
         {
+            if (++_nodesFollowed > MostNodesFollowed)
+            {
+                // Each body around this one still has its next pass to get through
+                if (_nodesFollowed == MostNodesFollowed + 1)
+                    Report(node.Location, false, $"The loops and run: files around this come to over {MostNodesFollowed} steps, so the check stops following it here.");
+
+                return;
+            }
+
             switch (node)
             {
                 case StepNode step:

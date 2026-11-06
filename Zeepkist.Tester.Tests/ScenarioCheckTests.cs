@@ -1,5 +1,7 @@
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using TNRD.Zeepkist.Tester.Cli;
 using Xunit;
 
@@ -172,6 +174,28 @@ public class ScenarioCheckTests
         var problem = Assert.Single(ScenarioCheck.Run([caller], CheckSteps.Registry));
 
         Assert.Equal($"{called}:2:37: error: The name 'typo' {NotDefined} (run from {caller}:3:5)", problem.ToString());
+    }
+
+    [Fact(Timeout = 60000)]
+    public async Task ManyNestedRepeats_StopBeingFollowed_AndSaySo()
+    {
+        using var folder = new TemporaryFolder();
+        var yaml = new StringBuilder("steps:\n");
+        var indent = "  ";
+        for (var i = 0; i < 40; i++)
+        {
+            yaml.Append($"{indent}- repeat: 2\n{indent}  steps:\n");
+            indent += "    ";
+        }
+
+        yaml.Append($"{indent}- undo\n");
+        var file = Write(folder, "a.ztest.yaml", yaml.ToString());
+
+        var problems = await Task.Run(() => ScenarioCheck.Run([file], CheckSteps.Registry));
+
+        var problem = Assert.Single(problems);
+        Assert.False(problem.IsError);
+        Assert.Contains("stops following it here", problem.Message);
     }
 
     [Theory]

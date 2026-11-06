@@ -1,4 +1,7 @@
 using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using TNRD.Zeepkist.Tester.Scenarios;
 using Xunit;
 
@@ -119,6 +122,24 @@ public class ScenarioValueChecksTests
             """;
 
         Parse(Yaml);
+    }
+
+    [Fact(Timeout = 20000)]
+    public async Task ManyNestedForsInOneValue_StillLoadInGoodTime()
+    {
+        var values = "[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]";
+        var yaml = new StringBuilder("steps:\n");
+        var indent = "  ";
+        for (var i = 0; i < 12; i++)
+        {
+            yaml.Append($"{indent}- for: {{ v{i}: {values} }}\n{indent}  steps:\n");
+            indent += "    ";
+        }
+
+        var names = string.Concat(Enumerable.Range(0, 12).Select(i => $"${{v{i}}}"));
+        yaml.Append($"{indent}- every-type: {{ file-name: \"{names}\" }}\n");
+
+        await Task.Run(() => Parse(yaml.ToString()));
     }
 
     private static void Parse(string yaml)

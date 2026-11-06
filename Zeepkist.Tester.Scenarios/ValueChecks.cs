@@ -11,6 +11,9 @@ namespace TNRD.Zeepkist.Tester.Scenarios;
 /// </summary>
 internal sealed class ValueChecks
 {
+    // Nested fors multiply, and a value that uses them all shouldn't keep a scenario from loading
+    private const int MostCombinations = 1000;
+
     private readonly IReadOnlyDictionary<string, IReadOnlyList<string>> _loopValues;
 
     private ValueChecks(IReadOnlyDictionary<string, IReadOnlyList<string>> loopValues)
@@ -78,12 +81,12 @@ internal sealed class ValueChecks
         if (!names.All(_loopValues.ContainsKey))
             return;
 
-        foreach (var values in Combinations(names))
+        foreach (var values in Combinations(names).Take(MostCombinations))
             new WrittenValue(argument, type, Substitution.Replace(scalar.Text, name => values[name]), scalar.Location, what).Read();
     }
 
     /// <summary>
-    /// Each way to choose one value for each of the names. With no names, that's the one way that chooses nothing.
+    /// Each way to choose one value for each of the names, as they're asked for. With no names, that's the one way that chooses nothing.
     /// </summary>
     private IEnumerable<Dictionary<string, string>> Combinations(List<string> names)
     {
