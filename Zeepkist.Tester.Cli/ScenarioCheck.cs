@@ -54,12 +54,14 @@ internal sealed class ScenarioCheck
         foreach (var scenario in scenarios)
             CollectRuns(scenario, runByAFile);
 
+        // A file that can't be read may be what runs the others, and what they'd be given can't be known
+        var mayHaveAHiddenCaller = _scenarios.Values.Contains(null);
         foreach (var scenario in scenarios.Where(scenario => !runByAFile.Contains(Key(scenario.File))))
-            FollowFromItsStart(scenario);
+            FollowFromItsStart(scenario, mayHaveAHiddenCaller);
 
-        // What's left only runs in a cycle, which following any of it reports
+        // What's left only runs in a cycle, which following any of it reports, so its caller is in there somewhere too
         foreach (var scenario in scenarios.Where(scenario => !_followed.Contains(Key(scenario.File))))
-            FollowFromItsStart(scenario);
+            FollowFromItsStart(scenario, true);
 
         return _problems
             .OrderBy(problem => problem.Location.File, StringComparer.Ordinal)
@@ -120,10 +122,10 @@ internal sealed class ScenarioCheck
         }
     }
 
-    private void FollowFromItsStart(Scenario scenario)
+    private void FollowFromItsStart(Scenario scenario, bool mayBeGivenNames)
     {
         var start = scenario.Start?.Name ?? ScenarioStart.DefaultName;
-        Follow(scenario, new Scope(null), [start]);
+        Follow(scenario, new Scope(null) { DefinesUnknownNames = mayBeGivenNames }, [start]);
     }
 
     private void Follow(Scenario scenario, Scope scope, HashSet<string> held)

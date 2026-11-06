@@ -117,6 +117,30 @@ public class ScenarioCheckTests
     }
 
     [Fact]
+    public void AFileWhoseCallerIsBroken_IsNotBlamedForWhatItWouldHaveBeenGiven()
+    {
+        using var folder = new TemporaryFolder();
+        var caller = Write(folder, "a.ztest.yaml", "steps:\n  - run: b.ztest.yaml\n    with: { x: 1 }\n  - nope\n");
+        var called = Write(folder, "b.ztest.yaml", "steps:\n  - wait: ${x}\n");
+
+        var problem = Assert.Single(ScenarioCheck.Run([caller, called], CheckSteps.Registry));
+
+        Assert.Equal($"{caller}:4:5: error: There's no step 'nope'.", problem.ToString());
+    }
+
+    [Fact]
+    public void AFileInACycle_IsNotBlamedForWhatItsCallerGivesIt()
+    {
+        using var folder = new TemporaryFolder();
+        var a = Write(folder, "a.ztest.yaml", "steps:\n  - run: b.ztest.yaml\n    with: { x: 1 }\n");
+        var b = Write(folder, "b.ztest.yaml", "steps:\n  - wait: ${x}\n  - run: a.ztest.yaml\n");
+
+        var problem = Assert.Single(ScenarioCheck.Run([b, a], CheckSteps.Registry));
+
+        Assert.Contains("is already running here", problem.ToString());
+    }
+
+    [Fact]
     public void AFileThatCantBeRead_IsAnError()
     {
         var file = Fixture("nope");
@@ -155,6 +179,13 @@ public class ScenarioCheckTests
         var reported = Assert.Single(ScenarioCheck.Run([file], CheckSteps.Registry));
 
         Assert.Equal($"{file}:{problem}", reported.ToString());
+    }
+
+    private static string Write(TemporaryFolder folder, string name, string yaml)
+    {
+        var file = Path.Combine(folder.Path, name);
+        File.WriteAllText(file, yaml);
+        return file;
     }
 
     private static string Fixture(string name)
