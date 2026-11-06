@@ -52,6 +52,8 @@ public class ScenarioCheckTests
         { "for-with-one-value-does-not", [] },
         { "body-state-goes-on-after-it", [] },
         { "clean", [] },
+        { "ref-of-a-base-kind", [] },
+        { "ref-of-a-derived-kind", ["3:18: error: The name 'plain' is a thing, not a special-thing."] },
     };
 
     [Theory]

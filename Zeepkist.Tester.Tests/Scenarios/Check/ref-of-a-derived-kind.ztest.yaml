@@ -1,0 +1,3 @@
+steps:
+  - make-thing: plain
+  - use-special: plain

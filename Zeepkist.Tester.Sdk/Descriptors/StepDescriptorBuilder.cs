@@ -337,7 +337,20 @@ public sealed class StepDescriptorBuilder
         if (substitute != null && !IsStringProperty(valueType, substitute))
             throw new StepDefinitionException($"Value kind Substitute '{substitute}' ({valueType.FullName}) isn't a public string property of it.");
 
-        return new ArgumentType { Kind = argumentKind, Pattern = Name<object>.Pattern, ValueKind = kind, Substitute = substitute };
+        return new ArgumentType { Kind = argumentKind, Pattern = Name<object>.Pattern, ValueKind = kind, BaseValueKinds = BaseKinds(valueType), Substitute = substitute };
+    }
+
+    private static List<string> BaseKinds(Type valueType)
+    {
+        var kinds = new List<string>();
+        for (var baseType = valueType.BaseType; baseType != null; baseType = baseType.BaseType)
+        {
+            var attribute = FindAttribute<ValueKindAttribute>(baseType);
+            if (attribute != null)
+                kinds.Add(ConstructorValue<string>(attribute));
+        }
+
+        return kinds;
     }
 
     private static bool IsStringProperty(Type type, string name)

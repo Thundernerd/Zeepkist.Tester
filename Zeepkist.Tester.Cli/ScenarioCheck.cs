@@ -170,7 +170,7 @@ internal sealed class ScenarioCheck
         foreach (var value in loop.Values)
         {
             var body = new Scope(scope);
-            body.Define(loop.Variable, new NamedValue(TextKind, true, value));
+            body.Define(loop.Variable, new NamedValue([TextKind], true, value));
             Follow(file, loop.Steps, body, held);
         }
     }
@@ -182,7 +182,7 @@ internal sealed class ScenarioCheck
         foreach (var entry in run.With)
         {
             CheckNames(entry.Value, scope);
-            given.Define(entry.Key, new NamedValue(TextKind, true, null));
+            given.Define(entry.Key, new NamedValue([TextKind], true, null));
         }
 
         var target = RunTarget(file, run);
@@ -219,7 +219,7 @@ internal sealed class ScenarioCheck
             if (defined != null)
                 Report(location, true, AlreadyDefined(name, defined));
             else
-                scope.Define(name, new NamedValue(type.ValueKind, type.Substitute != null, null));
+                scope.Define(name, new NamedValue([type.ValueKind, .. type.BaseValueKinds], type.Substitute != null, null));
         }
 
         FollowStates(node, held);
@@ -277,7 +277,7 @@ internal sealed class ScenarioCheck
         var value = scope.Find(name);
         if (value == null && !scope.MayDefineUnknownNames)
             Report(scalar.Location, true, NotDefined(name));
-        else if (value != null && value.Kind != type.ValueKind)
+        else if (value != null && !value.Kinds.Contains(type.ValueKind))
             Report(scalar.Location, true, $"The name '{name}' is a {value.Kind}, not a {type.ValueKind}.");
     }
 
@@ -378,14 +378,19 @@ internal sealed class ScenarioCheck
     /// </summary>
     private sealed class NamedValue
     {
-        public NamedValue(string kind, bool canBeWritten, string value)
+        /// <param name="kinds">Its own kind, then those it also counts as.</param>
+        /// <param name="canBeWritten">Whether <c>${name}</c> can write it.</param>
+        /// <param name="value">The text, if it's known here.</param>
+        public NamedValue(IReadOnlyList<string> kinds, bool canBeWritten, string value)
         {
-            Kind = kind;
+            Kinds = kinds;
             CanBeWritten = canBeWritten;
             Value = value;
         }
 
-        public string Kind { get; }
+        public IReadOnlyList<string> Kinds { get; }
+
+        public string Kind => Kinds[0];
 
         public bool CanBeWritten { get; }
 

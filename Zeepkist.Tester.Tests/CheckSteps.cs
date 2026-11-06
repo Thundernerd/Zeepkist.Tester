@@ -23,8 +23,23 @@ public static class CheckSteps
             typeof(GoToTestMode),
             typeof(BackToEditor),
             typeof(NeedsEither),
+            typeof(MakeThing),
+            typeof(MakeSpecial),
+            typeof(UseThing),
+            typeof(UseSpecial),
         },
         Type.EmptyTypes);
+
+    [ValueKind("thing", Substitute = nameof(Text))]
+    public class Thing
+    {
+        public string Text { get; set; }
+    }
+
+    [ValueKind("special-thing")]
+    public sealed class SpecialThing : Thing
+    {
+    }
 
     public abstract class EmptyState : IState
     {
@@ -108,5 +123,33 @@ public static class CheckSteps
     [RequiresAny(typeof(ScriptSelected), typeof(InTestMode))]
     public sealed class NeedsEither : EmptyStep
     {
+    }
+
+    [Step("make-thing")]
+    public sealed class MakeThing : EmptyStep
+    {
+        [Arg(Primary = true)]
+        public Name<Thing> Defines { get; set; }
+    }
+
+    [Step("make-special")]
+    public sealed class MakeSpecial : EmptyStep
+    {
+        [Arg(Primary = true)]
+        public Name<SpecialThing> Defines { get; set; }
+    }
+
+    [Step("use-thing")]
+    public sealed class UseThing : EmptyStep
+    {
+        [Arg(Primary = true)]
+        public Ref<Thing> Uses { get; set; }
+    }
+
+    [Step("use-special")]
+    public sealed class UseSpecial : EmptyStep
+    {
+        [Arg(Primary = true)]
+        public Ref<SpecialThing> Uses { get; set; }
     }
 }

@@ -25,6 +25,11 @@ public sealed class ArgumentType
     public string ValueKind { get; init; }
 
     /// <summary>
+    /// For a <see cref="ArgumentKind.Name"/> or <see cref="ArgumentKind.Ref"/>: the kinds a value of this kind also counts as, because its class derives from theirs.
+    /// </summary>
+    public IReadOnlyList<string> BaseValueKinds { get; init; } = [];
+
+    /// <summary>
     /// For a <see cref="ArgumentKind.Name"/> or <see cref="ArgumentKind.Ref"/>: the member <c>${name}</c> writes, or null when this kind can't be written that way.
     /// </summary>
     public string Substitute { get; init; }
