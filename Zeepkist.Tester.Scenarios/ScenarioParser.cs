@@ -29,7 +29,7 @@ internal sealed class ScenarioParser
 
     private readonly string _file;
     private readonly Dictionary<string, StepDescriptor> _steps;
-    private readonly List<YamlSequenceNode> _bodiesBeingRead = [];
+    private readonly List<YamlSequenceNode> _bodiesRead = [];
     private List<string> _use = [];
 
     private ScenarioParser(string file, IEnumerable<StepDescriptor> steps)
@@ -135,14 +135,12 @@ internal sealed class ScenarioParser
         if (list.Children.Count == 0)
             throw Fail(steps, "steps: has no steps in it.");
 
-        // An alias can make a body its own child, and following it would overflow the stack and take the game down
-        if (_bodiesBeingRead.Any(body => ReferenceEquals(body, list)))
-            throw Fail(steps, "steps: contains itself through an alias.");
+        // An alias can make a body its own child, or double the work at each level, which would take the game down
+        if (_bodiesRead.Any(body => ReferenceEquals(body, list)))
+            throw Fail(steps, "steps: is used a second time through an alias. Use run: to share steps.");
 
-        _bodiesBeingRead.Add(list);
-        var nodes = list.Select(ReadNode).ToList();
-        _bodiesBeingRead.RemoveAt(_bodiesBeingRead.Count - 1);
-        return nodes;
+        _bodiesRead.Add(list);
+        return list.Select(ReadNode).ToList();
     }
 
     private ScenarioNode ReadNode(YamlNode item)
@@ -157,6 +155,9 @@ internal sealed class ScenarioParser
         }
 
         var map = (YamlMappingNode)item;
+        if (map.Children.Count == 0)
+            throw Fail(item, "A step is a name or a map with its name as the key, but this map is empty.");
+
         var written = map.Children.Keys.Select(ReadKey).ToList();
         if (written.Contains("for"))
             return ReadFor(map);
@@ -168,7 +169,7 @@ internal sealed class ScenarioParser
             return ReadRun(map);
 
         if (map.Children.Count != 1)
-            throw Fail(map.Children.Keys.ElementAtOrDefault(1) ?? map, "A step has one key, but this is another. Is it indented too far, or missing its - ?");
+            throw Fail(map.Children.Keys.ElementAt(1), "A step has one key, but this is another. Is it indented too far, or missing its - ?");
 
         var entry = map.Children.First();
         var step = Resolve(entry.Key);
@@ -219,6 +220,9 @@ internal sealed class ScenarioParser
             foreach (var entry in values.Children)
             {
                 var name = ReadName(entry.Key, "a name");
+                if (with.ContainsKey(name))
+                    throw Fail(entry.Key, $"with: has the name '{name}' twice.");
+
                 with.Add(name, new ScalarArgument(Location(entry.Value), ReadScalar(entry.Value, $"'{name}' of with:")));
             }
         }
@@ -274,7 +278,7 @@ internal sealed class ScenarioParser
     private ObjectArgument ReadObject(string owner, IReadOnlyList<ArgumentDescriptor> arguments, YamlNode value)
     {
         var values = new Dictionary<string, ArgumentValue>();
-        if (value is YamlMappingNode map && !IsPrimaryItem(arguments, map))
+        if (value is YamlMappingNode map && arguments.Count > 0 && !IsPrimaryItem(arguments, map))
         {
             var names = arguments.Select(argument => argument.Name).ToList();
             foreach (var entry in ReadKeys(map, owner, names, "argument"))
@@ -406,6 +410,10 @@ internal sealed class ScenarioParser
             var key = ReadKey(entry.Key);
             if (!allowed.Contains(key))
                 throw Fail(entry.Key, $"{owner} has no {word} '{key}'. {(allowed.Count == 0 ? "It takes none." : $"It takes: {string.Join(", ", allowed)}.")}");
+
+            // YamlDotNet's own check for this tells a key with a tag from one without
+            if (entries.ContainsKey(key))
+                throw Fail(entry.Key, $"{owner} has the {word} '{key}' twice.");
 
             entries.Add(key, entry.Value);
         }

@@ -67,7 +67,13 @@ public class ScenarioParserTests
         { "run-unknown-key", 3, 5, "run: has no key 'steps'. It takes: run, with." },
         { "with-is-a-scalar", 3, 11, "with: takes a map of names and values." },
         { "with-value-is-a-list", 3, 16, "'b' of with: takes a single value, not a list." },
-        { "body-contains-itself", 1, 8, "steps: contains itself through an alias." },
+        { "body-contains-itself", 1, 8, "steps: is used a second time through an alias. Use run: to share steps." },
+        { "body-used-twice", 3, 12, "steps: is used a second time through an alias. Use run: to share steps." },
+        { "tagged-duplicate-key", 3, 1, "A scenario has the key 'steps' twice." },
+        { "tagged-duplicate-with", 5, 7, "with: has the name 'a' twice." },
+        { "step-is-an-empty-map", 2, 5, "A step is a name or a map with its name as the key, but this map is empty." },
+        { "no-arguments-map", 2, 11, "undo takes no arguments, so write it as a bare string." },
+        { "unquoted-substitution-in-flow", 2, 31, "While parsing a flow mapping, did not find expected ',' or '}'. Inside { } or [ ], quote a value with ${ or a colon in it." },
         { "with-bad-name", 3, 13, "'b c' can't be a name: it has to match ^[A-Za-z0-9_-]+$." },
     };
 

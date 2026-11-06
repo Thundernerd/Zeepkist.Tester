@@ -35,6 +35,7 @@ internal static class ScenarioYaml
         const string AfterPlace = "): ";
         var message = exception.Message;
         var place = message.IndexOf(AfterPlace, StringComparison.Ordinal);
-        return place < 0 ? message : message.Substring(place + AfterPlace.Length);
+        var problem = place < 0 ? message : message.Substring(place + AfterPlace.Length);
+        return problem.Contains("flow") ? $"{problem} Inside {{ }} or [ ], quote a value with ${{ or a colon in it." : problem;
     }
 }

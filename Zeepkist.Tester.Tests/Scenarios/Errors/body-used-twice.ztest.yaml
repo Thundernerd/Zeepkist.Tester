@@ -1,0 +1,6 @@
+steps:
+  - repeat: 2
+    steps: &body
+      - undo
+  - repeat: 2
+    steps: *body

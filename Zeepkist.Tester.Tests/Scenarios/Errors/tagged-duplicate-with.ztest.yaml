@@ -1,0 +1,5 @@
+steps:
+  - run: a.ztest.yaml
+    with:
+      a: 1
+      !!str a: 2
