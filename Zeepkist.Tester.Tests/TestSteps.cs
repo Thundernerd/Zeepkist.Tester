@@ -39,7 +39,7 @@ public static class TestSteps
         public string As { get; set; }
 
         [Arg(Default = 1, Name = "how-many")]
-        [Range(1, 8)]
+        [InRange(1, 8)]
         public int Count { get; set; }
 
         [Arg]
@@ -62,7 +62,7 @@ public static class TestSteps
 
         /// <summary>Frames the move takes.</summary>
         [Arg(Default = 1)]
-        [Range(1, 600)]
+        [InRange(1, 600)]
         public int Over { get; set; }
     }
 
@@ -103,7 +103,7 @@ public static class TestSteps
         public Axis? MaybeAxis { get; set; }
 
         [Arg]
-        public Text Text { get; set; }
+        public TextBlock Text { get; set; }
 
         [Arg]
         public float Float { get; set; }
@@ -174,7 +174,7 @@ public static class TestSteps
         public string Line { get; set; }
 
         [Arg]
-        public List<Text> Details { get; set; }
+        public List<TextBlock> Details { get; set; }
     }
 
     /// <summary>A step with each type of argument that can hold <c>${name}</c>, and others that look like they could.</summary>
@@ -188,13 +188,13 @@ public static class TestSteps
         public string NoString { get; set; }
 
         [Arg]
-        public Text Text { get; set; }
+        public TextBlock Text { get; set; }
 
         [Arg]
-        public Text? MaybeText { get; set; }
+        public TextBlock? MaybeText { get; set; }
 
         [Arg]
-        public Text? NoText { get; set; }
+        public TextBlock? NoText { get; set; }
 
         [Arg]
         public List<string> Strings { get; set; }

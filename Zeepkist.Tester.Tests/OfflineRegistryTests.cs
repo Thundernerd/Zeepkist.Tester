@@ -18,11 +18,11 @@ public class OfflineRegistryTests
     [Fact]
     public void Read_TestPlugin_GivesWhatRuntimeReflectionGives()
     {
-        var atRuntime = new StepDescriptorBuilder { Summaries = XmlDocs.Read([_modPath]) }.BuildAll([typeof(Compile), typeof(NamedValues), typeof(OwnNamespace)]);
+        var atRuntime = new StepDescriptorBuilder { Summaries = XmlDocs.Read([_modPath]) }.BuildAll([typeof(Compile), typeof(GameImports), typeof(NamedValues), typeof(OwnNamespace)]);
 
         var offline = OfflineRegistry.Read([_modPath], _sampleTesterPath).Where(step => step.Namespace.Length > 0).ToList();
 
-        Assert.Equal(["sample.compile", "sample.named-values", "other.own-namespace"], offline.Select(step => step.FullName));
+        Assert.Equal(["sample.compile", "sample.game-imports", "sample.named-values", "other.own-namespace"], offline.Select(step => step.FullName));
         Assert.Equal("Its constructors are there to compile on net472: `required` with `SetsRequiredMembersAttribute`.", offline[0].Documentation);
         Assert.Equal("The function to compile.", offline[0].Arguments[0].Documentation);
         Assert.True(offline[0].Arguments[0].IsRequired);
@@ -39,6 +39,16 @@ public class OfflineRegistryTests
         Assert.Equal("sample-block", defines.Type.ValueKind);
         Assert.Equal("Uid", defines.Type.Substitute);
         Assert.Equal(ArgumentKind.Ref, step.Arguments[1].Type.Kind);
+    }
+
+    [Fact]
+    public void Read_StepNextToTheGamesImports_FindsItsRangeAndTextBlock()
+    {
+        var step = OfflineRegistry.Read([_modPath], _sampleTesterPath).Single(descriptor => descriptor.Name == "game-imports");
+
+        Assert.Equal(1, step.Arguments[0].Minimum);
+        Assert.Equal(8, step.Arguments[0].Maximum);
+        Assert.Equal(ArgumentKind.TextBlock, step.Arguments[1].Type.Kind);
     }
 
     [Fact]

@@ -10,7 +10,7 @@ namespace TNRD.Zeepkist.Tester;
 internal static class StepArguments
 {
     /// <summary>
-    /// Writes the <c>${name}</c>s of each <c>string</c> and <c>Text</c> argument, also in lists and nested arguments.
+    /// Writes the <c>${name}</c>s of each <c>string</c> and <c>TextBlock</c> argument, also in lists and nested arguments.
     /// This replaces the written form, so a step that runs again has to be bound again.
     /// </summary>
     /// <param name="owner">A step, or the value of a nested argument.</param>
@@ -39,8 +39,8 @@ internal static class StepArguments
         {
             case string text:
                 return values.Substitute(text);
-            case Text { Value: not null } text:
-                return new Text(values.Substitute(text.Value));
+            case TextBlock { Value: not null } text:
+                return new TextBlock(values.Substitute(text.Value));
             case IList list:
                 for (var i = 0; i < list.Count; i++)
                 {

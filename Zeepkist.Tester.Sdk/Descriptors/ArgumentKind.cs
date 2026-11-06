@@ -6,7 +6,7 @@ namespace TNRD.Zeepkist.Tester.Sdk;
 public enum ArgumentKind
 {
     String,
-    Text,
+    TextBlock,
     Int,
     Float,
     Bool,

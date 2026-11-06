@@ -43,7 +43,7 @@ A fixed set, so the CLI can describe and check each one without running anything
 | C# type | YAML | Schema | Notes |
 | --- | --- | --- | --- |
 | `string` | scalar | `string` | One line. `${name}` is substituted. |
-| `Text` | `\|` block or scalar | `string` | Several lines, such as a Script's text. `${name}` is substituted. |
+| `TextBlock` | `\|` block or scalar | `string` | Several lines, such as a Script's text. `${name}` is substituted. |
 | `int`, `float`, `bool` | scalar | `integer` / `number` / `boolean` | `bool` takes only `true`/`false`, never `on`/`yes`. |
 | `Seconds` | `2`, `0.5`, `500ms` | `number` or `^\d+(\.\d+)?(ms\|s)$` | |
 | `Pixels` | `-1000` | `integer` | Negative is allowed. |
@@ -55,7 +55,7 @@ A fixed set, so the CLI can describe and check each one without running anything
 | `List<T>` of any of these | sequence | `array` | |
 | a class with `[Arg]` properties | map | `object` | For nested arguments, such as a drag's moves. |
 
-Patterns and ranges come from attributes the CLI can read: `[Pattern("…")]`, `[Range(1, 8)]`, `[MinItems(1)]`.
+Patterns and ranges come from attributes the CLI can read: `[Pattern("…")]`, `[InRange(1, 8)]`, `[MinItems(1)]`.
 
 ## Named values
 
@@ -114,7 +114,7 @@ public sealed class SetBlockSetting : Step
 ```
 
 - Names last for the scenario. Defining a name twice is an error, as today.
-- `${name}` is substituted only in `string`/`Text` arguments, and only when the name's kind has a `Substitute` member, a public string property. A `${name}` that isn't defined by an earlier step fails `ztest check` with its line. `$${` writes a literal `${`, and any other `${` without a name and `}` after it is an error.
+- `${name}` is substituted only in `string`/`TextBlock` arguments, and only when the name's kind has a `Substitute` member, a public string property. A `${name}` that isn't defined by an earlier step fails `ztest check` with its line. `$${` writes a literal `${`, and any other `${` without a name and `}` after it is an error.
 - In the game, a mistake with a name throws `StepFailedException`, which stops the step and fails it with the exception's message, so `Run` needs no check after `Block.Get(context)`. The scenario runner (#13) records that as the step's failure. It also makes one `ScenarioValues` per scenario, and calls `StepArguments.Substitute` on each step just before running it, on a freshly bound step, since this replaces what the arguments held.
 - Descriptors record this for `ztest check`: `ArgumentKind.Name` defines a name and `ArgumentKind.Ref` uses one, each with its `ValueKind` and its `Substitute` member.
 - `ztest check` follows the steps in order, so it knows which names exist at each line. Inside `for` bodies it adds the loop variable for the body only.
@@ -193,7 +193,7 @@ public sealed class DragMove
     [Arg(Primary = true)] public Pixels By { get; set; }
 
     /// <summary>Frames the move takes.</summary>
-    [Arg(Default = 1), Range(1, 600)] public int Over { get; set; }
+    [Arg(Default = 1), InRange(1, 600)] public int Over { get; set; }
 }
 
 /// <summary>Drags the window's resize handle with the mouse, the way a player does …</summary>
