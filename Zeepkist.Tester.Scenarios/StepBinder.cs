@@ -15,7 +15,7 @@ namespace TNRD.Zeepkist.Tester.Scenarios;
 /// </summary>
 internal sealed class StepBinder
 {
-    private static readonly Regex _seconds = new Regex(@"^(?<number>\d+(?:\.\d+)?)(?<unit>ms|s)?$");
+    private static readonly Regex _seconds = new Regex(@"^(?<number>[0-9]+(?:\.[0-9]+)?)(?<unit>ms|s)?\z");
 
     private readonly IValues _values;
 
@@ -99,11 +99,11 @@ internal sealed class StepBinder
             case ArgumentKind.Pixels:
                 return new Pixels(ParseInt(argument, text, location, what));
             case ArgumentKind.Float:
-                if (!float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) || float.IsNaN(number) || float.IsInfinity(number))
+                if (!TryParseFloat(text, out var number))
                     throw Fail(location, $"{what} takes a number, not '{text}'.");
 
                 RequireRange(number, argument, text, location, what);
-                return number;
+                return (float)number;
             case ArgumentKind.Seconds:
                 return new Seconds(ParseSeconds(argument, text, location, what));
             case ArgumentKind.Bool:
@@ -115,11 +115,11 @@ internal sealed class StepBinder
 
                 return type.GetFields(BindingFlags.Public | BindingFlags.Static)[index].GetValue(null);
             case ArgumentKind.String:
-                RequirePattern(argument, text, location, what);
+                RequirePattern(argument, argumentType, text, location, what);
                 return text;
             default:
                 // TextBlock, Keys, FileName, Name<T> and Ref<T> each hold the text
-                RequirePattern(argument, text, location, what);
+                RequirePattern(argument, argumentType, text, location, what);
                 return Activator.CreateInstance(type, text);
         }
     }
@@ -136,13 +136,20 @@ internal sealed class StepBinder
     private static float ParseSeconds(ArgumentDescriptor argument, string text, SourceLocation location, string what)
     {
         var match = _seconds.Match(text);
-        if (!match.Success)
+        if (!match.Success || !TryParseFloat(match.Groups["number"].Value, out var number))
             throw Fail(location, $"{what} takes a length of time such as 2, 0.5 or 500ms, not '{text}'.");
 
-        var number = float.Parse(match.Groups["number"].Value, NumberStyles.Float, CultureInfo.InvariantCulture);
         var seconds = match.Groups["unit"].Value == "ms" ? number / 1000 : number;
         RequireRange(seconds, argument, text, location, what);
-        return seconds;
+        return (float)seconds;
+    }
+
+    /// <summary>
+    /// Reads a float as a double, so a range compares what was written and not the nearest float to it.
+    /// </summary>
+    private static bool TryParseFloat(string text, out double number)
+    {
+        return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out number) && !float.IsNaN((float)number) && !float.IsInfinity((float)number);
     }
 
     private static void RequireRange(double number, ArgumentDescriptor argument, string text, SourceLocation location, string what)
@@ -151,10 +158,24 @@ internal sealed class StepBinder
             throw Fail(location, $"{what} has to be between {argument.Minimum.Value.ToString(CultureInfo.InvariantCulture)} and {argument.Maximum.Value.ToString(CultureInfo.InvariantCulture)}, not '{text}'.");
     }
 
-    private static void RequirePattern(ArgumentDescriptor argument, string text, SourceLocation location, string what)
+    /// <summary>
+    /// A list's items have their pattern on their own type, unless the argument gives one.
+    /// </summary>
+    private static void RequirePattern(ArgumentDescriptor argument, ArgumentType argumentType, string text, SourceLocation location, string what)
     {
-        if (argument.Pattern != null && !Regex.IsMatch(text, argument.Pattern))
-            throw Fail(location, $"{what} has to match {argument.Pattern}, not '{text}'.");
+        var pattern = argument.Pattern ?? argumentType.Pattern;
+        if (pattern != null && !Regex.IsMatch(text, ToEndOfText(pattern)))
+            throw Fail(location, $"{what} has to match {pattern}, not '{text}'.");
+    }
+
+    /// <summary>
+    /// A pattern is written for the schema too, where <c>$</c> is the end of the text. Here it also matches before a line break at the end, as a <c>|</c> block has.
+    /// </summary>
+    private static string ToEndOfText(string pattern)
+    {
+        return pattern.EndsWith("$", StringComparison.Ordinal) && !pattern.EndsWith(@"\$", StringComparison.Ordinal)
+            ? pattern.Substring(0, pattern.Length - 1) + @"\z"
+            : pattern;
     }
 
     private static string Choices(IReadOnlyList<string> values)

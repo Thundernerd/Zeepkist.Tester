@@ -22,6 +22,7 @@ public static class ScenarioSteps
         typeof(TestSteps.EveryType),
         typeof(TestSteps.Named),
         typeof(TestSteps.Written),
+        typeof(Ranged),
         typeof(ClashingWait),
         typeof(ZlsCompile),
         typeof(OtherCompile),
@@ -60,6 +61,19 @@ public static class ScenarioSteps
     [Step("compile", Namespace = "other")]
     public sealed class OtherCompile : EmptyStep
     {
+    }
+
+    /// <summary>Has ranges whose edge a float can't hold exactly.</summary>
+    [Step("ranged")]
+    public sealed class Ranged : EmptyStep
+    {
+        [Arg]
+        [InRange(0, 0.1)]
+        public float Number { get; set; }
+
+        [Arg]
+        [InRange(0, 0.1)]
+        public Seconds Time { get; set; }
     }
 
     public abstract class EmptyStep : Step
