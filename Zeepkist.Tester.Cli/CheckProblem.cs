@@ -7,21 +7,21 @@ namespace TNRD.Zeepkist.Tester.Cli;
 /// </summary>
 internal sealed class CheckProblem
 {
-    public CheckProblem(SourceLocation location, bool isError, string message)
+    public CheckProblem(SourceLocation location, CheckSeverity severity, string message)
     {
         Location = location;
-        IsError = isError;
+        Severity = severity;
         Message = message;
     }
 
     public SourceLocation Location { get; }
 
-    public bool IsError { get; }
+    public CheckSeverity Severity { get; }
 
     public string Message { get; }
 
     public override string ToString()
     {
-        return $"{Location}: {(IsError ? "error" : "warning")}: {Message}";
+        return $"{Location}: {(Severity == CheckSeverity.Error ? "error" : "warning")}: {Message}";
     }
 }

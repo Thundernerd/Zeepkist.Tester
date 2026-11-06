@@ -62,11 +62,11 @@ internal sealed class ScenarioCheck
 
         // A file that can't be read may be what runs the others, and what they'd be given can't be known
         var mayHaveAHiddenCaller = _scenarios.Values.Contains(null);
-        foreach (var scenario in scenarios.Where(scenario => !runByAFile.Contains(Key(scenario.File))))
+        foreach (var scenario in scenarios.Where(scenario => !runByAFile.Contains(FullPathOf(scenario.File))))
             FollowFromItsStart(scenario, mayHaveAHiddenCaller);
 
         // What's left only runs in a cycle, which following any of it reports, so its caller is in there somewhere too
-        foreach (var scenario in scenarios.Where(scenario => !_followed.Contains(Key(scenario.File))))
+        foreach (var scenario in scenarios.Where(scenario => !_followed.Contains(FullPathOf(scenario.File))))
             FollowFromItsStart(scenario, true);
 
         return _problems
@@ -78,7 +78,7 @@ internal sealed class ScenarioCheck
 
     private Scenario Load(string file)
     {
-        var key = Key(file);
+        var key = FullPathOf(file);
         if (_scenarios.TryGetValue(key, out var loaded))
             return loaded;
 
@@ -90,11 +90,11 @@ internal sealed class ScenarioCheck
         }
         catch (ScenarioException exception)
         {
-            Add(new CheckProblem(exception.Location, true, exception.Problem));
+            Add(new CheckProblem(exception.Location, CheckSeverity.Error, exception.Problem));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            Add(new CheckProblem(new SourceLocation(file, 1, 1), true, $"Can't read the file: {exception.Message}"));
+            Add(new CheckProblem(new SourceLocation(file, 1, 1), CheckSeverity.Error, $"Can't read the file: {exception.Message}"));
         }
 
         _scenarios.Add(key, scenario);
@@ -120,7 +120,7 @@ internal sealed class ScenarioCheck
                     break;
                 case RunNode run:
                     var target = RunTarget(file, run);
-                    if (files.Add(Key(target)) && File.Exists(target) && Load(target) is { } scenario)
+                    if (files.Add(FullPathOf(target)) && File.Exists(target) && Load(target) is { } scenario)
                         CollectRuns(scenario, files);
 
                     break;
@@ -137,7 +137,7 @@ internal sealed class ScenarioCheck
 
     private void Follow(Scenario scenario, Scope scope, HashSet<string> held)
     {
-        var key = Key(scenario.File);
+        var key = FullPathOf(scenario.File);
         _followed.Add(key);
         _running.Add(key);
         Follow(scenario.File, scenario.Steps, scope, held);
@@ -152,7 +152,7 @@ internal sealed class ScenarioCheck
             {
                 // Each body around this one still has its next pass to get through
                 if (_nodesFollowed == MostNodesFollowed + 1)
-                    Report(node.Location, false, $"The loops and run: files around this come to over {MostNodesFollowed} steps, so the check stops following it here.");
+                    Report(node.Location, CheckSeverity.Warning, $"The loops and run: files around this come to over {MostNodesFollowed} steps, so the check stops following it here.");
 
                 return;
             }
@@ -181,7 +181,7 @@ internal sealed class ScenarioCheck
     {
         var outer = scope.Find(loop.Variable);
         if (outer != null)
-            Report(loop.Location, true, AlreadyDefined(loop.Variable, outer));
+            Report(loop.Location, CheckSeverity.Error, ScenarioMessages.AlreadyDefined(loop.Variable, outer.Kind));
 
         foreach (var value in loop.Values)
         {
@@ -204,13 +204,13 @@ internal sealed class ScenarioCheck
         var target = RunTarget(file, run);
         if (!File.Exists(target))
         {
-            Report(run.Location, true, $"run: can't find '{run.File}' from this file.");
+            Report(run.Location, CheckSeverity.Error, $"run: can't find '{run.File}' from this file.");
             return;
         }
 
-        if (_running.Contains(Key(target)))
+        if (_running.Contains(FullPathOf(target)))
         {
-            Report(run.Location, true, $"run: '{run.File}' is already running here, so it would never end.");
+            Report(run.Location, CheckSeverity.Error, $"run: '{run.File}' is already running here, so it would never end.");
             return;
         }
 
@@ -227,28 +227,29 @@ internal sealed class ScenarioCheck
     private void FollowStep(StepNode node, Scope scope, HashSet<string> held)
     {
         // A step's values are all read before it runs, so what it defines is only there for the next step
-        var defines = new List<(string Name, ArgumentType Type, SourceLocation Location)>();
+        var defines = new List<Definition>();
         FollowArguments(node.Step.Arguments, node.Arguments, scope, defines);
-        foreach (var (name, type, location) in defines)
+        foreach (var definition in defines)
         {
-            if (name == null)
+            if (definition.Name == null)
             {
                 // It can define any name, so what's used after it can't be called undefined
                 scope.DefinesUnknownNames = true;
                 continue;
             }
 
-            var defined = scope.Find(name);
+            var type = definition.Type;
+            var defined = scope.Find(definition.Name);
             if (defined != null)
-                Report(location, true, AlreadyDefined(name, defined));
+                Report(definition.Location, CheckSeverity.Error, ScenarioMessages.AlreadyDefined(definition.Name, defined.Kind));
             else
-                scope.Define(name, new NamedValue([type.ValueKind, .. type.BaseValueKinds], type.Substitute != null, null));
+                scope.Define(definition.Name, new NamedValue([type.ValueKind, .. type.BaseValueKinds], type.Substitute != null, null));
         }
 
         FollowStates(node, held);
     }
 
-    private void FollowArguments(IReadOnlyList<ArgumentDescriptor> arguments, ObjectArgument written, Scope scope, List<(string, ArgumentType, SourceLocation)> defines)
+    private void FollowArguments(IReadOnlyList<ArgumentDescriptor> arguments, ObjectArgument written, Scope scope, List<Definition> defines)
     {
         foreach (var argument in arguments)
         {
@@ -259,7 +260,7 @@ internal sealed class ScenarioCheck
         }
     }
 
-    private void FollowValue(ArgumentType type, ArgumentValue value, Scope scope, List<(string, ArgumentType, SourceLocation)> defines)
+    private void FollowValue(ArgumentType type, ArgumentValue value, Scope scope, List<Definition> defines)
     {
         switch (value)
         {
@@ -277,7 +278,7 @@ internal sealed class ScenarioCheck
         }
     }
 
-    private void FollowScalar(ArgumentType type, ScalarArgument scalar, Scope scope, List<(string, ArgumentType, SourceLocation)> defines)
+    private void FollowScalar(ArgumentType type, ScalarArgument scalar, Scope scope, List<Definition> defines)
     {
         var isKnown = CheckNames(scalar, scope);
         if (type.Kind != ArgumentKind.Name && type.Kind != ArgumentKind.Ref)
@@ -286,7 +287,7 @@ internal sealed class ScenarioCheck
         if (!isKnown)
         {
             if (type.Kind == ArgumentKind.Name)
-                defines.Add((null, type, scalar.Location));
+                defines.Add(new Definition(null, type, scalar.Location));
 
             return;
         }
@@ -294,19 +295,19 @@ internal sealed class ScenarioCheck
         FollowName(type, Substitution.Replace(scalar.Text, written => scope.Find(written).Value), scalar.Location, scope, defines);
     }
 
-    private void FollowName(ArgumentType type, string name, SourceLocation location, Scope scope, List<(string, ArgumentType, SourceLocation)> defines)
+    private void FollowName(ArgumentType type, string name, SourceLocation location, Scope scope, List<Definition> defines)
     {
         if (type.Kind == ArgumentKind.Name)
         {
-            defines.Add((name, type, location));
+            defines.Add(new Definition(name, type, location));
             return;
         }
 
         var value = scope.Find(name);
         if (value == null && !scope.MayDefineUnknownNames)
-            Report(location, true, NotDefined(name));
+            Report(location, CheckSeverity.Error, ScenarioMessages.NotDefined(name));
         else if (value != null && !value.Kinds.Contains(type.ValueKind))
-            Report(location, true, $"The name '{name}' is a {value.Kind}, not a {type.ValueKind}.");
+            Report(location, CheckSeverity.Error, ScenarioMessages.WrongKind(name, value.Kind, type.ValueKind));
     }
 
     /// <summary>
@@ -321,11 +322,11 @@ internal sealed class ScenarioCheck
             if (value == null)
             {
                 if (!scope.MayDefineUnknownNames)
-                    Report(scalar.Location, true, NotDefined(name));
+                    Report(scalar.Location, CheckSeverity.Error, ScenarioMessages.NotDefined(name));
             }
             else if (!value.CanBeWritten)
             {
-                Report(scalar.Location, true, $"${{{name}}} can't be written: a {value.Kind} has no Substitute member.");
+                Report(scalar.Location, CheckSeverity.Error, ScenarioMessages.NoSubstituteMember(name, value.Kind));
             }
 
             isKnown &= value?.CanBeWritten == true && value.Value != null;
@@ -340,7 +341,7 @@ internal sealed class ScenarioCheck
         {
             var unmet = alternatives.Select(state => OutermostUnmet(state, held)).TakeWhile(state => state != null).ToList();
             if (unmet.Count == alternatives.Count)
-                Report(node.Location, false, node.Step.NeedsMessage(unmet.Distinct()));
+                Report(node.Location, CheckSeverity.Warning, ScenarioMessages.Needs(node.Step, unmet.Distinct()));
         }
 
         foreach (var state in node.Step.Leaves)
@@ -375,24 +376,14 @@ internal sealed class ScenarioCheck
     /// <summary>
     /// A path written in a file can be one no file can have, which <see cref="Path.GetFullPath(string)"/> throws for.
     /// </summary>
-    private static string Key(string file)
+    private static string FullPathOf(string file)
     {
         return File.Exists(file) ? Path.GetFullPath(file) : file;
     }
 
-    private static string NotDefined(string name)
+    private void Report(SourceLocation location, CheckSeverity severity, string message)
     {
-        return $"The name '{name}' isn't defined by an earlier step.";
-    }
-
-    private static string AlreadyDefined(string name, NamedValue defined)
-    {
-        return $"The name '{name}' is already defined, as a {defined.Kind}.";
-    }
-
-    private void Report(SourceLocation location, bool isError, string message)
-    {
-        Add(new CheckProblem(location, isError, _ranFrom == null ? message : $"{message} (run from {_ranFrom})"));
+        Add(new CheckProblem(location, severity, _ranFrom == null ? message : $"{message} (run from {_ranFrom})"));
     }
 
     /// <summary>
@@ -402,6 +393,25 @@ internal sealed class ScenarioCheck
     {
         if (_reported.Add(problem.ToString()))
             _problems.Add(problem);
+    }
+
+    /// <summary>
+    /// A name a step defines. Its name is null when only a run can know it.
+    /// </summary>
+    private sealed class Definition
+    {
+        public Definition(string name, ArgumentType type, SourceLocation location)
+        {
+            Name = name;
+            Type = type;
+            Location = location;
+        }
+
+        public string Name { get; }
+
+        public ArgumentType Type { get; }
+
+        public SourceLocation Location { get; }
     }
 
     /// <summary>

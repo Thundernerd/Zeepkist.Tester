@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using TNRD.Zeepkist.Tester.Scenarios;
 using TNRD.Zeepkist.Tester.Sdk;
 
 namespace TNRD.Zeepkist.Tester;
@@ -19,7 +20,7 @@ internal sealed class ScenarioValues : IValues
             throw new StepFailedException("The step defines a named value, but its name was left out.");
 
         if (_values.TryGetValue(name, out var defined))
-            throw new StepFailedException($"The name '{name}' is already defined, as a {defined.Kind}.");
+            throw new StepFailedException(ScenarioMessages.AlreadyDefined(name, defined.Kind));
 
         if (value == null)
             throw new StepFailedException($"The name '{name}' has to be defined with a value, not null.");
@@ -37,19 +38,19 @@ internal sealed class ScenarioValues : IValues
         if (defined.Value is T value)
             return value;
 
-        throw new StepFailedException($"The name '{name}' is a {defined.Kind}, not a {KindOf(typeof(T))}.");
+        throw new StepFailedException(ScenarioMessages.WrongKind(name, defined.Kind, KindOf(typeof(T))));
     }
 
     public string Substitute(string text)
     {
-        return Substitution.Replace(text, Written);
+        return Substitution.Replace(text, WrittenText);
     }
 
-    private string Written(string name)
+    private string WrittenText(string name)
     {
         var defined = Find(name);
         if (defined.SubstituteMember == null)
-            throw new StepFailedException($"${{{name}}} can't be written: a {defined.Kind} has no Substitute member.");
+            throw new StepFailedException(ScenarioMessages.NoSubstituteMember(name, defined.Kind));
 
         return defined.Substitute
             ?? throw new StepFailedException($"${{{name}}} can't be written: the {defined.Kind}'s {defined.SubstituteMember} is null.");
@@ -60,7 +61,7 @@ internal sealed class ScenarioValues : IValues
         if (_values.TryGetValue(name, out var defined))
             return defined;
 
-        throw new StepFailedException($"The name '{name}' isn't defined by an earlier step.");
+        throw new StepFailedException(ScenarioMessages.NotDefined(name));
     }
 
     private static string KindOf(Type valueType)

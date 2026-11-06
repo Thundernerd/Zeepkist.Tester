@@ -29,20 +29,10 @@ internal sealed class ValueChecks
         new ValueChecks(loopValues).CheckArguments(node.Step.FullName, node.Step.Arguments, node.Arguments);
     }
 
-    /// <summary>
-    /// The names of each <c>${name}</c> in a value.
-    /// </summary>
     /// <exception cref="ScenarioException">A <c>${</c> has no name and <c>}</c> after it.</exception>
-    public static IReadOnlyList<string> NamesIn(ScalarArgument scalar)
+    public static void RequireWrittenProperly(ScalarArgument scalar)
     {
-        try
-        {
-            return Substitution.NamesIn(scalar.Text);
-        }
-        catch (StepFailedException exception)
-        {
-            throw new ScenarioException(scalar.Location, exception.Message);
-        }
+        NamesIn(scalar);
     }
 
     private void CheckArguments(string owner, IReadOnlyList<ArgumentDescriptor> arguments, ObjectArgument written)
@@ -95,5 +85,17 @@ internal sealed class ValueChecks
             combinations = combinations.SelectMany(chosen => _loopValues[name].Select(value => new Dictionary<string, string>(chosen) { [name] = value }));
 
         return combinations;
+    }
+
+    private static IReadOnlyList<string> NamesIn(ScalarArgument scalar)
+    {
+        try
+        {
+            return Substitution.NamesIn(scalar.Text);
+        }
+        catch (StepFailedException exception)
+        {
+            throw new ScenarioException(scalar.Location, exception.Message);
+        }
     }
 }

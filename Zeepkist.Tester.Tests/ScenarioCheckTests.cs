@@ -9,9 +9,9 @@ namespace TNRD.Zeepkist.Tester.Tests;
 
 public class ScenarioCheckTests
 {
-    private static readonly string _folder = Path.Combine("Scenarios", "Check");
-
     private const string NotDefined = "isn't defined by an earlier step.";
+
+    private static readonly string _folder = Path.Combine("Scenarios", "Check");
 
     public static TheoryData<string, string[]> Problems => new TheoryData<string, string[]>
     {
@@ -194,7 +194,7 @@ public class ScenarioCheckTests
         var problems = await Task.Run(() => ScenarioCheck.Run([file], CheckSteps.Registry));
 
         var problem = Assert.Single(problems);
-        Assert.False(problem.IsError);
+        Assert.Equal(CheckSeverity.Warning, problem.Severity);
         Assert.Contains("stops following it here", problem.Message);
     }
 
@@ -218,7 +218,7 @@ public class ScenarioCheckTests
 
         var problem = Assert.Single(ScenarioCheck.Run([file], CheckSteps.Registry));
 
-        Assert.True(problem.IsError);
+        Assert.Equal(CheckSeverity.Error, problem.Severity);
         Assert.StartsWith($"{file}:1:1: error: Can't read the file:", problem.ToString());
     }
 

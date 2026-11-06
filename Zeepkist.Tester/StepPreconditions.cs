@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using TNRD.Zeepkist.Tester.Scenarios;
 using TNRD.Zeepkist.Tester.Sdk;
 
 namespace TNRD.Zeepkist.Tester;
@@ -34,7 +35,7 @@ internal static class StepPreconditions
         {
             var unmet = alternatives.Select(state => OutermostUnmet(state, context)).TakeWhile(state => state != null).ToList();
             if (unmet.Count == alternatives.Length)
-                throw new StepFailedException(step.NeedsMessage(unmet.Distinct().Select(_builder.BuildState)));
+                throw new StepFailedException(ScenarioMessages.Needs(step, unmet.Distinct().Select(_builder.BuildState)));
         }
     }
 

@@ -107,7 +107,7 @@ internal sealed class CheckCommand
         foreach (var smell in smells)
             _output.WriteLine($"warning: {smell}");
 
-        _output.WriteLine($"Checked {Count(registry.Steps.Count, "step")} and {Count(registry.States.Count, "state")}: {Count(smells.Count, "warning", "no")}.");
+        _output.WriteLine($"Checked {Counted(registry.Steps.Count, "step")} and {Counted(registry.States.Count, "state")}: {Counted(smells.Count, "warning", "no")}.");
         return 0;
     }
 
@@ -142,8 +142,8 @@ internal sealed class CheckCommand
         foreach (var problem in problems)
             _output.WriteLine(problem);
 
-        var errors = problems.Count(problem => problem.IsError);
-        _output.WriteLine($"Checked {Count(files.Count, "file")}: {Count(errors, "error", "no")}, {Count(problems.Count - errors, "warning", "no")}.");
+        var errors = problems.Count(problem => problem.Severity == CheckSeverity.Error);
+        _output.WriteLine($"Checked {Counted(files.Count, "file")}: {Counted(errors, "error", "no")}, {Counted(problems.Count - errors, "warning", "no")}.");
         return errors == 0 ? 0 : 1;
     }
 
@@ -153,7 +153,7 @@ internal sealed class CheckCommand
         return 1;
     }
 
-    private static string Count(int count, string what, string none = null)
+    private static string Counted(int count, string what, string none = null)
     {
         var number = count == 0 && none != null ? none : count.ToString(CultureInfo.InvariantCulture);
         return $"{number} {what}{(count == 1 ? string.Empty : "s")}";

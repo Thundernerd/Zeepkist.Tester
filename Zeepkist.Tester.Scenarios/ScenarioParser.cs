@@ -23,14 +23,9 @@ internal sealed class ScenarioParser
     private static readonly Dictionary<string, (string Argument, bool Required)> _startStates = new Dictionary<string, (string, bool)>()
     {
         ["main-menu"] = (null, false),
-        ["editor"] = ("level", false),
+        [ScenarioStart.DefaultName] = ("level", false),
         ["free-play"] = ("uid", true),
     };
-
-    /// <summary>
-    /// What <c>start:</c> can name, each of which is also the state a scenario starts in.
-    /// </summary>
-    public static IReadOnlyCollection<string> StartStates => _startStates.Keys;
 
     private readonly string _file;
     private readonly Dictionary<string, StepDescriptor> _steps;
@@ -43,6 +38,11 @@ internal sealed class ScenarioParser
         _file = file;
         _steps = steps.ToDictionary(step => step.FullName);
     }
+
+    /// <summary>
+    /// What <c>start:</c> can name, each of which is also the state a scenario starts in.
+    /// </summary>
+    public static IReadOnlyCollection<string> StartStates => _startStates.Keys;
 
     /// <exception cref="ScenarioException">The file can't be read as a scenario.</exception>
     public static Scenario Parse(string file, TextReader reader, IEnumerable<StepDescriptor> steps)
@@ -247,7 +247,7 @@ internal sealed class ScenarioParser
                     throw Fail(entry.Key, $"with: has the name '{name}' twice.");
 
                 var value = new ScalarArgument(Location(entry.Value), ReadScalar(entry.Value, $"'{name}' of with:"));
-                ValueChecks.NamesIn(value);
+                ValueChecks.RequireWrittenProperly(value);
                 with.Add(name, value);
             }
         }
