@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using TNRD.Zeepkist.Tester.Sdk;
@@ -236,5 +237,96 @@ public static class TestSteps
         {
             yield break;
         }
+    }
+
+    /// <summary>What the states and steps below run against: which states hold, and which steps ran.</summary>
+    public sealed class StatesContext : IStepContext
+    {
+        public HashSet<Type> Met { get; } = [];
+
+        public List<Type> Ran { get; } = [];
+
+        public IValues Values { get; } = new ScenarioValues();
+    }
+
+    /// <summary>A state that holds when its <see cref="StatesContext"/> says so.</summary>
+    public abstract class ContextState : IState
+    {
+        public bool IsMet(IStepContext context)
+        {
+            return ((StatesContext)context).Met.Contains(GetType());
+        }
+    }
+
+    /// <summary>A step that tells its <see cref="StatesContext"/> it ran.</summary>
+    public abstract class ContextStep : Step
+    {
+        public override IEnumerator Run(IStepContext context)
+        {
+            ((StatesContext)context).Ran.Add(GetType());
+            yield return "ran";
+        }
+    }
+
+    /// <summary>The level editor, not in test mode.</summary>
+    [State("editor", Namespace = "zls", Hint = "Start with `start: editor`.")]
+    public sealed class InEditor : ContextState
+    {
+    }
+
+    /// <summary>The Script window is open.</summary>
+    [State("window-open", Namespace = "zls", Within = typeof(InEditor), Hint = "Add `zls.open-window` first.")]
+    public sealed class WindowOpen : ContextState
+    {
+    }
+
+    /// <summary>A Script is selected.</summary>
+    [State("script-selected", Namespace = "zls", Within = typeof(WindowOpen), Hint = "Add `zls.new-script` or `zls.select-script` first.")]
+    public sealed class ScriptSelected : ContextState
+    {
+    }
+
+    /// <summary>A text field has the focus.</summary>
+    [State("field-focused", Namespace = "zls", Within = typeof(WindowOpen), Hint = "Add `zls.caret-at-end` first.")]
+    public sealed class FieldFocused : ContextState
+    {
+    }
+
+    /// <summary>A state with nothing to say about how to get into it.</summary>
+    [State("no-hint", Namespace = "zls")]
+    public sealed class NoHint : ContextState
+    {
+    }
+
+    [Step("compile", Namespace = "zls")]
+    [Requires(typeof(ScriptSelected))]
+    public sealed class Compile : ContextStep
+    {
+    }
+
+    [Step("open-window", Namespace = "zls")]
+    [Requires(typeof(InEditor), typeof(NoHint))]
+    [Enters(typeof(WindowOpen))]
+    public sealed class OpenWindow : ContextStep
+    {
+    }
+
+    [Step("close-window", Namespace = "zls")]
+    [Leaves(typeof(WindowOpen))]
+    public sealed class CloseWindow : ContextStep
+    {
+    }
+
+    [Step("needs-either", Namespace = "zls")]
+    [Requires(typeof(InEditor))]
+    [RequiresAny(typeof(ScriptSelected), typeof(FieldFocused))]
+    public sealed class NeedsEither : ContextStep
+    {
+    }
+
+    [Step("no-hint", Namespace = "zls")]
+    [Requires(typeof(NoHint))]
+    public sealed class NeedsNoHint : ContextStep
+    {
     }
 }

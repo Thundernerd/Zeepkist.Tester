@@ -54,6 +54,14 @@ public sealed class StepDescriptorBuilder
     }
 
     /// <summary>
+    /// The types in an assembly with <see cref="StateAttribute"/>.
+    /// </summary>
+    internal static IEnumerable<Type> FindStates(Assembly assembly)
+    {
+        return assembly.GetTypes().Where(type => FindAttribute<StateAttribute>(type) != null);
+    }
+
+    /// <summary>
     /// Whether a type in the assembly has <see cref="TestPluginAttribute"/>.
     /// </summary>
     internal static bool IsTestPlugin(Assembly assembly)
@@ -82,6 +90,13 @@ public sealed class StepDescriptorBuilder
         {
             Name = name,
             Namespace = stepNamespace,
+            Requires =
+            [
+                .. NamedStates<RequiresAttribute>(stepType).SelectMany(states => states).Select(state => new[] { BuildState(state).FullName }),
+                .. NamedStates<RequiresAnyAttribute>(stepType).Select(states => StateNames(states)),
+            ],
+            Enters = StateNames(NamedStates<EntersAttribute>(stepType).SelectMany(states => states)),
+            Leaves = StateNames(NamedStates<LeavesAttribute>(stepType).SelectMany(states => states)),
             Documentation = Summaries($"T:{DocName(stepType)}"),
             Examples = [.. FindAttributes(stepType, typeof(ExampleAttribute).FullName).Select(ConstructorValue<string>)],
             Arguments = BuildArguments(stepType, [stepType]),
@@ -106,6 +121,123 @@ public sealed class StepDescriptorBuilder
         }
 
         return descriptors;
+    }
+
+    public StateDescriptor BuildState(Type stateType)
+    {
+        return BuildState(stateType, []);
+    }
+
+    /// <summary>
+    /// Builds steps and states: <paramref name="stateTypes"/>, and those the steps and states name, which can't share a name within a namespace.
+    /// </summary>
+    public StepRegistry BuildRegistry(IEnumerable<Type> stepTypes, IEnumerable<Type> stateTypes)
+    {
+        var stepTypeList = stepTypes.ToList();
+        var steps = BuildAll(stepTypeList);
+
+        var states = new List<StateDescriptor>();
+        var typesByName = new Dictionary<string, Type>();
+        var pending = new Queue<Type>(stateTypes.Concat(stepTypeList.SelectMany(NamedStates)));
+        while (pending.Count > 0)
+        {
+            var stateType = pending.Dequeue();
+            var state = BuildState(stateType);
+            if (typesByName.TryGetValue(state.FullName, out var other))
+            {
+                if (other.FullName == stateType.FullName)
+                    continue;
+
+                throw new StepDefinitionException($"{other.FullName} and {stateType.FullName} are both the state '{state.FullName}'.");
+            }
+
+            typesByName.Add(state.FullName, stateType);
+            states.Add(state);
+
+            var within = NamedValue<Type>(FindAttribute<StateAttribute>(stateType), nameof(StateAttribute.Within));
+            if (within != null)
+                pending.Enqueue(within);
+        }
+
+        return new StepRegistry { Steps = steps, States = states };
+    }
+
+    private StateDescriptor BuildState(Type stateType, List<Type> inner)
+    {
+        var stateAttribute = FindAttribute<StateAttribute>(stateType)
+            ?? throw new StepDefinitionException($"{stateType.FullName} has no [State] attribute.");
+
+        if (inner.Any(other => other.FullName == stateType.FullName))
+            throw new StepDefinitionException($"{stateType.FullName} is within itself, through {inner.Last().FullName}.");
+
+        if (!stateType.GetInterfaces().Any(type => type.FullName == typeof(IState).FullName))
+            throw new StepDefinitionException($"{stateType.FullName} has [State] but doesn't implement IState.");
+
+        if (stateType.IsAbstract || stateType.GetConstructor(Type.EmptyTypes) == null)
+            throw new StepDefinitionException($"{stateType.FullName} has [State] but can't be made: it has to be a concrete class with a public constructor that takes nothing.");
+
+        var name = ConstructorValue<string>(stateAttribute);
+        RequireKebabCase($"State name '{name}'", name, stateType);
+
+        var stateNamespace = NamedValue<string>(stateAttribute, nameof(StateAttribute.Namespace)) ?? TestPluginNamespace(stateType.Assembly) ?? string.Empty;
+        if (stateNamespace.Length > 0)
+            RequireKebabCase($"Namespace '{stateNamespace}'", stateNamespace, stateType);
+        else if (stateType.Assembly.GetName().Name != TesterAssemblyName)
+            throw new StepDefinitionException($"State '{name}' ({stateType.FullName}) has no namespace, which is reserved for the tester's own states. Set Namespace on [State] or [TestPlugin].");
+
+        var within = NamedValue<Type>(stateAttribute, nameof(StateAttribute.Within));
+        if (within != null)
+            RequireState(within, $"Within on {stateType.FullName}");
+
+        return new StateDescriptor
+        {
+            Name = name,
+            Namespace = stateNamespace,
+            Within = within == null ? null : BuildState(within, [.. inner, stateType]).FullName,
+            Hint = NamedValue<string>(stateAttribute, nameof(StateAttribute.Hint)),
+            Documentation = Summaries($"T:{DocName(stateType)}"),
+        };
+    }
+
+    private List<string> StateNames(IEnumerable<Type> stateTypes)
+    {
+        return [.. stateTypes.Select(state => BuildState(state).FullName)];
+    }
+
+    private static IEnumerable<Type> NamedStates(Type stepType)
+    {
+        return NamedStates<RequiresAttribute>(stepType)
+            .Concat(NamedStates<RequiresAnyAttribute>(stepType))
+            .Concat(NamedStates<EntersAttribute>(stepType))
+            .Concat(NamedStates<LeavesAttribute>(stepType))
+            .SelectMany(states => states);
+    }
+
+    /// <summary>
+    /// What each of a step's <typeparamref name="TAttribute"/>s names.
+    /// </summary>
+    private static IEnumerable<List<Type>> NamedStates<TAttribute>(Type stepType)
+        where TAttribute : Attribute
+    {
+        var where = $"[{typeof(TAttribute).Name.Replace(nameof(Attribute), string.Empty)}] on {stepType.FullName}";
+        foreach (var attribute in FindAttributes(stepType, typeof(TAttribute).FullName))
+        {
+            var written = attribute.ConstructorArguments[0].Value as IEnumerable<CustomAttributeTypedArgument> ?? [];
+            var states = written.Select(state => (Type)state.Value).ToList();
+            if (states.Count == 0)
+                throw new StepDefinitionException($"{where} names no states.");
+
+            foreach (var state in states)
+                RequireState(state, where);
+
+            yield return states;
+        }
+    }
+
+    private static void RequireState(Type type, string where)
+    {
+        if (FindAttribute<StateAttribute>(type) == null)
+            throw new StepDefinitionException($"{where} names {type.FullName}, which has no [State] attribute.");
     }
 
     private IReadOnlyList<ArgumentDescriptor> BuildArguments(Type owner, List<Type> enclosing)

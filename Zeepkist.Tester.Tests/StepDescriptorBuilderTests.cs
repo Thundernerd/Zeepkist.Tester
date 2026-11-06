@@ -291,6 +291,54 @@ public class StepDescriptorBuilderTests
         Assert.Null(Assert.Single(descriptor.Arguments).Documentation);
     }
 
+    [Fact]
+    public void Build_Requires_GivesEachStateItsOwnEntry()
+    {
+        var descriptor = Build(typeof(TestSteps.OpenWindow));
+
+        Assert.Equal([["zls.editor"], ["zls.no-hint"]], descriptor.Requires);
+        Assert.Equal(["zls.window-open"], descriptor.Enters);
+        Assert.Empty(descriptor.Leaves);
+    }
+
+    [Fact]
+    public void Build_RequiresAny_KeepsItsStatesInOneEntry()
+    {
+        var descriptor = Build(typeof(TestSteps.NeedsEither));
+
+        Assert.Equal([["zls.editor"], ["zls.script-selected", "zls.field-focused"]], descriptor.Requires);
+    }
+
+    [Fact]
+    public void Build_NoStates_HasNoRequirementsOrEffects()
+    {
+        var descriptor = Build(typeof(TestSteps.Undo));
+
+        Assert.Empty(descriptor.Requires);
+        Assert.Empty(descriptor.Enters);
+        Assert.Empty(descriptor.Leaves);
+    }
+
+    [Fact]
+    public void BuildState_NestedStateWithAHint_HasItsParts()
+    {
+        var state = new StepDescriptorBuilder().BuildState(typeof(TestSteps.ScriptSelected));
+
+        Assert.Equal("script-selected", state.Name);
+        Assert.Equal("zls", state.Namespace);
+        Assert.Equal("zls.script-selected", state.FullName);
+        Assert.Equal("zls.window-open", state.Within);
+        Assert.Equal("Add `zls.new-script` or `zls.select-script` first.", state.Hint);
+    }
+
+    [Fact]
+    public void BuildRegistry_ListsTheStatesStepsNameAndThoseTheyAreWithin()
+    {
+        var registry = new StepDescriptorBuilder().BuildRegistry([typeof(TestSteps.Compile)], []);
+
+        Assert.Equal(["zls.script-selected", "zls.window-open", "zls.editor"], registry.States.Select(state => state.FullName));
+    }
+
     private static ArgumentDescriptor Argument(Type stepType, string name)
     {
         return Build(stepType).Arguments.Single(argument => argument.Name == name);
