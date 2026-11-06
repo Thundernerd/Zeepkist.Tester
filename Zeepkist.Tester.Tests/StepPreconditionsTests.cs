@@ -60,7 +60,7 @@ public class StepPreconditionsTests
     {
         var (_, failed) = Run(new NeedsNoHint());
 
-        Assert.Equal("zls.no-hint needs zls.no-hint.", failed?.Message);
+        Assert.Equal("zls.needs-no-hint needs zls.no-hint.", failed?.Message);
     }
 
     [Theory]
@@ -77,7 +77,7 @@ public class StepPreconditionsTests
     }
 
     [Fact]
-    public void Run_RequiresAny_NoneHolds_NamesThemAll()
+    public void Run_RequiresAnyWhereNoneHolds_NamesThemAll()
     {
         Met(typeof(InEditor), typeof(WindowOpen));
 
@@ -119,7 +119,7 @@ public class StepPreconditionsTests
     }
 
     [Fact]
-    public void Run_RequiresAny_TheStateTheyAreWithinWasLeft_NamesItOnce()
+    public void Run_RequiresAnyWithinALeftState_NamesItOnce()
     {
         Met(typeof(InEditor), typeof(ScriptSelected), typeof(FieldFocused));
 

@@ -324,7 +324,7 @@ public static class TestSteps
     {
     }
 
-    [Step("no-hint", Namespace = "zls")]
+    [Step("needs-no-hint", Namespace = "zls")]
     [Requires(typeof(NoHint))]
     public sealed class NeedsNoHint : ContextStep
     {

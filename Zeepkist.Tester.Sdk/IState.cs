@@ -6,7 +6,7 @@ namespace TNRD.Zeepkist.Tester.Sdk;
 public interface IState
 {
     /// <summary>
-    /// Whether the state holds right now. The harness asks this before each step that requires the state.
+    /// Whether the state holds right now. The harness asks this before each step that requires the state or one within it.
     /// </summary>
     public bool IsMet(IStepContext context);
 }
