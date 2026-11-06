@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Zeepkist.Tester.Scenarios\Zeepkist.Tester.Scenarios.csproj" />
     <ProjectReference Include="..\Zeepkist.Tester.Sdk\Zeepkist.Tester.Sdk.csproj" />
     <!-- Only built first: the CLI reads the tester's own steps from the DLL and docs below, and never loads it -->
     <ProjectReference Include="..\Zeepkist.Tester\Zeepkist.Tester.csproj" ReferenceOutputAssembly="false" Private="false" />

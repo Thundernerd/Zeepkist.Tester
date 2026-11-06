@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Zeepkist.Tester.Scenarios\Zeepkist.Tester.Scenarios.csproj" />
     <ProjectReference Include="..\Zeepkist.Tester.Sdk\Zeepkist.Tester.Sdk.csproj" />
   </ItemGroup>
 
