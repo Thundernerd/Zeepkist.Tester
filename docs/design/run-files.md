@@ -20,7 +20,7 @@ Each mod in `mods` has to pass the build check, as a step in the results named `
 - No other plugin with its name or one of its `oldGuids` is loaded.
 - BepInEx's log has no `Skipping [<name> <version>]`, which is how it reports a copy it skipped.
 
-After the build check, a run has a `yaml parser` step. It runs the YamlDotNet that's loaded, fails unless that's the copy next to the plugin, and names the build in its `Detail`.
+After the build check, a run has a `yaml parser` step. It parses and binds a small scenario, and fails unless that worked and YamlDotNet is the copy merged into the plugin. Its `Detail` says which assembly YamlDotNet came from.
 
 ## `out/results.json`
 

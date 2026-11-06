@@ -1,0 +1,26 @@
+<Project>
+
+  <!-- What a run deploys goes to plugin/: the tests and the CLI keep the separate DLLs in the output folder. -->
+  <!-- BepInEx loads every plugin into one AppDomain, so the merged YamlDotNet is internal and another mod's copy can't clash with it. -->
+  <Target Name="MergeYamlIntoPlugin" AfterTargets="Build">
+    <PropertyGroup>
+      <PluginFolder>$(OutDir)plugin/</PluginFolder>
+    </PropertyGroup>
+    <ItemGroup>
+      <MergedAssembly Include="$(TargetPath)" />
+      <MergedAssembly Include="$(OutDir)Zeepkist.Tester.Scenarios.dll" />
+      <MergedAssembly Include="$(OutDir)YamlDotNet.dll" />
+      <ReferenceFolder Include="@(ReferencePath->'%(RootDir)%(Directory)')" />
+    </ItemGroup>
+    <ILRepack
+      Parallel="true"
+      DebugInfo="true"
+      Internalize="true"
+      InputAssemblies="@(MergedAssembly)"
+      LibraryPath="@(ReferenceFolder->Distinct())"
+      TargetKind="SameAsPrimaryAssembly"
+      OutputFile="$(PluginFolder)$(TargetFileName)" />
+    <Copy SourceFiles="$(OutDir)Zeepkist.Tester.Sdk.dll" DestinationFolder="$(PluginFolder)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>
