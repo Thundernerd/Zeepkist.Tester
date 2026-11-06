@@ -5,7 +5,7 @@ start: editor
 input: in-process
 steps:
   - undo
-  - wait: on
+  - place-block: on
   - place-block: lamp
   - place-block: { function: lamp, as: my-lamp, how-many: 2 }
   - zls.drag-window-edge: 300

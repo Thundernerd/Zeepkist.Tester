@@ -30,6 +30,7 @@ internal sealed class ScenarioParser
     private readonly string _file;
     private readonly Dictionary<string, StepDescriptor> _steps;
     private readonly List<YamlSequenceNode> _bodiesRead = [];
+    private readonly Dictionary<string, IReadOnlyList<string>> _loopValues = [];
     private List<string> _use = [];
 
     private ScenarioParser(string file, IEnumerable<StepDescriptor> steps)
@@ -151,7 +152,7 @@ internal sealed class ScenarioParser
         if (item is YamlScalarNode bare)
         {
             var named = Resolve(bare);
-            return new StepNode(Location(item), named, ReadNoArguments(named, item));
+            return Checked(new StepNode(Location(item), named, ReadNoArguments(named, item)));
         }
 
         var map = (YamlMappingNode)item;
@@ -173,7 +174,13 @@ internal sealed class ScenarioParser
 
         var entry = map.Children.First();
         var step = Resolve(entry.Key);
-        return new StepNode(Location(item), step, ReadObject(step.FullName, step.Arguments, entry.Value));
+        return Checked(new StepNode(Location(item), step, ReadObject(step.FullName, step.Arguments, entry.Value)));
+    }
+
+    private StepNode Checked(StepNode node)
+    {
+        ValueChecks.Check(node, _loopValues);
+        return node;
     }
 
     private ForNode ReadFor(YamlMappingNode map)
@@ -194,7 +201,18 @@ internal sealed class ScenarioParser
             throw Fail(values, $"for: has no values for '{name}'.");
 
         var literals = values.Select(value => ReadLiteral(value, "A value of for:")).ToList();
-        return new ForNode(Location(map), name, literals, ReadBody(RequireSteps(map, entries, "for:")));
+        var body = RequireSteps(map, entries, "for:");
+
+        // A body's own for of this name is an error in itself, which ztest check reports. Here the inner one wins, as it would until then
+        _loopValues.TryGetValue(name, out var outer);
+        _loopValues[name] = literals;
+        var steps = ReadBody(body);
+        if (outer == null)
+            _loopValues.Remove(name);
+        else
+            _loopValues[name] = outer;
+
+        return new ForNode(Location(map), name, literals, steps);
     }
 
     private RepeatNode ReadRepeat(YamlMappingNode map)
@@ -223,7 +241,9 @@ internal sealed class ScenarioParser
                 if (with.ContainsKey(name))
                     throw Fail(entry.Key, $"with: has the name '{name}' twice.");
 
-                with.Add(name, new ScalarArgument(Location(entry.Value), ReadScalar(entry.Value, $"'{name}' of with:")));
+                var value = new ScalarArgument(Location(entry.Value), ReadScalar(entry.Value, $"'{name}' of with:"));
+                ValueChecks.NamesIn(value);
+                with.Add(name, value);
             }
         }
 
