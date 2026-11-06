@@ -136,6 +136,18 @@ public class ScenarioCheckTests
     }
 
     [Fact]
+    public void ABrokenFile_DoesntHideTheProblemsOfAFileItDoesntMention()
+    {
+        using var folder = new TemporaryFolder();
+        var broken = Write(folder, "a.ztest.yaml", "steps:\n  - nope\n");
+        var other = Write(folder, "b.ztest.yaml", "steps:\n  - wait: ${x}\n");
+
+        var problems = ScenarioCheck.Run([broken, other], CheckSteps.Registry).Select(problem => problem.ToString());
+
+        Assert.Equal([$"{broken}:2:5: error: There's no step 'nope'.", $"{other}:2:11: error: The name 'x' {NotDefined}"], problems);
+    }
+
+    [Fact]
     public void AFileInACycle_IsNotBlamedForWhatItsCallerGivesIt()
     {
         using var folder = new TemporaryFolder();

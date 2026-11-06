@@ -30,6 +30,7 @@ internal sealed class ScenarioCheck
     private readonly IReadOnlyList<StepDescriptor> _steps;
     private readonly Dictionary<string, StateDescriptor> _states;
     private readonly Dictionary<string, Scenario> _scenarios = [];
+    private readonly List<string> _brokenFiles = [];
     private readonly HashSet<string> _followed = [];
     private readonly List<string> _running = [];
     private readonly List<CheckProblem> _problems = [];
@@ -60,10 +61,8 @@ internal sealed class ScenarioCheck
         foreach (var scenario in scenarios)
             CollectRuns(scenario, runByAFile);
 
-        // A file that can't be read may be what runs the others, and what they'd be given can't be known
-        var mayHaveAHiddenCaller = _scenarios.Values.Contains(null);
         foreach (var scenario in scenarios.Where(scenario => !runByAFile.Contains(FullPathOf(scenario.File))))
-            FollowFromItsStart(scenario, mayHaveAHiddenCaller);
+            FollowFromItsStart(scenario, MayBeRunByABrokenFile(scenario));
 
         // What's left only runs in a cycle, which following any of it reports, so its caller is in there somewhere too
         foreach (var scenario in scenarios.Where(scenario => !_followed.Contains(FullPathOf(scenario.File))))
@@ -83,13 +82,15 @@ internal sealed class ScenarioCheck
             return loaded;
 
         Scenario scenario = null;
+        string text = null;
         try
         {
-            using var reader = File.OpenText(file);
-            scenario = ScenarioParser.Parse(file, reader, _steps);
+            text = File.ReadAllText(file);
+            scenario = ScenarioParser.Parse(file, new StringReader(text), _steps);
         }
         catch (ScenarioException exception)
         {
+            _brokenFiles.Add(text);
             Add(new CheckProblem(exception.Location, CheckSeverity.Error, exception.Problem));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
@@ -99,6 +100,15 @@ internal sealed class ScenarioCheck
 
         _scenarios.Add(key, scenario);
         return scenario;
+    }
+
+    /// <summary>
+    /// A file that doesn't parse has no <c>run:</c> nodes to follow, so all that shows it may give this one names is that it mentions it.
+    /// </summary>
+    private bool MayBeRunByABrokenFile(Scenario scenario)
+    {
+        var name = Path.GetFileName(scenario.File);
+        return _brokenFiles.Any(text => text.Contains(name, StringComparison.Ordinal));
     }
 
     private void CollectRuns(Scenario scenario, HashSet<string> files)
