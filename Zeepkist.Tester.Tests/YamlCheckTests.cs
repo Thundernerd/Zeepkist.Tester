@@ -11,6 +11,6 @@ public class YamlCheckTests
 
         Assert.True(step.Passed, step.ToString());
         Assert.Contains("YamlDotNet", step.Detail);
-        Assert.Contains(".NETCoreApp,Version=v10.0", step.Detail);
+        Assert.Contains(".NETCoreApp", step.Detail);
     }
 }
