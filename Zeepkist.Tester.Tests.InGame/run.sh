@@ -40,9 +40,10 @@ game_running && { log "Zeepkist is already running, close it first"; exit 1; }
 pgrep -x steam >/dev/null || { log "Steam isn't running"; exit 1; }
 [[ ! -e "$tester" && ! -e "$mod" ]] || { log "$tester or $mod is already there, and isn't this script's to replace"; exit 1; }
 
-dotnet build "$repo" --configuration Release --nologo --verbosity quiet
+# The compiler server outlives the build, and would keep holding the lock after this script ends
+dotnet build "$repo" --configuration Release --nologo --verbosity quiet 9>&-
 dotnet "$repo/Zeepkist.Tester.Cli/bin/Release/net10.0/Zeepkist.Tester.Cli.dll" check \
-    "$here/Scenarios"/*.ztest.yaml --plugin "$here/bin/Release/net472/$guid.dll"
+    "$here/Scenarios"/*.ztest.yaml --plugin "$here/bin/Release/net472/$guid.dll" 9>&-
 
 mkdir -p "$out"
 kept="$(mktemp -d "${TMPDIR:-/tmp}/ztest-kept.XXXXXX")"
