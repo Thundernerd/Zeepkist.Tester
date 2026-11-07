@@ -17,6 +17,8 @@ internal interface IRunHost
     /// </summary>
     public float Now { get; }
 
+    public IInput Input { get; }
+
     public IGameEvents Game { get; }
 
     /// <summary>

@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using TNRD.Zeepkist.Tester.Cli;
@@ -339,6 +341,16 @@ public class StepDescriptorBuilderTests
         Assert.Equal(["zls.script-selected", "zls.window-open", "zls.editor"], registry.States.Select(state => state.FullName));
     }
 
+    [Fact]
+    public void TheSdksDragMove_IsAnArgumentAStepCanTake()
+    {
+        var item = Argument(typeof(TakesDragMoves), "moves").Type.ItemType;
+
+        Assert.Equal(["by", "over", "sideways"], item.Arguments.Select(argument => argument.Name));
+        Assert.True(item.Arguments[0].IsPrimary);
+        Assert.Equal(ArgumentKind.Pixels, item.Arguments[0].Type.Kind);
+    }
+
     private static ArgumentDescriptor Argument(Type stepType, string name)
     {
         return Build(stepType).Arguments.Single(argument => argument.Name == name);
@@ -355,5 +367,17 @@ public class StepDescriptorBuilderTests
     private static StepDescriptorBuilder AsTester(Func<string, string> summaries)
     {
         return new StepDescriptorBuilder { TesterAssemblyName = typeof(TestSteps).Assembly.GetName().Name, Summaries = summaries };
+    }
+
+    [Step("takes-drag-moves")]
+    private sealed class TakesDragMoves : Step
+    {
+        [Arg(Primary = true)]
+        public required List<DragMove> Moves { get; set; }
+
+        public override IEnumerator Run(IStepContext context)
+        {
+            yield break;
+        }
     }
 }

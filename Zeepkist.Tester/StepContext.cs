@@ -40,6 +40,8 @@ internal sealed class StepContext : ScenarioContext, IStepContext
 
     public IValues Values { get; }
 
+    public IInput Input => _host.Input;
+
     public IGameEvents Game => _host.Game;
 
     public IExceptionLog Exceptions { get; }

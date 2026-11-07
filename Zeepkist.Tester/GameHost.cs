@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using BepInEx.Bootstrap;
 using BepInEx.Logging;
+using TNRD.Zeepkist.Tester.InputDrivers;
 using TNRD.Zeepkist.Tester.Scenarios;
 using TNRD.Zeepkist.Tester.Sdk;
 using UnityEngine;
@@ -26,11 +27,14 @@ internal sealed class GameHost : IRunHost
         Game = game;
         _screenshots = screenshots;
         _walk = new StartWalk(game, logger, report);
+        Input = new TesterInput(new InProcessDrivers(new ImuiDriver()), () => Now);
     }
 
     public ManualLogSource Logger { get; }
 
     public float Now => Time.realtimeSinceStartup;
+
+    public IInput Input { get; }
 
     public IGameEvents Game { get; }
 

@@ -161,6 +161,7 @@ internal sealed class ScenarioRunner
     {
         _host.Logger.LogInfo($"{TestRun.Marker} scenario {scenario.Name}");
         _exceptions.StartScenario(scenario.Name);
+        _host.Input.Route = scenario.InputRoute;
 
         var ready = true;
         if (!isFirst)
@@ -407,6 +408,8 @@ internal sealed class ScenarioRunner
         public string File => _scenario.File;
 
         public ScenarioStart Start => _scenario.Start;
+
+        public InputRoute InputRoute => _scenario.Input;
 
         public IReadOnlyList<ScenarioNode> Steps => _scenario.Steps;
 

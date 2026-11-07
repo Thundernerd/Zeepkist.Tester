@@ -20,6 +20,8 @@ public abstract class BareStepContext : IStepContext
 
     public bool Failed => throw new NotSupportedException();
 
+    public IInput Input => throw new NotSupportedException();
+
     public IGameEvents Game => throw new NotSupportedException();
 
     public IExceptionLog Exceptions => throw new NotSupportedException();
