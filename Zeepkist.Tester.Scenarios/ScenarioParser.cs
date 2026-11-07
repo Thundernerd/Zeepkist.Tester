@@ -55,7 +55,7 @@ internal sealed class ScenarioParser
 
         var description = entries.TryGetValue("description", out var written) ? ReadScalar(written, "description") : null;
         var start = entries.TryGetValue("start", out written) ? ReadStart(written) : ScenarioStart.Default;
-        var input = entries.TryGetValue("input", out written) ? ReadInput(written) : null;
+        var input = entries.TryGetValue("input", out written) ? ReadInput(written) : InputRoute.InProcess;
         if (entries.TryGetValue("use", out written))
             _use = ReadUse(written);
 
@@ -115,13 +115,15 @@ internal sealed class ScenarioParser
         return new ScenarioStart(state, arguments, Location(written));
     }
 
-    private string ReadInput(YamlNode written)
+    private InputRoute ReadInput(YamlNode written)
     {
         var input = ReadScalar(written, "input:");
-        if (input != "in-process" && input != "os")
-            throw Fail(written, $"input: takes in-process or os, not '{input}'.");
-
-        return input;
+        return input switch
+        {
+            "in-process" => InputRoute.InProcess,
+            "os" => InputRoute.Os,
+            _ => throw Fail(written, $"input: takes in-process or os, not '{input}'."),
+        };
     }
 
     private List<ScenarioNode> ReadBody(YamlNode steps)
