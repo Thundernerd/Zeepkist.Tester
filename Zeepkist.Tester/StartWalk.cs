@@ -74,12 +74,17 @@ internal sealed class StartWalk
     {
         PressAnyKeyToStartGame startScreen = null;
         yield return AwaitObject(() => startScreen = Find<PressAnyKeyToStartGame>(), "the start screen");
-        yield return Until(() => startScreen.disableThisIntroPanel.activeInHierarchy && PlayerManager.Instance != null, "press any key");
+
+        // The game can leave the start screen before this holds, which is as good as this pressing the key
+        yield return Until(() => startScreen == null || (startScreen.disableThisIntroPanel.activeInHierarchy && PlayerManager.Instance != null), "press any key");
+        yield return Until(() => PlayerManager.Instance != null, "the player manager");
 
         // Skips the main menu's one-time warning panels for this session, without changing settings
         PlayerManager.Instance.modPanelHasAlreadyBeenDisplayed = true;
         PlayerManager.Instance.epilepsyPanelHasAlreadyBeenDisplayed = true;
-        startScreen.LoadNextLevel();
+        if (startScreen != null)
+            startScreen.LoadNextLevel();
+
         _pastStartScreen = true;
         _report(RunStep.Pass("start screen"));
     }
