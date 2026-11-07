@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
+using TNRD.Zeepkist.Tester.Scenarios;
 
 namespace TNRD.Zeepkist.Tester;
 
@@ -12,10 +13,24 @@ namespace TNRD.Zeepkist.Tester;
 internal sealed class RunRequest
 {
     public const string Flag = "-ztest";
+    public const string ScenariosFolder = "scenarios";
 
     public string RunId { get; set; }
 
     public List<ModUnderTest> Mods { get; set; } = [];
+
+    /// <summary>
+    /// The scenario files to run, in order, relative to the <see cref="ScenariosFolder"/> next to this plugin.
+    /// </summary>
+    public List<string> Scenarios { get; set; } = [];
+
+    /// <summary>
+    /// The scenario files to run, as paths, from the folder of this plugin.
+    /// </summary>
+    public List<string> ScenarioFiles(string folder)
+    {
+        return Scenarios.ConvertAll(file => ScenarioPaths.InFolder(Path.Combine(folder, ScenariosFolder), file));
+    }
 
     public static bool TryRead(string folder, string[] args, out RunRequest request)
     {

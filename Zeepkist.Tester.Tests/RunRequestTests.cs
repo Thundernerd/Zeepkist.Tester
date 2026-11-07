@@ -16,6 +16,30 @@ public class RunRequestTests
         """;
 
     [Fact]
+    public void TheScenarios_AreTheirFilesInOrder_NextToThePlugin()
+    {
+        using var folder = new TemporaryFolder();
+        File.WriteAllText(Path.Combine(folder.Path, "run.json"), """{ "runId": "abc", "scenarios": ["b.ztest.yaml", "shared/a.ztest.yaml"] }""");
+
+        Assert.True(RunRequest.TryRead(folder.Path, ["Zeepkist.exe", "-ztest", "abc"], out var request));
+
+        Assert.Equal(
+            [Path.Combine(folder.Path, "scenarios", "b.ztest.yaml"), Path.Combine(folder.Path, "scenarios", "shared", "a.ztest.yaml")],
+            request.ScenarioFiles(folder.Path));
+    }
+
+    [Fact]
+    public void ARunJsonWithoutScenarios_HasNone()
+    {
+        using var folder = new TemporaryFolder();
+        File.WriteAllText(Path.Combine(folder.Path, "run.json"), RunJson);
+
+        Assert.True(RunRequest.TryRead(folder.Path, ["Zeepkist.exe", "-ztest", "abc"], out var request));
+
+        Assert.Empty(request.ScenarioFiles(folder.Path));
+    }
+
+    [Fact]
     public void TheFlag_WithAMatchingRunJson_IsARun()
     {
         using var folder = new TemporaryFolder();

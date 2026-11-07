@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
+using TNRD.Zeepkist.Tester.Sdk;
 
 namespace TNRD.Zeepkist.Tester;
 
@@ -41,6 +42,12 @@ internal sealed class RunResults
 
     [JsonIgnore]
     public bool AnyStepFailed => Steps.Exists(step => !step.Passed);
+
+    /// <summary>
+    /// A failed step or start in a scenario takes its own screenshot.
+    /// </summary>
+    [JsonIgnore]
+    public bool AnyStepFailedOutsideAScenario => Steps.Exists(step => !step.Passed && step.Scenario.Length == 0);
 
     public string ScreenshotPath(string name)
     {

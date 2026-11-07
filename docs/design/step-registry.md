@@ -2,7 +2,7 @@
 
 The typed list of steps that the YAML parser, the editor schema, the step reference docs, `ztest check`, `ztest convert` and C# tests all come from. It replaces ZeepLogicScript's `StepList` + `StepArgument` + the hand-kept step table + `StepListTests`. Background: [generic-tester.md](../research/generic-tester.md) §4 and §7, and [scenario-format.md](../research/scenario-format.md).
 
-Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4), named values (#5), the states with their runtime check (#6), the parser (#7), `ztest check` (#8) and the walks to where a scenario starts (#12); the rest isn't, and its names are placeholders.
+Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4), named values (#5), the states with their runtime check (#6), the parser (#7), `ztest check` (#8), the walks to where a scenario starts (#12) and the scenario runner with its context and hooks (#13); the rest isn't, and its names are placeholders.
 
 ## The one constraint that shapes it
 
@@ -115,16 +115,16 @@ public sealed class SetBlockSetting : Step
 
 - Names last for the scenario, except inside a `for`, `repeat` or `run:` (see *Control nodes and names*). Defining a name that's already defined is an error, as today.
 - `${name}` works in any single YAML value, whatever the argument's type. It's substituted before the value is converted (see *Control nodes and names*). It needs a name whose kind has a `Substitute` member, a public string property. A `${name}` that isn't defined by an earlier step fails `ztest check` with its line. `$${` writes a literal `${`, and any other `${` without a name and `}` after it is an error.
-- In the game, a mistake with a name throws `StepFailedException`, which stops the step and fails it with the exception's message, so `Run` needs no check after `Block.Get(context)`. The scenario runner (#13) records that as the step's failure. It also makes one `ScenarioValues` per scenario, with a scope for each body. Substitution moves into binding (#7, #13), so `StepArguments.Substitute` from #5 goes away.
+- In the game, a mistake with a name throws `StepFailedException`, which stops the step and fails it with the exception's message, so `Run` needs no check after `Block.Get(context)`. The scenario runner records that as the step's failure. It also makes one `ScenarioValues` per scenario, with a scope for each body. Substitution is part of binding.
 - Descriptors record this for `ztest check`: `ArgumentKind.Name` defines a name and `ArgumentKind.Ref` uses one, each with its `ValueKind` and its `Substitute` member.
 - `ztest check` follows the steps in order, so it knows which names exist at each line, with a scope for each `for`, `repeat` and `run:` body. A `Name` whose value only a run can know could define anything, so names used after it in that scope aren't called undefined.
 
 ## The context
 
 ```csharp
-public interface IStepContext
+public interface IStepContext : IScenarioContext
 {
-    string Scenario { get; }
+    string ScenarioName { get; }   // from IScenarioContext; a property can't share its name with Scenario<T>()
     ManualLogSource Logger { get; }
 
     // Outcome, as StepContext today
@@ -139,7 +139,7 @@ public interface IStepContext
     IEnumerator WaitUntil(Func<bool> condition, Seconds timeout, string what);
 
     // What the harness provides
-    IInput Input { get; }          // see below
+    IInput Input { get; }          // see below; comes with #15
     IGameEvents Game { get; }      // counts of scene loads, editor entries, test mode entries, round starts, level loads
     IExceptionLog Exceptions { get; }
     IEnumerator Screenshot(FileName name);
@@ -153,6 +153,10 @@ public interface IStepContext
     T Get<T>() where T : class;
 }
 ```
+
+- `Fail` doesn't stop `Run`, so a step that can't go on does `yield break`, or throws `StepFailedException`. The first failure is the one in the results, and `Pass` doesn't take it back.
+- A wait that gives up throws `StepFailedException`, so nothing after it runs.
+- `Get<T>` fails the step if no plugin gave a service of that type. Two plugins giving one type is an error that fails the run, naming both.
 
 `Scenario<T>()` replaces fields like `PlacedBlockNames` and `RememberedWindowRect` that ZLS's `StepContext` has today. Each mod keeps its own state class instead of growing the shared context.
 
@@ -267,7 +271,9 @@ public sealed class LogicScriptingHooks : IScenarioHooks
 }
 ```
 
-Step classes are found by scanning the plugin's assembly for `[Step]`, both by `Tester.Register` in the game and by the CLI offline. `Namespace` defaults to the `[TestPlugin]` one.
+`Tester`, `TesterInfo`, `IScenarioHooks` and the contexts are in the SDK, so a mod only needs the plugin to name a state it requires. `IRunContext` has `Logger` and `Get<T>()`, `IScenarioContext` adds `ScenarioName` and `Scenario<T>()`, and `IStepContext` adds the rest. A hook runs before the walk to where its scenario starts, so `BeforeScenario` finds the game where the last scenario left it. `RunStarted` runs once before the first walk.
+
+Step classes are found by scanning each `[TestPlugin]` assembly for `[Step]`, in the game from the loaded plugins and offline by the CLI. `Tester.Register` only gives what steps run against. `Namespace` defaults to the `[TestPlugin]` one.
 
 Namespacing (decided):
 - **The steps the tester ships with have no prefix:** `wait`, `screenshot`, `press`, `click`, `place-block`, `test-mode`, …. The empty namespace is reserved for them, so no mod can register one there.
@@ -378,7 +384,7 @@ steps:
 
 ### Where a scenario starts
 
-`StartState` lists what `start:` can name, each with its one argument. `StartWalk` (#12) takes the game there the way a player gets there, always through the main menu, so each scenario gets a new menu, level or round whatever the last one left behind. The scenario runner (#13) is what will call it:
+`StartState` lists what `start:` can name, each with its one argument. `StartWalk` (#12) takes the game there the way a player gets there, always through the main menu, so each scenario gets a new menu, level or round whatever the last one left behind. The scenario runner calls it for each scenario:
 
 | `start:` | From the main menu | State it holds |
 | --- | --- | --- |
@@ -388,9 +394,33 @@ steps:
 | `free-play: { uid: … }` | `RacingApi.LoadTrackInFreePlayAsync`, then the round starting. The UID has to be a level the game has loaded: a local, workshop or adventure one. | `free-play` |
 
 - **To the main menu:** the first walk of a run goes from the start screen and skips the one-time panels for that session, without changing settings. Later, the main menu loads again, test mode quits to the editor through the pause menu, the editor quits without saving, and free play quits through the pause menu to the level select or the adventure map, and goes home from there. The game still writes an autosave when the editor quits, which the runner has to put back (#23).
-- **Failing:** each wait gives up after 120 seconds, and every failure is a `StartFailedException` saying what wasn't reached, so a changed menu fails the run instead of hanging it. Unlike a failed step, this leaves the game somewhere unknown. A level file with no blocks in it fails too, because the game opens a file that isn't a level as an empty one, and `start: editor` is the way to an empty level. A damaged level still opens with the blocks the game could read, and only the game's own warning says so.
+- **Failing:** each wait gives up after 120 seconds, and every failure is a `StartFailedException` saying what wasn't reached, so a changed menu fails the run instead of hanging it. Unlike a failed step, this leaves the game somewhere unknown, so it ends the run (see *Running scenarios*). A level file with no blocks in it fails too, because the game opens a file that isn't a level as an empty one, and `start: editor` is the way to an empty level. A damaged level still opens with the blocks the game could read, and only the game's own warning says so.
 - **The states** are `InMainMenu`, `InEditor` and `InFreePlay`, public in the plugin so a mod's step can require them. The walk checks it ended up there. `ztest check` holds the state with the name of the start, and reports a level file that isn't there. A start state no step needs or enters isn't a smell for `ztest check --registry`.
 - `${name}` in a `start:` argument fails at load: no step has run yet to define a name.
+
+### Running scenarios
+
+`run.json` lists the files in order (see [run-files.md](run-files.md)). `ScenarioRunner` first loads each file and the `run:` files it uses, so a mistake fails before a run reaches it: a failed `load` step, and the other files still run. Then for each scenario:
+
+1. `BeforeScenario` of each plugin, except for the first scenario.
+2. `StartWalk.Enter`, through `GuardedRoutine`.
+3. Each node of `steps:`. For a step: bind it, check its states, run it, and record it.
+4. `AfterScenario` of each plugin, also after a failed scenario or a failed start.
+
+What a failure does:
+
+| What failed | What happens |
+| --- | --- |
+| A step | Its scenario stops with a screenshot, and the run goes on with the next, whose walk gets it a new menu, level or round. |
+| The walk to a start, with any exception | A failed `start: <state>` step and a screenshot, then `AfterScenario`, and **the run ends**: each scenario left gets a failed `not run` step saying why. The game is somewhere unknown, so a later scenario's result couldn't be trusted, and each further walk could take 120 seconds per wait to fail the same way. A level file that's wrong also ends the run, which `ztest check` catches before one. |
+| `BeforeScenario` or `AfterScenario` | A failed step named after the hook. After `BeforeScenario` the scenario doesn't run. The run goes on, because the game is still where it was. |
+| `RunStarted` | A failed step named after the hook, and each scenario gets a failed `not run` step. |
+| The right-build or parser checks | No scenario runs. |
+| `run.json` names no scenarios | A failed `scenarios` step, because a run that tested nothing shouldn't report a pass. |
+
+The harness gives back the mouse after each scenario once there's an input driver to give it back (#15).
+
+The steps the tester has so far are `wait`, `log` and `screenshot`. The rest come with #14. `Zeepkist.Tester.Tests.InGame` is a test plugin and scenarios for the in-game check, and its `run.sh` deploys and runs them.
 
 The runner handles the control nodes itself; they aren't registry steps, but the schema includes them:
 

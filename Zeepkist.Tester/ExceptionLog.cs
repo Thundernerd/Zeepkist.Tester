@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TNRD.Zeepkist.Tester.Sdk;
 
 namespace TNRD.Zeepkist.Tester;
 
@@ -6,7 +7,7 @@ namespace TNRD.Zeepkist.Tester;
 /// The exceptions the game logged while the run went on, each scenario's under its name, for the results and for
 /// expect-no-exceptions.
 /// </summary>
-internal sealed class ExceptionLog
+internal sealed class ExceptionLog : IExceptionLog
 {
     // Those logged since the last expect-no-exceptions, or since the scenario started
     private readonly List<LoggedException> _sinceCheck = [];
@@ -34,7 +35,7 @@ internal sealed class ExceptionLog
     /// <summary>
     /// What was logged since the last call, or since the scenario started.
     /// </summary>
-    public List<LoggedException> TakeSinceCheck()
+    public IReadOnlyList<LoggedException> TakeSinceCheck()
     {
         List<LoggedException> taken = [.. _sinceCheck];
         _sinceCheck.Clear();

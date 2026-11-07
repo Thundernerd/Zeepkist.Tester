@@ -18,11 +18,6 @@ namespace TNRD.Zeepkist.Tester.Cli;
 internal sealed class ScenarioCheck
 {
     /// <summary>
-    /// The kind of a <c>for</c> variable and a <c>with:</c> value.
-    /// </summary>
-    private const string TextKind = "text";
-
-    /// <summary>
     /// Nested bodies and <c>run:</c> files multiply, and following them all could take longer than a run would.
     /// </summary>
     private const int MostNodesFollowed = 1_000_000;
@@ -199,7 +194,7 @@ internal sealed class ScenarioCheck
         foreach (var value in loop.Values)
         {
             var body = new Scope(scope);
-            body.Define(loop.Variable, new NamedValue([TextKind], true, value));
+            body.Define(loop.Variable, new NamedValue([TextValue.Kind], true, value));
             Follow(file, loop.Steps, body, held);
         }
     }
@@ -211,19 +206,19 @@ internal sealed class ScenarioCheck
         foreach (var entry in run.With)
         {
             var text = CheckNames(entry.Value, scope) ? Substitution.Replace(entry.Value.Text, written => scope.Find(written).Value) : null;
-            given.Define(entry.Key, new NamedValue([TextKind], true, text));
+            given.Define(entry.Key, new NamedValue([TextValue.Kind], true, text));
         }
 
         var target = RunTarget(file, run);
         if (!File.Exists(target))
         {
-            Report(run.Location, CheckSeverity.Error, $"run: can't find '{run.File}' from this file.");
+            Report(run.Location, CheckSeverity.Error, ScenarioMessages.RunFileMissing(run.File));
             return;
         }
 
         if (_running.Contains(FullPathOf(target)))
         {
-            Report(run.Location, CheckSeverity.Error, $"run: '{run.File}' is already running here, so it would never end.");
+            Report(run.Location, CheckSeverity.Error, ScenarioMessages.RunAlreadyRunning(run.File));
             return;
         }
 

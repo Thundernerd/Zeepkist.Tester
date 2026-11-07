@@ -29,6 +29,16 @@ internal static class ScenarioMessages
         return $"${{{name}}} can't be written: a {kind} has no Substitute member.";
     }
 
+    public static string RunFileMissing(string file)
+    {
+        return $"run: can't find '{file}' from this file.";
+    }
+
+    public static string RunAlreadyRunning(string file)
+    {
+        return $"run: '{file}' is already running here, so it would never end.";
+    }
+
     /// <summary>
     /// When the states a step needs don't hold.
     /// </summary>

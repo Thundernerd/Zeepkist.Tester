@@ -167,13 +167,56 @@ public class ScenarioValuesTests
         Assert.Equal("A ${ has no name and } after it. Write $${ for a literal ${.", exception.Message);
     }
 
+    [Fact]
+    public void AScope_ReadsWhatIsDefinedAroundIt()
+    {
+        var outer = new ScenarioValues();
+        outer.Define("lamp", new BlockValue { Uid = "uid-1" });
+
+        var inner = outer.NewScope();
+
+        Assert.Equal("uid-1", inner.Get<BlockValue>("lamp").Uid);
+        Assert.Equal("uid-1", inner.Substitute("${lamp}"));
+    }
+
+    [Fact]
+    public void AScope_CantDefineANameFromAroundIt_SoNothingIsHidden()
+    {
+        var outer = new ScenarioValues();
+        outer.Define("lamp", new BlockValue());
+
+        var exception = Assert.Throws<StepFailedException>(() => outer.NewScope().Define("lamp", new BlockValue()));
+
+        Assert.Equal("The name 'lamp' is already defined, as a block.", exception.Message);
+    }
+
+    [Fact]
+    public void WhatAScopeDefines_EndsWithIt_AndTheNextPassCanDefineItAgain()
+    {
+        var outer = new ScenarioValues();
+
+        outer.NewScope().Define("lamp", new BlockValue());
+
+        Assert.Throws<StepFailedException>(() => outer.Get<BlockValue>("lamp"));
+        outer.NewScope().Define("lamp", new BlockValue());
+    }
+
+    [Fact]
+    public void AText_WritesItsOwnText_AndIsAKindOfItsOwn()
+    {
+        var values = new ScenarioValues();
+        values.Define("h", new TextValue("64"));
+
+        Assert.Equal("64", values.Substitute("${h}"));
+        Assert.Equal("The name 'h' is a text, not a block.", Assert.Throws<StepFailedException>(() => values.Get<BlockValue>("h")).Message);
+    }
+
     private void Define(string name, string uid)
     {
         new Name<BlockValue>(name).Set(_context, new BlockValue { Uid = uid });
     }
 
-    private sealed class Context : IStepContext
+    private sealed class Context : BareStepContext
     {
-        public IValues Values { get; } = new ScenarioValues();
     }
 }

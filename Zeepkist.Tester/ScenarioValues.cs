@@ -7,11 +7,31 @@ using TNRD.Zeepkist.Tester.Sdk;
 namespace TNRD.Zeepkist.Tester;
 
 /// <summary>
-/// The named values of one scenario, which end with it.
+/// The named values of one scope: a scenario, a pass of a <c>for</c> or <c>repeat</c> body, or a <c>run:</c> file. What a
+/// scope defines ends with it. A pass's scope, from <see cref="NewScope"/>, can read what's around it, and defining one of
+/// those names again is an error, so nothing gets silently hidden. A <c>run:</c> file's is a new one, which sees nothing.
 /// </summary>
 internal sealed class ScenarioValues : IValues
 {
     private readonly Dictionary<string, Defined> _values = new Dictionary<string, Defined>();
+    private readonly ScenarioValues _outer;
+
+    public ScenarioValues()
+    {
+    }
+
+    private ScenarioValues(ScenarioValues outer)
+    {
+        _outer = outer;
+    }
+
+    /// <summary>
+    /// A scope for a pass of a body, which reads this one.
+    /// </summary>
+    public ScenarioValues NewScope()
+    {
+        return new ScenarioValues(this);
+    }
 
     public void Define<T>(string name, T value)
         where T : class
@@ -19,7 +39,8 @@ internal sealed class ScenarioValues : IValues
         if (name == null)
             throw new StepFailedException("The step defines a named value, but its name was left out.");
 
-        if (_values.TryGetValue(name, out var defined))
+        var defined = FindOrNull(name);
+        if (defined != null)
             throw new StepFailedException(ScenarioMessages.AlreadyDefined(name, defined.Kind));
 
         if (value == null)
@@ -58,10 +79,12 @@ internal sealed class ScenarioValues : IValues
 
     private Defined Find(string name)
     {
-        if (_values.TryGetValue(name, out var defined))
-            return defined;
+        return FindOrNull(name) ?? throw new StepFailedException(ScenarioMessages.NotDefined(name));
+    }
 
-        throw new StepFailedException(ScenarioMessages.NotDefined(name));
+    private Defined FindOrNull(string name)
+    {
+        return _values.TryGetValue(name, out var defined) ? defined : _outer?.FindOrNull(name);
     }
 
     private static string KindOf(Type valueType)
