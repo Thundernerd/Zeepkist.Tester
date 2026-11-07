@@ -1,0 +1,49 @@
+description: Places blocks, changes a setting and counts them, each as one undo step
+start: editor
+steps:
+  - expect-block-count: 0
+  - place-start
+  - expect-block-count: 1
+
+  # A logic block whose settings are stored as whole numbers: its mode is xbs
+  - place-block: { type: 2440, as: telemetry }
+  - sample.expect-selected: telemetry
+  - expect-block-count: 2
+  - expect-block-count: { count: 1, type: 2440 }
+  - expect-block-count: { count: 0, type: 2448 }
+  - log: The block's UID is ${telemetry}
+
+  - sample.expect-block-setting: { block: telemetry, setting: xbs, value: "0" }
+  - set-block-setting: { block: telemetry, setting: xbs, value: 2 }
+  - sample.expect-block-setting: { block: telemetry, setting: xbs, value: "2" }
+  - undo
+  - sample.expect-block-setting: { block: telemetry, setting: xbs, value: "0" }
+  - redo
+  - sample.expect-block-setting: { block: telemetry, setting: xbs, value: "2" }
+
+  # Back past the selection and the setting to before the block
+  - undo
+  - undo
+  - undo
+  - expect-block-count: 1
+  - redo
+  - expect-block-count: 2
+  - place-block: 2448
+  - expect-block-count: 3
+
+  # A lamp stores whether it's a spotlight as a whole number, and its override inputs as text
+  - place-block: { type: 2448, as: lamp }
+  - set-block-setting: { block: lamp, setting: is, value: "true" }
+  - sample.expect-block-setting: { block: lamp, setting: is, value: "1" }
+  - set-block-setting: { block: lamp, setting: oi2, value: "5" }
+  - sample.expect-block-setting: { block: lamp, setting: oi2, value: "5" }
+
+  # A sign has two editors, and the second has its text, while the first registers the undo step
+  - place-block: { type: 2374, as: sign }
+  - set-block-setting: { block: sign, setting: sg, value: Hello }
+  - sample.expect-sign-text: { block: sign, text: Hello }
+  - undo
+  - sample.expect-sign-text: { block: sign, text: "" }
+  - redo
+  - sample.expect-sign-text: { block: sign, text: Hello }
+  - expect-no-exceptions

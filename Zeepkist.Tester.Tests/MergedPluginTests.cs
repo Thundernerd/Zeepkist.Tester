@@ -50,7 +50,8 @@ public sealed class MergedPluginTests : IDisposable
     [InlineData("InMainMenu")]
     [InlineData("InEditor")]
     [InlineData("InFreePlay")]
-    public void TheStartStates_StayPublic_ForAModsStepsToRequire(string name)
+    [InlineData("InTestMode")]
+    public void TheStates_StayPublic_ForAModsStepsToRequire(string name)
     {
         Assert.Equal(TypeAttributes.Public, Visibility("TNRD.Zeepkist.Tester.States", name));
     }

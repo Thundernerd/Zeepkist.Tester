@@ -1,0 +1,6 @@
+description: expect-no-exceptions passes until the game logs one, and fails on purpose after that
+start: main-menu
+steps:
+  - expect-no-exceptions
+  - sample.log-exception: On purpose
+  - expect-no-exceptions

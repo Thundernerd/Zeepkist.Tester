@@ -1,0 +1,5 @@
+description: set-block-setting fails, listing what the block has, for a key it doesn't hold
+start: editor
+steps:
+  - place-block: { type: 2440, as: telemetry }
+  - set-block-setting: { block: telemetry, setting: nope, value: 1 }

@@ -1,0 +1,4 @@
+description: test-mode fails, saying what to add, in a level with no start block
+start: editor
+steps:
+  - test-mode

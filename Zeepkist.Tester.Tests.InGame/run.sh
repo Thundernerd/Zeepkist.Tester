@@ -84,7 +84,7 @@ cp -a "$here/Scenarios" "$tester/scenarios"
 case "$mode" in
     --no-scenarios) scenarios='[]' ;;
     --start-fails) scenarios='["core-steps.ztest.yaml","start-fails.ztest.yaml","control-nodes.ztest.yaml"]' ;;
-    *) scenarios='["core-steps.ztest.yaml","a-step-fails.ztest.yaml","control-nodes.ztest.yaml"]' ;;
+    *) scenarios='["core-steps.ztest.yaml","a-step-fails.ztest.yaml","control-nodes.ztest.yaml","screenshots.ztest.yaml","exceptions.ztest.yaml","blocks.ztest.yaml","test-mode.ztest.yaml","test-mode-needs-a-start.ztest.yaml","a-setting-it-does-not-have.ztest.yaml"]' ;;
 esac
 printf '{"runId":"%s","mods":[{"guid":"%s"}],"scenarios":%s}' "$run_id" "$guid" "$scenarios" >"$tester/run.json"
 
@@ -130,7 +130,7 @@ elif [[ "$mode" == --start-fails ]]; then
 else
     jq -r '.Steps[] | "\(.Name) | \(.Scenario) | \(if .Passed then "pass" else "FAIL" end)"' "$results" >"$out/actual-results.txt"
     diff "$here/expected-results.txt" "$out/actual-results.txt" || failed=1
-    jq -e '(.Screenshots | index("a-step-fails-failure.png")) and (.Screenshots | index("control-nodes-height-64.png")) and (.BlankScreenshots == {})' "$results" >/dev/null || { log "the screenshots aren't what they should be"; failed=1; }
+    jq -e '(.Screenshots | index("a-step-fails-failure.png")) and (.Screenshots | index("control-nodes-height-64.png")) and (.BlankScreenshots | keys == ["screenshots-covered.png"])' "$results" >/dev/null || { log "the screenshots aren't what they should be"; failed=1; }
 fi
 
 ((failed == 0)) || { log "not what this run should do"; exit 1; }

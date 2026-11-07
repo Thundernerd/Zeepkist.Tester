@@ -2,7 +2,7 @@
 
 The typed list of steps that the YAML parser, the editor schema, the step reference docs, `ztest check`, `ztest convert` and C# tests all come from. It replaces ZeepLogicScript's `StepList` + `StepArgument` + the hand-kept step table + `StepListTests`. Background: [generic-tester.md](../research/generic-tester.md) §4 and §7, and [scenario-format.md](../research/scenario-format.md).
 
-Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4), named values (#5), the states with their runtime check (#6), the parser (#7), `ztest check` (#8), the walks to where a scenario starts (#12) and the scenario runner with its context and hooks (#13); the rest isn't, and its names are placeholders.
+Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4), named values (#5), the states with their runtime check (#6), the parser (#7), `ztest check` (#8), the walks to where a scenario starts (#12), the scenario runner with its context and hooks (#13) and the core steps (#14); the rest isn't, and its names are placeholders.
 
 ## The one constraint that shapes it
 
@@ -59,22 +59,22 @@ Patterns and ranges come from attributes the CLI can read: `[Pattern("…")]`, `
 
 ## Named values
 
-Today `place-block lamp as lamp` remembers a block for `{uid:lamp}` and `set-block-setting lamp …`. That becomes a typed named value:
+`place-block: { type: 2448, as: lamp }` remembers a block for `${lamp}` and `set-block-setting`, as a typed named value:
 
 ```csharp
 /// <summary>A block placed or named by a step, by its UID.</summary>
 [ValueKind("block", Substitute = nameof(Uid))]   // ${lamp} writes the UID
 public sealed class BlockValue
 {
-    public string Uid { get; init; }
+    public string Uid { get; }
 }
 
-/// <summary>Places a block of the Block Function's type in its first style, beside where place-start puts the start block, and selects it.</summary>
+/// <summary>Places a block on the ground below the camera, a cell to the side of where place-start puts the start block, and selects it.</summary>
 [Step("place-block")]
 public sealed class PlaceBlock : Step
 {
-    /// <summary>The Block Function, such as <c>lamp</c>.</summary>
-    [Arg(Primary = true)] public string Function { get; set; }
+    /// <summary>The block's type: its ID in the game's block list, the number a level file stores for it.</summary>
+    [Arg(Primary = true)] public required int Type { get; set; }
 
     /// <summary>A name for the block, so later steps can write <c>${name}</c> for its UID.</summary>
     [Arg] public Name<BlockValue>? As { get; set; }
@@ -85,8 +85,8 @@ public sealed class PlaceBlock : Step
         if (central == null)
             yield break;
 
-        var block = /* … places it, as today … */;
-        As?.Set(context, new BlockValue { Uid = block.UID });
+        var block = /* … places it … */;
+        As?.Set(context, new BlockValue(block.UID));
     }
 }
 
@@ -94,9 +94,9 @@ public sealed class PlaceBlock : Step
 [Step("set-block-setting")]
 public sealed class SetBlockSetting : Step
 {
-    [Arg] public Ref<BlockValue> Block { get; set; }
-    [Arg] public string Setting { get; set; }
-    [Arg] public string Value { get; set; }
+    [Arg] public required Ref<BlockValue> Block { get; set; }
+    [Arg] public required string Setting { get; set; }   // the key a level file stores it under
+    [Arg] public required string Value { get; set; }
 
     public override IEnumerator Run(IStepContext context)
     {
@@ -107,12 +107,14 @@ public sealed class SetBlockSetting : Step
 ```
 
 ```yaml
-- place-block: { function: lamp, as: lamp }
-- set-block-setting: { block: lamp, setting: invert, value: "true" }
+- place-block: { type: 2448, as: lamp }
+- set-block-setting: { block: lamp, setting: is, value: "true" }
 - set-text: |
     toggler(p.horn, targets: placed("${lamp}"))
 ```
 
+- `BlockValue` is in the SDK, so a mod's step can take a `Ref<BlockValue>` that `place-block` defined.
+- The tester knows blocks only as the game does, so a block's type is its ID, and a setting is the key the block stores it under. A setting takes a value of the type the block already holds there: a whole number (`true` and `false` are 1 and 0), a decimal, or text. A key the block doesn't hold fails the step, listing the ones it does. The step writes what the level file stores and has the block's editor read it, with no list of which keys mean what, so a key the editor doesn't read, such as a paint slot or a wire, is only stored. A mod with its own names for types and settings has its own steps for them.
 - Names last for the scenario, except inside a `for`, `repeat` or `run:` (see *Control nodes and names*). Defining a name that's already defined is an error, as today.
 - `${name}` works in any single YAML value, whatever the argument's type. It's substituted before the value is converted (see *Control nodes and names*). It needs a name whose kind has a `Substitute` member, a public string property. A `${name}` that isn't defined by an earlier step fails `ztest check` with its line. `$${` writes a literal `${`, and any other `${` without a name and `}` after it is an error.
 - In the game, a mistake with a name throws `StepFailedException`, which stops the step and fails it with the exception's message, so `Run` needs no check after `Block.Get(context)`. The scenario runner records that as the step's failure. It also makes one `ScenarioValues` per scenario, with a scope for each body. Substitution is part of binding.
@@ -142,7 +144,8 @@ public interface IStepContext : IScenarioContext
     IInput Input { get; }          // see below; comes with #15
     IGameEvents Game { get; }      // counts of scene loads, editor entries, test mode entries, round starts, level loads
     IExceptionLog Exceptions { get; }
-    IEnumerator Screenshot(FileName name);
+    string LastScreenshotBlankColor { get; }   // the color when every pixel of the last one was the same, or null
+    IEnumerator Screenshot(FileName name, bool covered = false);   // covered fills the frame with one color first, for expect-blank-screenshot
     LEV_LevelEditorCentral RequireEditor();   // fails the step and returns null outside the editor
 
     // Named values, and state a mod keeps for the length of one scenario
@@ -420,7 +423,24 @@ What a failure does:
 
 The harness gives back the mouse after each scenario once there's an input driver to give it back (#15).
 
-The steps the tester has so far are `wait`, `log` and `screenshot`. The rest come with #14. `Zeepkist.Tester.Tests.InGame` is a test plugin and scenarios for the in-game check, and its `run.sh` deploys and runs them.
+The steps the tester ships with so far:
+
+| Step | What it does | Needs | Changes |
+| --- | --- | --- | --- |
+| `wait` | Waits. | | |
+| `log` | Writes a line to the results and the log. | | |
+| `screenshot` | Saves what's on screen, and fails if it's blank. | | |
+| `expect-blank-screenshot` | Covers the frame in one color and checks the screenshot is found blank. | | |
+| `expect-no-exceptions` | Checks the game logged none since the scenario started or this last ran. | | |
+| `place-start` | Places a start block below the camera, as one undo step. | `editor` | |
+| `place-block` | Places a block of a type a cell to the side and selects it. `as:` names it. | `editor` | |
+| `set-block-setting` | Changes a named block's setting through the block's editor, as one undo step. | `editor` | |
+| `expect-block-count` | Counts the level's blocks, or with `type:` those of one type. | `editor` | |
+| `undo`, `redo` | Press the editor's key once, and fail if the history didn't move. | `editor` | |
+| `test-mode` | Starts test mode and waits for the round. The level needs a start block. | `editor` | leaves `editor`, enters `test-mode` |
+| `back-to-editor` | Quits through the pause menu and waits for the level to load. | `test-mode` | leaves `test-mode`, enters `editor` |
+
+Input steps come with #20. `Zeepkist.Tester.Tests.InGame` is a test plugin and scenarios for the in-game check, and its `run.sh` deploys and runs them.
 
 The runner handles the control nodes itself; they aren't registry steps, but the schema includes them:
 
@@ -450,8 +470,8 @@ The runner handles the control nodes itself; they aren't registry steps, but the
 ```yaml
 - repeat: 3
   steps:
-    - place-block: { function: lamp, as: lamp }
-    - set-block-setting: { block: lamp, setting: invert, value: "true" }
+    - place-block: { type: 2448, as: lamp }
+    - set-block-setting: { block: lamp, setting: is, value: "true" }
 ```
 
 - A body can read names from outside it. Defining one of those names again in the body is the same "already defined" error, so nothing gets silently hidden.

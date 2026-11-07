@@ -24,6 +24,8 @@ public abstract class BareStepContext : IStepContext
 
     public IExceptionLog Exceptions => throw new NotSupportedException();
 
+    public string LastScreenshotBlankColor => throw new NotSupportedException();
+
     public T Get<T>()
         where T : class
     {
@@ -61,7 +63,7 @@ public abstract class BareStepContext : IStepContext
         throw new NotSupportedException();
     }
 
-    public IEnumerator Screenshot(FileName name)
+    public IEnumerator Screenshot(FileName name, bool covered = false)
     {
         throw new NotSupportedException();
     }

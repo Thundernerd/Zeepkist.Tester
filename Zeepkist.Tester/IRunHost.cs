@@ -25,9 +25,17 @@ internal interface IRunHost
     public LEV_LevelEditorCentral Editor { get; }
 
     /// <summary>
+    /// The color of every pixel of the last screenshot when they were all the same, or null.
+    /// </summary>
+    public string LastBlankColor { get; }
+
+    /// <summary>
     /// Takes the game to where a scenario starts. An exception from it leaves the game somewhere unknown.
     /// </summary>
     public IEnumerator EnterStart(ScenarioStart start, string scenarioFile);
 
-    public IEnumerator Screenshot(string name);
+    /// <summary>
+    /// With <paramref name="covered"/>, fills the frame with one color just before the capture, so the screenshot is blank.
+    /// </summary>
+    public IEnumerator Screenshot(string name, bool covered = false);
 }
