@@ -64,7 +64,7 @@ public class RunResultsTests
         Assert.Equal(3, (int)step["Line"]);
         Assert.Equal("smoke.ztest.yaml:7", (string)step["RanFrom"]);
         Assert.Equal("h=64", (string)step["Passes"]);
-        Assert.Equal("smoke:3 wait [h=64] (run from smoke.ztest.yaml:7) PASS", run.ToString());
+        Assert.Equal("smoke shared.ztest.yaml:3 wait [h=64] (run from smoke.ztest.yaml:7) PASS", run.ToString());
     }
 
     [Fact]

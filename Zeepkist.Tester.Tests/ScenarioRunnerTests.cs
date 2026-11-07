@@ -403,6 +403,49 @@ public sealed class ScenarioRunnerTests : IDisposable
     }
 
     [Fact]
+    public void AHookThatThrowsBeforeItsFirstYield_FailsThatScenario_AndTheRunGoesOn()
+    {
+        _plugins.Add(new TestPluginRegistration("hooks").Hooks(new EagerHooks()));
+
+        Run(Write("one", "steps:\n  - t.note: a\n"), Write("two", "steps:\n  - t.note: b\n"));
+
+        Assert.Equal(
+            ["EagerHooks.AfterScenario", "EagerHooks.BeforeScenario", "EagerHooks.AfterScenario"],
+            _steps.Where(step => !step.Passed).Select(step => step.Name));
+        Assert.Contains("a", Events);
+    }
+
+    [Fact]
+    public void ADetail_SetAfterAFailure_DoesntReplaceIt()
+    {
+        Run(Write("a", "steps:\n  - t.fail-then-detail\n"));
+
+        Assert.Equal("first", Assert.Single(_steps).Detail);
+    }
+
+    [Fact]
+    public void ScenariosOfOneNameInTwoFolders_StayApart()
+    {
+        Directory.CreateDirectory(Path.Combine(_folder.Path, "a"));
+        Directory.CreateDirectory(Path.Combine(_folder.Path, "b"));
+
+        Run(Write("a/x", "steps:\n  - t.fail: why\n"), Write("b/x", "steps:\n  - t.fail: why\n"));
+
+        Assert.Equal(["a/x", "b/x"], _steps.Select(step => step.Scenario));
+        Assert.Contains("screenshot a-x-failure", Events);
+        Assert.Contains("screenshot b-x-failure", Events);
+    }
+
+    [Fact]
+    public void ARunFilePathThePlatformRejects_FailsAtLoad_AndTheOthersStillRun()
+    {
+        Run(Path.Combine(_folder.Path, "bad\0name.ztest.yaml"), Write("fine", "steps:\n  - t.note: fine\n"));
+
+        Assert.Equal("load", _steps[0].Name);
+        Assert.Contains("fine", Events);
+    }
+
+    [Fact]
     public void AnAfterHookThatThrows_FailsThatScenario_AndTheRunGoesOn()
     {
         _plugins.Add(new TestPluginRegistration("hooks").Hooks(new RecordingHooks(_recorder) { ThrowAfter = "one" }));
@@ -573,7 +616,7 @@ public sealed class ScenarioRunnerTests : IDisposable
     private Exception RunExpectingError(params string[] files)
     {
         Exception error = null;
-        var runner = new ScenarioRunner(_host, _exceptions, StepTypes.Build(_stepTypes), _plugins, _steps.Add);
+        var runner = new ScenarioRunner(_host, _exceptions, StepTypes.Build(_stepTypes), _plugins, _steps.Add, _folder.Path);
         var routine = GuardedRoutine.Run(runner.Run(files), exception => error = exception);
         var frames = 0;
         while (routine.MoveNext())
@@ -644,6 +687,26 @@ public sealed class ScenarioRunnerTests : IDisposable
         public int RoundStarts => 0;
 
         public int LevelLoads => 0;
+    }
+
+    /// <summary>
+    /// Hooks that aren't iterators, so they throw when they're called.
+    /// </summary>
+    private sealed class EagerHooks : IScenarioHooks
+    {
+        public void RunStarted(IRunContext run)
+        {
+        }
+
+        public IEnumerator BeforeScenario(IScenarioContext scenario)
+        {
+            throw new InvalidOperationException("hook");
+        }
+
+        public IEnumerator AfterScenario(IScenarioContext scenario)
+        {
+            throw new InvalidOperationException("hook");
+        }
     }
 
     private sealed class RecordingHooks : IScenarioHooks

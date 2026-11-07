@@ -8,8 +8,8 @@ namespace TNRD.Zeepkist.Tester;
 
 /// <summary>
 /// The named values of one scope: a scenario, a pass of a <c>for</c> or <c>repeat</c> body, or a <c>run:</c> file. What a
-/// scope defines ends with it. It can read what's around it, and defining one of those names again is an error, so nothing
-/// gets silently hidden.
+/// scope defines ends with it. A pass's scope, from <see cref="NewScope"/>, can read what's around it, and defining one of
+/// those names again is an error, so nothing gets silently hidden. A <c>run:</c> file's is a new one, which sees nothing.
 /// </summary>
 internal sealed class ScenarioValues : IValues
 {

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
+using TNRD.Zeepkist.Tester.Scenarios;
 
 namespace TNRD.Zeepkist.Tester;
 
@@ -28,8 +29,7 @@ internal sealed class RunRequest
     /// </summary>
     public List<string> ScenarioFiles(string folder)
     {
-        var scenarios = Path.Combine(folder, ScenariosFolder);
-        return Scenarios.ConvertAll(file => Path.Combine(scenarios, file.Replace('/', Path.DirectorySeparatorChar)));
+        return Scenarios.ConvertAll(file => ScenarioPaths.InFolder(Path.Combine(folder, ScenariosFolder), file));
     }
 
     public static bool TryRead(string folder, string[] args, out RunRequest request)

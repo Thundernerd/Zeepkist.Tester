@@ -9,7 +9,7 @@ namespace TNRD.Zeepkist.Tester.Sdk;
 public interface IStepContext : IScenarioContext
 {
     /// <summary>
-    /// What the results say about the step.
+    /// What the results say about the step. This does nothing after <see cref="Fail"/>.
     /// </summary>
     public string Detail { get; set; }
 

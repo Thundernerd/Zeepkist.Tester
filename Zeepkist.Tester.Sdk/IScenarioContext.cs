@@ -6,7 +6,7 @@ namespace TNRD.Zeepkist.Tester.Sdk;
 public interface IScenarioContext : IRunContext
 {
     /// <summary>
-    /// The scenario's file name, without <c>.ztest.yaml</c>.
+    /// The scenario's file, relative to the run's scenarios folder and without <c>.ztest.yaml</c>, such as <c>compile/errors</c>.
     /// </summary>
     public string ScenarioName { get; }
 

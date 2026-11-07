@@ -12,6 +12,7 @@ namespace TNRD.Zeepkist.Tester;
 internal sealed class StepContext : ScenarioContext, IStepContext
 {
     private readonly IRunHost _host;
+    private string _detail = string.Empty;
 
     public StepContext(ScenarioContext scenario, IRunHost host, IExceptionLog exceptions, IValues values, Dictionary<Type, object> state)
         : base(scenario, scenario.ScenarioName, state)
@@ -21,7 +22,15 @@ internal sealed class StepContext : ScenarioContext, IStepContext
         Values = values;
     }
 
-    public string Detail { get; set; } = string.Empty;
+    public string Detail
+    {
+        get => _detail;
+        set
+        {
+            if (!Failed)
+                _detail = value;
+        }
+    }
 
     public string Expected { get; private set; }
 
@@ -91,7 +100,7 @@ internal sealed class StepContext : ScenarioContext, IStepContext
 
     private void Record(string detail, string expected, string actual)
     {
-        Detail = detail ?? string.Empty;
+        _detail = detail ?? string.Empty;
         Expected = expected;
         Actual = actual;
     }

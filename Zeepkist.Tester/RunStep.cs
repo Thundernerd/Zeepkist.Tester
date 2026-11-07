@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace TNRD.Zeepkist.Tester;
 
 /// <summary>
@@ -45,7 +47,7 @@ internal sealed class RunStep
 
     public override string ToString()
     {
-        var scenario = Scenario.Length > 0 ? $"{Scenario}:{Line} " : string.Empty;
+        var scenario = Scenario.Length == 0 ? string.Empty : RanFrom.Length == 0 ? $"{Scenario}:{Line} " : $"{Scenario} {Path.GetFileName(File)}:{Line} ";
         var where = (Passes.Length > 0 ? $" [{Passes}]" : string.Empty) + (RanFrom.Length > 0 ? $" (run from {RanFrom})" : string.Empty);
         var compared = Expected == null ? string.Empty : $" (expected: {Expected}, actual: {Actual})";
         return $"{scenario}{Name}{where} {(Passed ? "PASS" : "FAIL")} {Detail}{compared}".TrimEnd();

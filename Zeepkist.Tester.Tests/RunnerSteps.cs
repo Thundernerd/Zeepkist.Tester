@@ -125,6 +125,17 @@ public static class RunnerSteps
         }
     }
 
+    [Step("fail-then-detail", Namespace = "t")]
+    public sealed class FailThenDetail : Step
+    {
+        public override IEnumerator Run(IStepContext context)
+        {
+            context.Fail("first");
+            context.Detail = "second";
+            yield break;
+        }
+    }
+
     [Step("check", Namespace = "t")]
     public sealed class Check : Step
     {

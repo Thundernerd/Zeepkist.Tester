@@ -22,9 +22,17 @@ internal sealed class ScenarioRunner
     private readonly IReadOnlyList<TestPluginRegistration> _plugins;
     private readonly Action<RunStep> _report;
     private readonly ScenarioLoader _loader;
+    private readonly string _folder;
 
-    public ScenarioRunner(IRunHost host, ExceptionLog exceptions, StepTypes steps, IReadOnlyList<TestPluginRegistration> plugins, Action<RunStep> report)
+    /// <param name="host">The game.</param>
+    /// <param name="exceptions">Where the game's exceptions are listed under each scenario.</param>
+    /// <param name="steps">The steps scenarios can use.</param>
+    /// <param name="plugins">What the test plugins gave.</param>
+    /// <param name="report">Takes each step's result.</param>
+    /// <param name="folder">What a scenario's name is relative to, so two files of one name in two folders stay apart.</param>
+    public ScenarioRunner(IRunHost host, ExceptionLog exceptions, StepTypes steps, IReadOnlyList<TestPluginRegistration> plugins, Action<RunStep> report, string folder)
     {
+        _folder = folder;
         _host = host;
         _exceptions = exceptions;
         _steps = steps;
@@ -56,7 +64,7 @@ internal sealed class ScenarioRunner
 
         for (var i = 0; i < scenarios.Count; i++)
         {
-            var scenario = new RunningScenario(scenarios[i], new ScenarioContext(run, NameOf(scenarios[i].File)));
+            var scenario = new RunningScenario(scenarios[i], new ScenarioContext(run, ScenarioName(scenarios[i].File)));
             yield return RunScenario(scenario, isFirst: i == 0);
             if (scenario.StartFailed)
             {
@@ -66,12 +74,12 @@ internal sealed class ScenarioRunner
         }
     }
 
-    private static string NameOf(string file)
+    private string ScenarioName(string file)
     {
-        var name = Path.GetFileName(file);
-        return name.EndsWith(ScenarioFileEnd, StringComparison.OrdinalIgnoreCase)
-            ? name.Substring(0, name.Length - ScenarioFileEnd.Length)
-            : Path.GetFileNameWithoutExtension(name);
+        var name = (file.StartsWith(_folder, StringComparison.Ordinal) ? file.Substring(_folder.Length) : Path.GetFileName(file))
+            .Replace('\\', '/')
+            .TrimStart('/');
+        return name.EndsWith(ScenarioFileEnd, StringComparison.OrdinalIgnoreCase) ? name.Substring(0, name.Length - ScenarioFileEnd.Length) : name;
     }
 
     private static string Describe(Exception exception)
@@ -110,11 +118,11 @@ internal sealed class ScenarioRunner
             }
             catch (ScenarioException exception)
             {
-                _report(new RunStep { Name = "load", Scenario = NameOf(file), File = exception.Location.File, Line = (int)exception.Location.Line, Detail = exception.Message });
+                _report(new RunStep { Name = "load", Scenario = ScenarioName(file), File = exception.Location.File, Line = (int)exception.Location.Line, Detail = exception.Message });
             }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
             {
-                _report(new RunStep { Name = "load", Scenario = NameOf(file), File = file, Detail = exception.Message });
+                _report(new RunStep { Name = "load", Scenario = ScenarioName(file), File = file, Detail = exception.Message });
             }
         }
 
@@ -132,7 +140,7 @@ internal sealed class ScenarioRunner
             catch (Exception exception)
             {
                 var name = $"{hooks.GetType().Name}.{nameof(IScenarioHooks.RunStarted)}";
-                _host.Logger.LogError($"{TestRun.Marker} {exception}");
+                LogError(exception);
                 _report(RunStep.Fail(name, Describe(exception)));
                 problem = $"{name} failed.";
                 return false;
@@ -146,7 +154,7 @@ internal sealed class ScenarioRunner
     private void ReportNotRun(IEnumerable<Scenario> scenarios, string why)
     {
         foreach (var scenario in scenarios)
-            _report(new RunStep { Name = "not run", Scenario = NameOf(scenario.File), File = scenario.File, Detail = why });
+            _report(new RunStep { Name = "not run", Scenario = ScenarioName(scenario.File), File = scenario.File, Detail = why });
     }
 
     private IEnumerator RunScenario(RunningScenario scenario, bool isFirst)
@@ -158,50 +166,58 @@ internal sealed class ScenarioRunner
         if (!isFirst)
         {
             foreach (var hooks in Hooks)
-                yield return RunHook(scenario, hooks, nameof(IScenarioHooks.BeforeScenario), hooks.BeforeScenario(scenario.Context), () => ready = false);
+                yield return RunHook(scenario, hooks, nameof(IScenarioHooks.BeforeScenario), () => hooks.BeforeScenario(scenario.Context), () => ready = false);
         }
 
         if (ready)
         {
             yield return EnterStart(scenario);
             if (!scenario.StartFailed)
-                yield return RunNodes(scenario, scenario.Scenario.Steps, Frame.Top(scenario.Scenario.File));
+                yield return RunNodes(scenario, scenario.Steps, Frame.Top(scenario.File));
         }
 
         foreach (var hooks in Hooks)
-            yield return RunHook(scenario, hooks, nameof(IScenarioHooks.AfterScenario), hooks.AfterScenario(scenario.Context), null);
+            yield return RunHook(scenario, hooks, nameof(IScenarioHooks.AfterScenario), () => hooks.AfterScenario(scenario.Context), null);
     }
 
-    private IEnumerator RunHook(RunningScenario scenario, IScenarioHooks hooks, string hook, IEnumerator routine, Action failed)
+    private IEnumerator RunHook(RunningScenario scenario, IScenarioHooks hooks, string hook, Func<IEnumerator> routine, Action failed)
     {
         Exception error = null;
-        yield return GuardedRoutine.Run(routine, exception => error = exception);
+        yield return GuardedRoutine.Run(Called(routine), exception => error = exception);
         if (error == null)
             yield break;
 
-        _host.Logger.LogError($"{TestRun.Marker} {error}");
-        _report(new RunStep { Name = $"{hooks.GetType().Name}.{hook}", Scenario = scenario.Name, File = scenario.Scenario.File, Detail = Describe(error) });
+        LogError(error);
+        _report(new RunStep { Name = $"{hooks.GetType().Name}.{hook}", Scenario = scenario.Name, File = scenario.File, Detail = Describe(error) });
         failed?.Invoke();
+    }
+
+    /// <summary>
+    /// A hook needn't be an iterator, so the call itself can throw too.
+    /// </summary>
+    private static IEnumerator Called(Func<IEnumerator> routine)
+    {
+        yield return routine();
     }
 
     private IEnumerator EnterStart(RunningScenario scenario)
     {
-        var start = scenario.Scenario.Start;
+        var start = scenario.Start;
         Exception error = null;
         var startedAt = _host.Now;
-        yield return GuardedRoutine.Run(_host.EnterStart(start, scenario.Scenario.File), exception => error = exception);
+        yield return GuardedRoutine.Run(_host.EnterStart(start, scenario.File), exception => error = exception);
         if (error == null)
             yield break;
 
         scenario.StartFailed = true;
         if (error is not StartFailedException)
-            _host.Logger.LogError($"{TestRun.Marker} {error}");
+            LogError(error);
 
         _report(new RunStep
         {
             Name = $"start: {start.State.Name}",
             Scenario = scenario.Name,
-            File = scenario.Scenario.File,
+            File = scenario.File,
             Line = (int)(start.Location?.Line ?? 0),
             Detail = error is StartFailedException ? error.Message : Describe(error),
             Seconds = Seconds(startedAt),
@@ -239,7 +255,7 @@ internal sealed class ScenarioRunner
         foreach (var value in loop.Values)
         {
             var values = frame.Values.NewScope();
-            var problem = Problem(() => values.Define(loop.Variable, new TextValue(value)));
+            var problem = ProblemDefining(() => values.Define(loop.Variable, new TextValue(value)));
             if (problem != null)
             {
                 yield return FailNode(scenario, frame, "for", loop.Location, problem);
@@ -265,10 +281,10 @@ internal sealed class ScenarioRunner
     private IEnumerator RunFile(RunningScenario scenario, RunNode run, Frame frame)
     {
         var values = new ScenarioValues();
-        var problem = Problem(() =>
+        var problem = ProblemDefining(() =>
         {
             foreach (var entry in run.With)
-                values.Define(entry.Key, new TextValue(Written(entry.Value, frame.Values)));
+                values.Define(entry.Key, new TextValue(WithNamesWritten(entry.Value, frame.Values)));
         });
         if (problem != null)
         {
@@ -283,7 +299,7 @@ internal sealed class ScenarioRunner
     /// <summary>
     /// What <paramref name="define"/> failed with, or null.
     /// </summary>
-    private static string Problem(Action define)
+    private static string ProblemDefining(Action define)
     {
         try
         {
@@ -303,7 +319,7 @@ internal sealed class ScenarioRunner
         yield return FailureScreenshot(scenario);
     }
 
-    private static string Written(ScalarArgument value, ScenarioValues values)
+    private static string WithNamesWritten(ScalarArgument value, ScenarioValues values)
     {
         try
         {
@@ -324,7 +340,7 @@ internal sealed class ScenarioRunner
         if (error != null)
         {
             if (error is not StepFailedException)
-                _host.Logger.LogError($"{TestRun.Marker} {error}");
+                LogError(error);
 
             context.Fail(Describe(error));
         }
@@ -365,7 +381,12 @@ internal sealed class ScenarioRunner
     /// </summary>
     private IEnumerator FailureScreenshot(RunningScenario scenario)
     {
-        yield return GuardedRoutine.Run(_host.Screenshot(ScreenshotNames.For(scenario.Name, "failure")), exception => _host.Logger.LogError($"{TestRun.Marker} {exception}"));
+        yield return GuardedRoutine.Run(_host.Screenshot(ScreenshotNames.For(scenario.Name, "failure")), LogError);
+    }
+
+    private void LogError(Exception exception)
+    {
+        _host.Logger.LogError($"{TestRun.Marker} {exception}");
     }
 
     private double Seconds(float startedAt)
@@ -375,13 +396,19 @@ internal sealed class ScenarioRunner
 
     private sealed class RunningScenario
     {
+        private readonly Scenario _scenario;
+
         public RunningScenario(Scenario scenario, ScenarioContext context)
         {
-            Scenario = scenario;
+            _scenario = scenario;
             Context = context;
         }
 
-        public Scenario Scenario { get; }
+        public string File => _scenario.File;
+
+        public ScenarioStart Start => _scenario.Start;
+
+        public IReadOnlyList<ScenarioNode> Steps => _scenario.Steps;
 
         public ScenarioContext Context { get; }
 

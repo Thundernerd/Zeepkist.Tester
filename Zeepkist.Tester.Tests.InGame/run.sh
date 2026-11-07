@@ -12,6 +12,7 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo="$(dirname "$here")"
 out="${1:?out dir}"
 mode="${2:-}"
+[[ "$mode" =~ ^(|--no-scenarios|--start-fails)$ ]] || { printf 'Unknown option %s\n' "$mode"; exit 1; }
 game="${ZEEPKIST_DIR:-$HOME/.steam/steam/steamapps/common/Zeepkist}"
 plugins="$game/BepInEx/plugins/Sideloaded/Plugins"
 tester="$plugins/Zeepkist.Tester"
@@ -50,6 +51,8 @@ for i in "${!changed[@]}"; do
 done
 
 cleanup() {
+    # One step failing shouldn't keep the others from putting things back
+    set +e
     if game_running; then
         pkill -x Zeepkist.exe || true
         sleep 5
@@ -63,6 +66,8 @@ cleanup() {
         if [[ -e "$kept/$i" ]]; then
             rm -rf "${changed[$i]}"
             cp -a "$kept/$i" "${changed[$i]}"
+        else
+            rm -rf "${changed[$i]}"
         fi
     done
     rm -rf "$kept"
@@ -111,7 +116,7 @@ for _ in $(seq 30); do
     sleep 1
 done
 
-jq -r '.Steps[] | "\(.Scenario):\(.Line) \(.Name) \(if .Passed then "pass" else "FAIL" end): \(.Detail)"' "$results"
+jq -r '.Steps[] | "\(.Scenario):\(.Line)\(if .RanFrom != "" then " in a run: file" else "" end) \(.Name) \(if .Passed then "pass" else "FAIL" end): \(.Detail)"' "$results"
 jq -r '.Exceptions[]? | "exception in \(.Scenario): \(.Message)"' "$results"
 
 failed=0
