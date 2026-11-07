@@ -212,13 +212,13 @@ internal sealed class ScenarioCheck
         var target = RunTarget(file, run);
         if (!File.Exists(target))
         {
-            Report(run.Location, CheckSeverity.Error, $"run: can't find '{run.File}' from this file.");
+            Report(run.Location, CheckSeverity.Error, ScenarioMessages.RunFileMissing(run.File));
             return;
         }
 
         if (_running.Contains(FullPathOf(target)))
         {
-            Report(run.Location, CheckSeverity.Error, $"run: '{run.File}' is already running here, so it would never end.");
+            Report(run.Location, CheckSeverity.Error, ScenarioMessages.RunAlreadyRunning(run.File));
             return;
         }
 

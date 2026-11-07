@@ -10,6 +10,8 @@
   <ItemGroup>
     <!-- Zeepkist.Tester.Sdk's types expose these, but only compiles against them and doesn't pass them on -->
     <PackageReference Include="BepInEx.BaseLib" Version="5.4.20" />
+    <!-- Finding the tester's own steps reads the attributes of its Harmony patches -->
+    <PackageReference Include="HarmonyX" Version="2.7.0" />
     <!-- The harness only compiles against this, as the game ships it; its results and run request need it at runtime here -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Zeepkist.GameLibs" Version="$(GameLibsVersion)" />

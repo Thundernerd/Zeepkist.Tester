@@ -1,5 +1,6 @@
 using System;
 using TNRD.Zeepkist.Tester.Patches;
+using TNRD.Zeepkist.Tester.Sdk;
 using UnityEngine.SceneManagement;
 using ZeepSDK.LevelEditor;
 using ZeepSDK.Racing;
@@ -10,7 +11,7 @@ namespace TNRD.Zeepkist.Tester;
 /// Counts the moments a run waits for, so a wait compares a count from before with the count now instead of
 /// subscribing for itself, which a step that stops halfway would leave subscribed.
 /// </summary>
-internal sealed class GameEvents : IDisposable
+internal sealed class GameEvents : IGameEvents, IDisposable
 {
     public GameEvents()
     {

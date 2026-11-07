@@ -6,8 +6,8 @@ using UnityEngine;
 namespace TNRD.Zeepkist.Tester;
 
 /// <summary>
-/// Checks the run has the right builds, records what the game runs at, and quits. An exception anywhere fails the run,
-/// and still quits the game, instead of leaving the runner to time out.
+/// Checks the run has the right builds, runs its scenarios, records what the game runs at, and quits. An exception
+/// anywhere fails the run, and still quits the game, instead of leaving the runner to time out.
 /// </summary>
 internal sealed class TestRun : IDisposable
 {
@@ -59,7 +59,7 @@ internal sealed class TestRun : IDisposable
             Step(RunStep.Fail("no errors", $"{error.GetType().Name}: {error.Message}"));
         }
 
-        if (_results.AnyStepFailed)
+        if (_results.AnyStepFailedOutsideAScenario)
             yield return _screenshots.Take("failure");
     }
 
@@ -72,6 +72,14 @@ internal sealed class TestRun : IDisposable
             Step(step);
 
         Step(YamlCheck.Run(typeof(YamlCheck).Assembly));
+
+        // Scenarios of another build or without a parser would only say something about those
+        if (_results.AnyStepFailed)
+            yield break;
+
+        var host = new GameHost(_logger, _game, _screenshots, Step);
+        var runner = new ScenarioRunner(host, _exceptions, StepTypes.Build(GameHost.FindStepTypes()), Sdk.Tester.Registered, Step);
+        yield return runner.Run(_request.ScenarioFiles(_folder));
     }
 
     private void RecordDisplay()

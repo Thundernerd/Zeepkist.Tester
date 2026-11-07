@@ -216,8 +216,7 @@ public class ScenarioValuesTests
         new Name<BlockValue>(name).Set(_context, new BlockValue { Uid = uid });
     }
 
-    private sealed class Context : IStepContext
+    private sealed class Context : BareStepContext
     {
-        public IValues Values { get; } = new ScenarioValues();
     }
 }

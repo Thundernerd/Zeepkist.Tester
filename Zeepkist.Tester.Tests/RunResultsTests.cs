@@ -51,6 +51,23 @@ public class RunResultsTests
     }
 
     [Fact]
+    public void AStepInARunFile_NamesBothFilesAndLines_AndItsPass()
+    {
+        using var folder = new TemporaryFolder();
+        var results = new RunResults("abc", folder.Path, []);
+        var run = new RunStep { Scenario = "smoke", Name = "wait", Passed = true, File = "shared.ztest.yaml", Line = 3, RanFrom = "smoke.ztest.yaml:7", Passes = "h=64" };
+
+        results.Add(run);
+
+        var step = Assert.Single(Read(folder.Path)["Steps"]);
+        Assert.Equal("shared.ztest.yaml", (string)step["File"]);
+        Assert.Equal(3, (int)step["Line"]);
+        Assert.Equal("smoke.ztest.yaml:7", (string)step["RanFrom"]);
+        Assert.Equal("h=64", (string)step["Passes"]);
+        Assert.Equal("smoke:3 wait [h=64] (run from smoke.ztest.yaml:7) PASS", run.ToString());
+    }
+
+    [Fact]
     public void Finishing_WithEveryStepPassed_Passes()
     {
         using var folder = new TemporaryFolder();

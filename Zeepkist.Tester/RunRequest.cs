@@ -12,10 +12,25 @@ namespace TNRD.Zeepkist.Tester;
 internal sealed class RunRequest
 {
     public const string Flag = "-ztest";
+    public const string ScenariosFolder = "scenarios";
 
     public string RunId { get; set; }
 
     public List<ModUnderTest> Mods { get; set; } = [];
+
+    /// <summary>
+    /// The scenario files to run, in order, relative to the <see cref="ScenariosFolder"/> next to this plugin.
+    /// </summary>
+    public List<string> Scenarios { get; set; } = [];
+
+    /// <summary>
+    /// The scenario files to run, as paths, from the folder of this plugin.
+    /// </summary>
+    public List<string> ScenarioFiles(string folder)
+    {
+        var scenarios = Path.Combine(folder, ScenariosFolder);
+        return Scenarios.ConvertAll(file => Path.Combine(scenarios, file.Replace('/', Path.DirectorySeparatorChar)));
+    }
 
     public static bool TryRead(string folder, string[] args, out RunRequest request)
     {

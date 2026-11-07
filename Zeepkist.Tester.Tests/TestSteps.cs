@@ -240,13 +240,11 @@ public static class TestSteps
     }
 
     /// <summary>What the states and steps below run against: which states hold, and which steps ran.</summary>
-    public sealed class StatesContext : IStepContext
+    public sealed class StatesContext : BareStepContext
     {
         public HashSet<Type> Met { get; } = [];
 
         public List<Type> Ran { get; } = [];
-
-        public IValues Values { get; } = new ScenarioValues();
     }
 
     /// <summary>A state that holds when its <see cref="StatesContext"/> says so.</summary>
