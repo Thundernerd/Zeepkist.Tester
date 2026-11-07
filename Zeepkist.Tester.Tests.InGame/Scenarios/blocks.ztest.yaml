@@ -1,0 +1,33 @@
+description: Places blocks, changes a setting and counts them, each as one undo step
+start: editor
+steps:
+  - expect-block-count: 0
+  - place-start
+  - expect-block-count: 1
+
+  # A logic block whose settings are stored as whole numbers: its mode is xbs
+  - place-block: { type: 2440, as: telemetry }
+  - sample.expect-selected: telemetry
+  - expect-block-count: 2
+  - expect-block-count: { count: 1, type: 2440 }
+  - expect-block-count: { count: 0, type: 2448 }
+  - log: The block's UID is ${telemetry}
+
+  - sample.expect-block-setting: { block: telemetry, setting: xbs, value: "0" }
+  - set-block-setting: { block: telemetry, setting: xbs, value: 2 }
+  - sample.expect-block-setting: { block: telemetry, setting: xbs, value: "2" }
+  - undo
+  - sample.expect-block-setting: { block: telemetry, setting: xbs, value: "0" }
+  - redo
+  - sample.expect-block-setting: { block: telemetry, setting: xbs, value: "2" }
+
+  # Back past the selection and the setting to before the block
+  - undo
+  - undo
+  - undo
+  - expect-block-count: 1
+  - redo
+  - expect-block-count: 2
+  - place-block: 2448
+  - expect-block-count: 3
+  - expect-no-exceptions
