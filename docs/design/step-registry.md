@@ -48,7 +48,7 @@ A fixed set, so the CLI can describe and check each one without running anything
 | `Seconds` | `2`, `0.5`, `500ms` | `number` or `^\d+(\.\d+)?(ms\|s)$` | |
 | `Pixels` | `-1000` | `integer` | Negative is allowed. |
 | an `enum` | scalar | `enum` | `[ArgValue("global_velocity")]` on a member names how it's written. Choices like `scripts\|libraries` and `on\|off` become enums, which is also why `on` is safe. |
-| `Keys` | `ctrl+space escape` | `string` with a pattern | The existing key-chord syntax (`KeyNames`), checked by pattern. |
+| `Keys` | `ctrl+space escape` | `string` with a pattern | The existing key-chord syntax (`KeyNames`), up to 8 keys, which is what fits in a frame, checked by pattern. |
 | `FileName` | scalar | `^[A-Za-z0-9_-]+$` | For screenshot names. |
 | `Name<T>` | scalar | `^[A-Za-z0-9_-]+$` | **Defines** a named value of kind `T` (see *Named values*). |
 | `Ref<T>` | scalar | `^[A-Za-z0-9_-]+$` | **Uses** one, by name. |
@@ -141,7 +141,7 @@ public interface IStepContext : IScenarioContext
     IEnumerator WaitUntil(Func<bool> condition, Seconds timeout, string what);
 
     // What the harness provides
-    IInput Input { get; }          // see below; comes with #15
+    IInput Input { get; }          // see below
     IGameEvents Game { get; }      // counts of scene loads, editor entries, test mode entries, round starts, level loads
     IExceptionLog Exceptions { get; }
     string LastScreenshotBlankColor { get; }   // the color when every pixel of the last one was the same, or null
@@ -176,7 +176,7 @@ public interface IInput
     IEnumerator MoveMouse(Vector2 screenPoint);
     IEnumerator Click(Vector2 screenPoint, MouseButton button = MouseButton.Left);
     IEnumerator Drag(Vector2 from, IReadOnlyList<DragMove> moves, MouseButton button = MouseButton.Left);
-    void GiveBack();                 // the player's mouse again, as ImuiMouse.GiveBack; the harness calls it after each scenario
+    void GiveBack();                 // lets go of what's held and hands back the player's mouse, on every route
 }
 
 public enum InputRoute
@@ -185,6 +185,14 @@ public enum InputRoute
     Os,          // SendInput: what a player's keyboard and mouse do; needs the window in front
 }
 ```
+
+- One `IInput` lives for the whole run. The runner sets `Route` from a scenario's header as it starts, `InProcess` when the header leaves it out, so a route a step switched to ends with its scenario.
+- `TesterInput` decides what goes in which frame, and hands it to an `IInputDriver`. The `InProcess` route is a composite of one driver per input path, which all get the same input, and it only fails a step when none of them has anything to take it. Imui's is the first; #16, #17 and #18 add the others.
+- A key is a key event, then the character it types as an event of its own, as Unity hands them to Imui. Ctrl, Alt or Cmd with a key types nothing. `press` lets go in the frame after, and `type` as it sends the next key. The Escapes in one `press` come in one frame, as a quick double press does, because Unity reports one Escape a frame however often it was pressed.
+- Unity's own `Input` never sees what the Imui driver sends, so code that reads Escape or anything else there, the level editor included, doesn't see it until the legacy `Input` driver (#17).
+- A point, and a `DragMove`'s pixels, are in Unity's screen pixels, with a point counted from the bottom left. The Imui driver turns them into Imui's own pixels with its backend's scale, so a step that got its point from an `ImRect` scales it back first.
+- The mouse stays where a call left it until `GiveBack`, so a step can check what's under it. `GiveBack` can't fail: it works with nothing held, on any route and without an Imui backend, so the runner can call it after any scenario (#62).
+- Until the OS driver (#19) exists, `input: os` loads and `ztest check` accepts it, and every `IInput` call that sends input on that route fails its step, saying so. `Route` and `GiveBack` still work there, and a scenario on that route with no input step passes.
 
 Core steps (`press`, `type`, `hold`, `click`, `move-mouse`, `drag`) are thin wrappers over this. A mod's step uses it the same way: ZLS's `hover` and `drag-window-edge` would find where to point from its window driver, then call `context.Input`.
 
@@ -196,11 +204,14 @@ Today it's `drag-window-edge -1000 over 10 then 200 over 2`, read by a hand-writ
 /// <summary>One move of a drag, in even steps over the frames.</summary>
 public sealed class DragMove
 {
-    /// <summary>Pixels down, or up for a number below 0.</summary>
+    /// <summary>Pixels down, or up for a number below 0. With Sideways, pixels right, or left below 0.</summary>
     [Arg(Primary = true)] public Pixels By { get; set; }
 
     /// <summary>Frames the move takes.</summary>
-    [Arg(Default = 1), InRange(1, 600)] public int Over { get; set; }
+    [Arg(Default = 1), InRange(1, 600)] public int Over { get; set; } = 1;
+
+    /// <summary>Whether it goes right or left, instead of down or up.</summary>
+    [Arg(Default = false)] public bool Sideways { get; set; }
 }
 
 /// <summary>Drags the window's resize handle with the mouse, the way a player does …</summary>
@@ -210,7 +221,7 @@ public sealed class DragWindowEdge : Step
     /// <summary>The moves, made in turn before letting go.</summary>
     [Arg(Primary = true), MinItems(1)] public List<DragMove> Moves { get; set; }
 
-    [Arg(Default = false)] public bool Sideways { get; set; }   // replaces drag-window-edge-sideways
+    [Arg(Default = false)] public bool Sideways { get; set; }   // replaces drag-window-edge-sideways, setting each move's
 
     public override IEnumerator Run(IStepContext context) { /* … */ }
 }

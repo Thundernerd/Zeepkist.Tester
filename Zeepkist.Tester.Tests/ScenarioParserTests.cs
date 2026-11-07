@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using TNRD.Zeepkist.Tester.Scenarios;
+using TNRD.Zeepkist.Tester.Sdk;
 using Xunit;
 
 namespace TNRD.Zeepkist.Tester.Tests;
@@ -86,7 +87,18 @@ public class ScenarioParserTests
         Assert.Equal("Each way to write a step", scenario.Description);
         Assert.Equal(["zls"], scenario.Use);
         Assert.Same(StartState.Editor, scenario.Start.State);
-        Assert.Equal("in-process", scenario.Input);
+        Assert.Equal(InputRoute.InProcess, scenario.Input);
+    }
+
+    [Theory]
+    [InlineData("input: os\n", InputRoute.Os)]
+    [InlineData("input: in-process\n", InputRoute.InProcess)]
+    [InlineData("", InputRoute.InProcess)]
+    public void TheInputHeader_NamesARoute_AndLeftOutIsInProcess(string header, InputRoute route)
+    {
+        var scenario = ScenarioParser.Parse("scenario.ztest.yaml", new StringReader($"{header}steps:\n  - undo\n"), ScenarioSteps.Descriptors);
+
+        Assert.Equal(route, scenario.Input);
     }
 
     [Fact]

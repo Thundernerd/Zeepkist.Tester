@@ -23,6 +23,11 @@ public interface IStepContext : IScenarioContext
     /// </summary>
     public IValues Values { get; }
 
+    /// <summary>
+    /// Sends the game keys and a mouse.
+    /// </summary>
+    public IInput Input { get; }
+
     public IGameEvents Game { get; }
 
     public IExceptionLog Exceptions { get; }

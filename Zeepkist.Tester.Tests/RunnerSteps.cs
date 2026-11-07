@@ -47,6 +47,26 @@ public static class RunnerSteps
         }
     }
 
+    [Step("route", Namespace = "t")]
+    public sealed class Route : Step
+    {
+        public override IEnumerator Run(IStepContext context)
+        {
+            context.Get<Recorder>().Events.Add($"route {context.Input.Route}");
+            yield break;
+        }
+    }
+
+    [Step("switch-to-os", Namespace = "t")]
+    public sealed class SwitchToOs : Step
+    {
+        public override IEnumerator Run(IStepContext context)
+        {
+            context.Input.Route = InputRoute.Os;
+            yield break;
+        }
+    }
+
     [Step("number", Namespace = "t")]
     public sealed class Number : Step
     {

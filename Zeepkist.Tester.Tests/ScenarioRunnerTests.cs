@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using BepInEx.Logging;
+using TNRD.Zeepkist.Tester.InputDrivers;
 using TNRD.Zeepkist.Tester.Scenarios;
 using TNRD.Zeepkist.Tester.Sdk;
 using TNRD.Zeepkist.Tester.Steps;
@@ -602,6 +603,18 @@ public sealed class ScenarioRunnerTests : IDisposable
     }
 
     [Fact]
+    public void AScenarioStartsOnTheRouteOfItsHeader_WhateverAStepSwitchedTheOneBeforeTo()
+    {
+        Run(
+            Write("one", "steps:\n  - t.route\n  - t.switch-to-os\n  - t.route\n"),
+            Write("two", "steps:\n  - t.route\n"),
+            Write("three", "input: os\nsteps:\n  - t.route\n"),
+            Write("four", "input: in-process\nsteps:\n  - t.route\n"));
+
+        Assert.Equal(["route InProcess", "route Os", "route InProcess", "route Os", "route InProcess"], Events.Where(item => item.StartsWith("route", StringComparison.Ordinal)));
+    }
+
+    [Fact]
     public void Screenshot_OfABlankScreen_FailsTheStep_SayingWhichColor()
     {
         _host.BlankColor = "#00000000";
@@ -733,6 +746,8 @@ public sealed class ScenarioRunnerTests : IDisposable
 
         // Time goes on every time it's asked, so a wait always ends
         public float Now => _now += 1;
+
+        public IInput Input { get; } = new TesterInput(new InProcessDrivers(), () => 0);
 
         public IGameEvents Game { get; } = new FakeEvents();
 

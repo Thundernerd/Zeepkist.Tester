@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TNRD.Zeepkist.Tester.Sdk;
 
 namespace TNRD.Zeepkist.Tester.Scenarios;
 
@@ -7,7 +8,7 @@ namespace TNRD.Zeepkist.Tester.Scenarios;
 /// </summary>
 internal sealed class Scenario
 {
-    public Scenario(string file, string description, IReadOnlyList<string> use, ScenarioStart start, string input, IReadOnlyList<ScenarioNode> steps)
+    public Scenario(string file, string description, IReadOnlyList<string> use, ScenarioStart start, InputRoute input, IReadOnlyList<ScenarioNode> steps)
     {
         File = file;
         Description = description;
@@ -20,7 +21,7 @@ internal sealed class Scenario
     public string File { get; }
 
     /// <summary>
-    /// Null when the header leaves it out, as it is for <see cref="Input"/>.
+    /// Null when the header leaves it out.
     /// </summary>
     public string Description { get; }
 
@@ -32,9 +33,9 @@ internal sealed class Scenario
     public ScenarioStart Start { get; }
 
     /// <summary>
-    /// <c>in-process</c> or <c>os</c>.
+    /// The route the scenario's input starts on, <see cref="InputRoute.InProcess"/> when the header leaves it out.
     /// </summary>
-    public string Input { get; }
+    public InputRoute Input { get; }
 
     public IReadOnlyList<ScenarioNode> Steps { get; }
 }

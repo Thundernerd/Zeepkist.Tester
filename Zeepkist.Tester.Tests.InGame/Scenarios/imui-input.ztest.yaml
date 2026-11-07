@@ -1,0 +1,20 @@
+description: Reaches a ZeepSDK window's Imui controls through context.Input, as a player's keyboard and mouse do
+start: editor
+steps:
+  - sample.show-input-window
+  - sample.click-field
+  - sample.type-text: Hello, World(1)!
+  - sample.expect-field: Hello, World(1)!
+  - sample.press-keys: backspace backspace
+  - sample.expect-field: Hello, World(1
+  - sample.press-keys: ctrl+a
+  - sample.expect-field: Hello, World(1
+  - sample.press-keys: backspace
+  - sample.expect-field
+  - sample.press-keys: a shift+b
+  - sample.expect-field: aB
+  - sample.hold-keys: { keys: c, for: 200ms }
+  - sample.expect-field: aBc
+  - sample.drag-slider
+  - sample.give-back-mouse
+  - sample.hide-input-window
