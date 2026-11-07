@@ -27,13 +27,13 @@ internal sealed class Screenshots
     public string LastBlankColor { get; private set; }
 
     /// <summary>
-    /// With <paramref name="cover"/>, fills the frame with it just before the capture, so the screenshot is blank.
+    /// With <paramref name="covered"/>, fills the frame with one color just before the capture, so the screenshot is blank.
     /// </summary>
-    public IEnumerator Take(string name, Color? cover = null)
+    public IEnumerator Take(string name, bool covered = false)
     {
         yield return new WaitForEndOfFrame();
-        if (cover is { } color)
-            GL.Clear(true, true, color);
+        if (covered)
+            GL.Clear(true, true, Color.magenta);
 
         var texture = ScreenCapture.CaptureScreenshotAsTexture();
         bool blank;

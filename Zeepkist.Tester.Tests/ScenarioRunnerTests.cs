@@ -23,6 +23,8 @@ public sealed class ScenarioRunnerTests : IDisposable
         typeof(Wait),
         typeof(Log),
         typeof(Screenshot),
+        typeof(ExpectBlankScreenshot),
+        typeof(ExpectNoExceptions),
     ];
 
     private readonly TemporaryFolder _folder = new TemporaryFolder();
@@ -599,6 +601,79 @@ public sealed class ScenarioRunnerTests : IDisposable
         Assert.Contains("x", Events);
     }
 
+    [Fact]
+    public void Screenshot_OfABlankScreen_FailsTheStep_SayingWhichColor()
+    {
+        _host.BlankColor = "#00000000";
+        var file = Write("blank", "steps:\n  - screenshot: shot\n");
+
+        Run(file);
+
+        var step = Assert.Single(_steps);
+        Assert.False(step.Passed);
+        Assert.Equal("The screenshot is blank: every pixel is #00000000.", step.Detail);
+        Assert.Equal("more than one color", step.Expected);
+        Assert.Equal("every pixel #00000000", step.Actual);
+    }
+
+    [Fact]
+    public void ExpectBlankScreenshot_CoversTheFrame_AndPassesOnWhatItFinds()
+    {
+        _host.BlankColor = "#FF00FFFF";
+        var file = Write("covered", "steps:\n  - expect-blank-screenshot: shot\n");
+
+        Run(file);
+
+        var step = Assert.Single(_steps);
+        Assert.True(step.Passed);
+        Assert.Equal("Every pixel is #FF00FFFF.", step.Detail);
+        Assert.Contains("covered screenshot covered-shot", Events);
+    }
+
+    [Fact]
+    public void ExpectBlankScreenshot_OfAFrameThatStillShowsSomething_FailsTheStep()
+    {
+        var file = Write("covered", "steps:\n  - expect-blank-screenshot: shot\n");
+
+        Run(file);
+
+        var step = Assert.Single(_steps);
+        Assert.False(step.Passed);
+        Assert.Equal("The screen was covered in one color, but the screenshot isn't blank.", step.Detail);
+    }
+
+    [Fact]
+    public void ExpectNoExceptions_WithNoneLogged_Passes()
+    {
+        var file = Write("clean", "steps:\n  - expect-no-exceptions\n");
+
+        Run(file);
+
+        var step = Assert.Single(_steps);
+        Assert.True(step.Passed);
+        Assert.Equal("0", step.Actual);
+    }
+
+    [Fact]
+    public void ExpectNoExceptions_ListsWhatWasLogged_AndFailsTheStep()
+    {
+        _host.WhenEntering = () =>
+        {
+            _exceptions.Record("Exception: boom", "at Here\nat There");
+            _exceptions.Record("Exception: boom", "at Here\nat There");
+            _exceptions.Record("Exception: bang", string.Empty);
+        };
+        var file = Write("thrown", "steps:\n  - expect-no-exceptions\n");
+
+        Run(file);
+
+        var step = Assert.Single(_steps);
+        Assert.False(step.Passed);
+        Assert.Equal("3 exceptions logged", step.Detail);
+        Assert.Equal("0", step.Expected);
+        Assert.Equal("3: 2× Exception: boom at at Here; Exception: bang", step.Actual);
+    }
+
     private string Write(string name, string yaml)
     {
         var path = Path.Combine(_folder.Path, $"{name}.ztest.yaml");
@@ -647,6 +722,13 @@ public sealed class ScenarioRunnerTests : IDisposable
 
         public bool ScreenshotThrows { get; set; }
 
+        /// <summary>
+        /// What each screenshot comes out as, null for one with something on it.
+        /// </summary>
+        public string BlankColor { get; set; }
+
+        public string LastBlankColor { get; private set; }
+
         public ManualLogSource Logger { get; } = new ManualLogSource("test");
 
         // Time goes on every time it's asked, so a wait always ends
@@ -666,12 +748,13 @@ public sealed class ScenarioRunnerTests : IDisposable
             yield return null;
         }
 
-        public IEnumerator Screenshot(string name)
+        public IEnumerator Screenshot(string name, bool covered = false)
         {
             if (ScreenshotThrows)
                 throw new InvalidOperationException("no screen");
 
-            _recorder.Events.Add($"screenshot {name}");
+            _recorder.Events.Add(covered ? $"covered screenshot {name}" : $"screenshot {name}");
+            LastBlankColor = BlankColor;
             yield return null;
         }
     }

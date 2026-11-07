@@ -44,6 +44,8 @@ internal sealed class StepContext : ScenarioContext, IStepContext
 
     public IExceptionLog Exceptions { get; }
 
+    public string LastScreenshotBlankColor => _host.LastBlankColor;
+
     public void Pass(string detail, string expected, string actual)
     {
         if (!Failed)
@@ -84,9 +86,9 @@ internal sealed class StepContext : ScenarioContext, IStepContext
         }
     }
 
-    public IEnumerator Screenshot(FileName name)
+    public IEnumerator Screenshot(FileName name, bool covered = false)
     {
-        return _host.Screenshot(ScreenshotNames.For(ScenarioName, name.Value));
+        return _host.Screenshot(ScreenshotNames.For(ScenarioName, name.Value), covered);
     }
 
     public LEV_LevelEditorCentral RequireEditor()

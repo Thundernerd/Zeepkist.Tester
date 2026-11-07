@@ -65,9 +65,11 @@ internal sealed class GameHost : IRunHost
         return _walk.Enter(start, scenarioFile);
     }
 
-    public IEnumerator Screenshot(string name)
+    public string LastBlankColor => _screenshots.LastBlankColor;
+
+    public IEnumerator Screenshot(string name, bool covered = false)
     {
-        return _screenshots.Take(name);
+        return _screenshots.Take(name, covered);
     }
 
     /// <summary>
