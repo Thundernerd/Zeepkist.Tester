@@ -141,6 +141,10 @@ internal sealed class ScenarioCheck
     private void FollowFromItsStart(Scenario scenario, bool mayBeGivenNames)
     {
         _nodesFollowed = 0;
+        var level = scenario.Start.LevelPath(scenario.File);
+        if (level != null && !File.Exists(level))
+            Report(scenario.Start.Location, CheckSeverity.Error, $"start: {scenario.Start.State.Name} can't find '{scenario.Start.Arguments[scenario.Start.State.Argument]}' from this file.");
+
         Follow(scenario, new Scope(null) { DefinesUnknownNames = mayBeGivenNames }, [scenario.Start.State.Name]);
     }
 
