@@ -11,20 +11,17 @@ namespace TNRD.Zeepkist.Tester;
 /// </summary>
 internal sealed class BlockSettings
 {
-    private const int True = 1;
-    private const int False = 0;
-
     private readonly Dictionary<string, int> _whole;
-    private readonly Dictionary<string, float> _numbers;
+    private readonly Dictionary<string, float> _decimals;
     private readonly Dictionary<string, string> _text;
 
     /// <summary>
     /// Any of them can be null, as a block's are when it has no setting of that type.
     /// </summary>
-    public BlockSettings(Dictionary<string, int> whole, Dictionary<string, float> numbers, Dictionary<string, string> text)
+    public BlockSettings(Dictionary<string, int> whole, Dictionary<string, float> decimals, Dictionary<string, string> text)
     {
         _whole = whole;
-        _numbers = numbers;
+        _decimals = decimals;
         _text = text;
     }
 
@@ -51,11 +48,11 @@ internal sealed class BlockSettings
 
             problem = $"{key} takes a whole number, true or false, not '{value}'";
         }
-        else if (_numbers?.ContainsKey(key) == true)
+        else if (_decimals?.ContainsKey(key) == true)
         {
             if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
             {
-                _numbers[key] = number;
+                _decimals[key] = number;
                 return Read(key);
             }
 
@@ -68,7 +65,7 @@ internal sealed class BlockSettings
         }
         else
         {
-            var keys = Keys(_whole).Concat(Keys(_numbers)).Concat(Keys(_text)).OrderBy(name => name, StringComparer.Ordinal).ToList();
+            var keys = Keys(_whole).Concat(Keys(_decimals)).Concat(Keys(_text)).OrderBy(name => name, StringComparer.Ordinal).ToList();
             problem = $"The block has no setting '{key}'. It has {(keys.Count == 0 ? "none" : string.Join(", ", keys))}.";
         }
 
@@ -83,7 +80,7 @@ internal sealed class BlockSettings
         if (_whole != null && _whole.TryGetValue(key, out var whole))
             return whole.ToString(CultureInfo.InvariantCulture);
 
-        if (_numbers != null && _numbers.TryGetValue(key, out var number))
+        if (_decimals != null && _decimals.TryGetValue(key, out var number))
             return number.ToString("R", CultureInfo.InvariantCulture);
 
         return _text != null && _text.TryGetValue(key, out var text) ? text : null;
@@ -94,10 +91,10 @@ internal sealed class BlockSettings
         switch (value)
         {
             case "true":
-                whole = True;
+                whole = 1;
                 return true;
             case "false":
-                whole = False;
+                whole = 0;
                 return true;
             default:
                 return int.TryParse(value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out whole);

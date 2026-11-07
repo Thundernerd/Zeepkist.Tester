@@ -35,12 +35,13 @@ public sealed class PlaceBlock : Step
             yield break;
         }
 
-        var placed = BlockPlacing.Place(central, Type, 0, 1, "Test: place block");
+        // Before placing, so a name that's already taken places nothing
+        var uid = BlockPlacing.NewUid(Type);
+        As?.Set(context, new BlockValue(uid));
 
-        // After placing, because the UID is only known then. A name already taken leaves the block in the level, in a scenario that's stopping
-        As?.Set(context, new BlockValue(placed.UID));
+        var placed = BlockPlacing.Place(central, Type, uid, yaw: 0, cellsToTheSide: 1, "Test: place block");
         BlockPlacing.Select(central, placed);
-        context.Detail = $"Block type {Type}, UID \"{placed.UID}\" at {placed.transform.position}";
+        context.Detail = $"Block type {Type}, UID \"{uid}\" at {placed.transform.position}";
         yield return null;
     }
 }

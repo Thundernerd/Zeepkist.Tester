@@ -34,6 +34,8 @@ internal sealed class GameHost : IRunHost
 
     public IGameEvents Game { get; }
 
+    public string LastBlankColor => _screenshots.LastBlankColor;
+
     public LEV_LevelEditorCentral Editor
     {
         get
@@ -64,8 +66,6 @@ internal sealed class GameHost : IRunHost
     {
         return _walk.Enter(start, scenarioFile);
     }
-
-    public string LastBlankColor => _screenshots.LastBlankColor;
 
     public IEnumerator Screenshot(string name, bool covered = false)
     {

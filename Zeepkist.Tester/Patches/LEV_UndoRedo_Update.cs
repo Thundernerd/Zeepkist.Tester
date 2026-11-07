@@ -2,6 +2,9 @@ using HarmonyLib;
 
 namespace TNRD.Zeepkist.Tester.Patches;
 
+/// <summary>
+/// Holds the key <see cref="EditorKeys"/> pressed down for the one update that reads it.
+/// </summary>
 [HarmonyPatch(typeof(LEV_UndoRedo), nameof(LEV_UndoRedo.Update))]
 internal static class LEV_UndoRedo_Update
 {

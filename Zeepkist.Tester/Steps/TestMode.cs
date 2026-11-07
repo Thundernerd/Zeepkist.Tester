@@ -27,10 +27,12 @@ public sealed class TestMode : Step
             yield break;
         }
 
+        var entriesBefore = context.Game.TestModeEntries;
         var roundsBefore = context.Game.RoundStarts;
 
         // Does nothing in a level without a start block
         central.testMap.TestMap();
+        yield return context.WaitUntil(() => context.Game.TestModeEntries > entriesBefore, new Seconds(StartSeconds), "test mode to start");
         yield return context.WaitUntil(() => context.Game.RoundStarts > roundsBefore, new Seconds(StartSeconds), "the round to start in test mode");
     }
 }

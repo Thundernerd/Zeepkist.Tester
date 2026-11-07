@@ -14,13 +14,22 @@ internal static class BlockPlacing
     private const float GridSize = 16;
     private const string PaintKeyStart = "p";
 
+    /// <summary>
+    /// A UID no block in the level has, for <see cref="Place"/>.
+    /// </summary>
+    public static string NewUid(int blockId)
+    {
+        return PlayerManager.Instance.GenerateUniqueIDforBlocks(blockId.ToString(CultureInfo.InvariantCulture));
+    }
+
     /// <param name="central">The level editor.</param>
     /// <param name="blockId">The type of the block.</param>
+    /// <param name="uid">The block's UID, from <see cref="NewUid"/>.</param>
     /// <param name="yaw">Which way the block faces.</param>
     /// <param name="cellsToTheSide">How many cells along x from below the camera, so one block doesn't go where another does.</param>
     /// <param name="label">What the game's logs call this.</param>
     /// <exception cref="StepFailedException">A grabbed block keeps the editor from registering the undo step.</exception>
-    public static BlockProperties Place(LEV_LevelEditorCentral central, int blockId, float yaw, int cellsToTheSide, string label)
+    public static BlockProperties Place(LEV_LevelEditorCentral central, int blockId, string uid, float yaw, int cellsToTheSide, string label)
     {
         // BreakLock silently skips the undo step while grabbing
         if (central.gizmos.isGrabbing)
@@ -31,7 +40,7 @@ internal static class BlockPlacing
         var json = new BlockPropertyJSON
         {
             i = blockId,
-            u = PlayerManager.Instance.GenerateUniqueIDforBlocks(blockId.ToString(CultureInfo.InvariantCulture)),
+            u = uid,
             p = new CV3(position),
             r = new CV3(new Vector3(0, yaw, 0)),
             s = new CV3(Vector3.one),

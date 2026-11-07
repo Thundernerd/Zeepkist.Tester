@@ -59,7 +59,7 @@ Patterns and ranges come from attributes the CLI can read: `[Pattern("…")]`, `
 
 ## Named values
 
-Today `place-block lamp as lamp` remembers a block for `{uid:lamp}` and `set-block-setting lamp …`. That becomes a typed named value:
+`place-block: { type: 2448, as: lamp }` remembers a block for `${lamp}` and `set-block-setting`, as a typed named value:
 
 ```csharp
 /// <summary>A block placed or named by a step, by its UID.</summary>
@@ -85,7 +85,7 @@ public sealed class PlaceBlock : Step
         if (central == null)
             yield break;
 
-        var block = /* … places it, as today … */;
+        var block = /* … places it … */;
         As?.Set(context, new BlockValue(block.UID));
     }
 }
@@ -114,7 +114,7 @@ public sealed class SetBlockSetting : Step
 ```
 
 - `BlockValue` is in the SDK, so a mod's step can take a `Ref<BlockValue>` that `place-block` defined.
-- The tester knows blocks only as the game does, so a block's type is its ID, and a setting is the key the block stores it under. A setting takes a value of the type the block already holds there: a whole number (`true` and `false` are 1 and 0), a decimal, or text. A key the block doesn't hold fails the step, listing the ones it does. A mod with its own names for types and settings has its own steps for them.
+- The tester knows blocks only as the game does, so a block's type is its ID, and a setting is the key the block stores it under. A setting takes a value of the type the block already holds there: a whole number (`true` and `false` are 1 and 0), a decimal, or text. A key the block doesn't hold fails the step, listing the ones it does. The step writes what the level file stores and has the block's editor read it, with no list of which keys mean what, so a key the editor doesn't read, such as a paint slot or a wire, is only stored. A mod with its own names for types and settings has its own steps for them.
 - Names last for the scenario, except inside a `for`, `repeat` or `run:` (see *Control nodes and names*). Defining a name that's already defined is an error, as today.
 - `${name}` works in any single YAML value, whatever the argument's type. It's substituted before the value is converted (see *Control nodes and names*). It needs a name whose kind has a `Substitute` member, a public string property. A `${name}` that isn't defined by an earlier step fails `ztest check` with its line. `$${` writes a literal `${`, and any other `${` without a name and `}` after it is an error.
 - In the game, a mistake with a name throws `StepFailedException`, which stops the step and fails it with the exception's message, so `Run` needs no check after `Block.Get(context)`. The scenario runner records that as the step's failure. It also makes one `ScenarioValues` per scenario, with a scope for each body. Substitution is part of binding.

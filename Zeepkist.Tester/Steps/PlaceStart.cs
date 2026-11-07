@@ -29,7 +29,7 @@ public sealed class PlaceStart : Step
         }
 
         var yaw = Mathf.Round(central.cam.cameraTransform.eulerAngles.y / QuarterTurn) * QuarterTurn;
-        var placed = BlockPlacing.Place(central, startId, yaw, 0, "Test: place start");
+        var placed = BlockPlacing.Place(central, startId, BlockPlacing.NewUid(startId), yaw, cellsToTheSide: 0, "Test: place start");
         context.Detail = $"Block type {startId} at {placed.transform.position}, facing {yaw}°";
         yield return null;
     }
