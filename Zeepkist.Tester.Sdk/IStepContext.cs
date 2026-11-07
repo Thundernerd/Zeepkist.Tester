@@ -33,6 +33,12 @@ public interface IStepContext : IScenarioContext
     public IExceptionLog Exceptions { get; }
 
     /// <summary>
+    /// The color of every pixel of the last screenshot of the run when they were all the same, or null, so a step can fail on
+    /// a capture that shows nothing.
+    /// </summary>
+    public string LastScreenshotBlankColor { get; }
+
+    /// <summary>
     /// Records a check that held. This does nothing after <see cref="Fail"/>.
     /// </summary>
     public void Pass(string detail, string expected, string actual);
@@ -53,9 +59,10 @@ public interface IStepContext : IScenarioContext
     public IEnumerator WaitUntil(Func<bool> condition, Seconds timeout, string what);
 
     /// <summary>
-    /// Saves a screenshot in the run's results, named after the scenario and <paramref name="name"/>.
+    /// Saves a screenshot in the run's results, named after the scenario and <paramref name="name"/>. With
+    /// <paramref name="covered"/>, it fills the frame with one color just before the capture, so the screenshot is blank.
     /// </summary>
-    public IEnumerator Screenshot(FileName name);
+    public IEnumerator Screenshot(FileName name, bool covered = false);
 
     /// <summary>
     /// The level editor. Outside it this fails the step and gives null.

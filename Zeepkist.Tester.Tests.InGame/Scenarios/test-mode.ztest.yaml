@@ -1,0 +1,15 @@
+description: Test mode from the editor and back, with the level's blocks still there, and ending in test mode for the next walk to leave
+start: editor
+steps:
+  - place-start
+  - place-block: 2448
+  - test-mode
+  - wait: 1
+  - screenshot: running
+  - sample.expect-in-test-mode
+  - back-to-editor
+  - expect-block-count: 2
+  - expect-block-count: { count: 1, type: 2448 }
+  - screenshot: back-in-editor
+  - expect-no-exceptions
+  - test-mode

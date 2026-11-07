@@ -99,7 +99,7 @@ internal sealed class StartWalk
             case GameLocation.TestMode:
                 var loadsBefore = _game.LevelLoads;
                 yield return QuitRound();
-                yield return Until(() => IsLevelBack(loadsBefore), "the level editor, from test mode");
+                yield return Until(() => RoundControls.IsLevelBack(_game, loadsBefore), "the level editor, from test mode");
                 QuitEditor();
                 break;
             case GameLocation.FreePlay:
@@ -139,18 +139,13 @@ internal sealed class StartWalk
             central.unsavedContentPopup.Yes();
     }
 
-    /// <summary>
-    /// Opens the pause menu and presses Quit, which goes back to the editor from a test level and to a menu from free play.
-    /// </summary>
     private static IEnumerator QuitRound()
     {
-        var pauseMenu = Find<PauseMenuUI>();
+        var pauseMenu = RoundControls.FindPauseMenu();
         if (pauseMenu == null)
             throw new StartFailedException("the level's pause menu: not found");
 
-        pauseMenu.Open(true);
-        yield return null;
-        pauseMenu.OnQuit();
+        return RoundControls.Quit(pauseMenu);
     }
 
     /// <summary>
@@ -240,18 +235,6 @@ internal sealed class StartWalk
 
         yield return Until(() => _game.RoundStarts > roundsBefore, "the round in free play");
         _report(RunStep.Pass("free play"));
-    }
-
-    /// <summary>
-    /// Whether the editor has loaded a level since <paramref name="loadsBefore"/> and placed all its blocks, as it does
-    /// coming back from test mode.
-    /// </summary>
-    private bool IsLevelBack(int loadsBefore)
-    {
-        // Only looked up once a load started, so the wait doesn't search the scene every frame before then
-        return _game.LevelLoads > loadsBefore
-            && ComponentCache.Get<LEV_LevelEditorCentral>() is { } central
-            && !central.saveload.isLoading;
     }
 
     private static T Find<T>()

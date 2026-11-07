@@ -1,0 +1,5 @@
+description: A run finds a screenshot of a frame covered in one color blank, and the next one isn't
+start: main-menu
+steps:
+  - expect-blank-screenshot: covered
+  - screenshot: after

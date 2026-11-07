@@ -1,6 +1,7 @@
 using TNRD.Zeepkist.Tester.Sdk;
 using Xunit;
 using static TNRD.Zeepkist.Tester.Tests.TestSteps;
+using BlockValue = TNRD.Zeepkist.Tester.Tests.TestSteps.BlockValue;
 
 namespace TNRD.Zeepkist.Tester.Tests;
 
