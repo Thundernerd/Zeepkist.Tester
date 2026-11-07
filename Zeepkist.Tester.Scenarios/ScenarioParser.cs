@@ -19,14 +19,6 @@ internal sealed class ScenarioParser
 
     private static readonly Regex _namePattern = new Regex(Name<object>.Pattern.Replace("$", @"\z"));
 
-    // Each start state, with the only argument it takes and whether it needs it
-    private static readonly Dictionary<string, (string Argument, bool Required)> _startStates = new Dictionary<string, (string, bool)>()
-    {
-        ["main-menu"] = (null, false),
-        [ScenarioStart.DefaultName] = ("level", false),
-        ["free-play"] = ("uid", true),
-    };
-
     private readonly string _file;
     private readonly Dictionary<string, StepDescriptor> _steps;
     private readonly List<YamlSequenceNode> _bodiesRead = [];
@@ -38,11 +30,6 @@ internal sealed class ScenarioParser
         _file = file;
         _steps = steps.ToDictionary(step => step.FullName);
     }
-
-    /// <summary>
-    /// What <c>start:</c> can name, each of which is also the state a scenario starts in.
-    /// </summary>
-    public static IReadOnlyCollection<string> StartStates => _startStates.Keys;
 
     /// <exception cref="ScenarioException">The file can't be read as a scenario.</exception>
     public static Scenario Parse(string file, TextReader reader, IEnumerable<StepDescriptor> steps)
@@ -67,7 +54,7 @@ internal sealed class ScenarioParser
             throw Fail(header, "A scenario needs steps:.");
 
         var description = entries.TryGetValue("description", out var written) ? ReadScalar(written, "description") : null;
-        var start = entries.TryGetValue("start", out written) ? ReadStart(written) : null;
+        var start = entries.TryGetValue("start", out written) ? ReadStart(written) : ScenarioStart.Default;
         var input = entries.TryGetValue("input", out written) ? ReadInput(written) : null;
         if (entries.TryGetValue("use", out written))
             _use = ReadUse(written);
@@ -107,8 +94,12 @@ internal sealed class ScenarioParser
             name = ReadScalar(written, "start:");
         }
 
-        if (!_startStates.TryGetValue(name, out var state))
-            throw Fail(written, $"start: takes main-menu, editor or free-play, not '{name}'.");
+        var state = StartState.All.FirstOrDefault(known => known.Name == name);
+        if (state == null)
+        {
+            var known = StartState.All.Select(each => each.Name).ToList();
+            throw Fail(written, $"start: takes {string.Join(", ", known.Take(known.Count - 1))} or {known.Last()}, not '{name}'.");
+        }
 
         var arguments = new Dictionary<string, string>();
         if (value != null)
@@ -118,10 +109,10 @@ internal sealed class ScenarioParser
                 arguments.Add(entry.Key, ReadScalar(entry.Value, $"'{entry.Key}' of start: {name}"));
         }
 
-        if (state.Required && !arguments.ContainsKey(state.Argument))
+        if (state.NeedsArgument && !arguments.ContainsKey(state.Argument))
             throw Fail(written, $"start: {name} needs the argument '{state.Argument}'.");
 
-        return new ScenarioStart(name, arguments);
+        return new ScenarioStart(state, arguments, Location(written));
     }
 
     private string ReadInput(YamlNode written)

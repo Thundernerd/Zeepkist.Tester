@@ -27,6 +27,12 @@ public class RegistryCheckTests
     }
 
     [Fact]
+    public void AStartState_NeedsNoStepToNeedIt()
+    {
+        Assert.Empty(Smells([], [typeof(Editor)]));
+    }
+
+    [Fact]
     public void AStateNothingUses_IsASmell()
     {
         Assert.Contains("Nothing uses the state 'mod.unused': no step requires it and no state is within it.", Smells([typeof(EntersUnused)], []));

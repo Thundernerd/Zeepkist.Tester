@@ -141,8 +141,7 @@ internal sealed class ScenarioCheck
     private void FollowFromItsStart(Scenario scenario, bool mayBeGivenNames)
     {
         _nodesFollowed = 0;
-        var start = scenario.Start?.Name ?? ScenarioStart.DefaultName;
-        Follow(scenario, new Scope(null) { DefinesUnknownNames = mayBeGivenNames }, [start]);
+        Follow(scenario, new Scope(null) { DefinesUnknownNames = mayBeGivenNames }, [scenario.Start.State.Name]);
     }
 
     private void Follow(Scenario scenario, Scope scope, HashSet<string> held)

@@ -84,7 +84,7 @@ public class ScenarioParserTests
 
         Assert.Equal("Each way to write a step", scenario.Description);
         Assert.Equal(["zls"], scenario.Use);
-        Assert.Equal("editor", scenario.Start.Name);
+        Assert.Same(StartState.Editor, scenario.Start.State);
         Assert.Equal("in-process", scenario.Input);
     }
 
@@ -181,11 +181,33 @@ public class ScenarioParserTests
     {
         var start = ScenarioParser.Parse("start.ztest.yaml", new StringReader($"start: {written}\nsteps:\n  - undo\n"), ScenarioSteps.Descriptors).Start;
 
-        Assert.Equal(name, start.Name);
+        Assert.Equal(name, start.State.Name);
         if (argument == null)
             Assert.Empty(start.Arguments);
         else
             Assert.Equal(value, start.Arguments[argument]);
+    }
+
+    [Fact]
+    public void AHeaderWithoutAStart_StartsOnANewLevelInTheEditor()
+    {
+        var start = ScenarioParser.Parse("start.ztest.yaml", new StringReader("steps:\n  - undo\n"), ScenarioSteps.Descriptors).Start;
+
+        Assert.Same(StartState.Editor, start.State);
+        Assert.Null(start.LevelPath("start.ztest.yaml"));
+    }
+
+    [Theory]
+    [InlineData("{ editor: { level: a.zeeplevel } }", "a.zeeplevel")]
+    [InlineData("{ editor: { level: levels/a.zeeplevel } }", "levels/a.zeeplevel")]
+    [InlineData("editor", null)]
+    [InlineData("{ free-play: { uid: levels/a.zeeplevel } }", null)]
+    public void ALevelFile_IsFoundFromTheScenario(string written, string expected)
+    {
+        var scenario = Path.Combine("scenarios", "start.ztest.yaml");
+        var start = ScenarioParser.Parse(scenario, new StringReader($"start: {written}\nsteps:\n  - undo\n"), ScenarioSteps.Descriptors).Start;
+
+        Assert.Equal(expected == null ? null : Path.Combine("scenarios", expected.Replace('/', Path.DirectorySeparatorChar)), start.LevelPath(scenario));
     }
 
     [Fact]
