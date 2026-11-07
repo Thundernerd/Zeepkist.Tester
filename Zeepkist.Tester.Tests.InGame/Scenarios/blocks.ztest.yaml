@@ -30,4 +30,20 @@ steps:
   - expect-block-count: 2
   - place-block: 2448
   - expect-block-count: 3
+
+  # A lamp stores whether it's a spotlight as a whole number, and its override inputs as text
+  - place-block: { type: 2448, as: lamp }
+  - set-block-setting: { block: lamp, setting: is, value: "true" }
+  - sample.expect-block-setting: { block: lamp, setting: is, value: "1" }
+  - set-block-setting: { block: lamp, setting: oi2, value: "5" }
+  - sample.expect-block-setting: { block: lamp, setting: oi2, value: "5" }
+
+  # A sign has two editors, and the second has its text, while the first registers the undo step
+  - place-block: { type: 2374, as: sign }
+  - set-block-setting: { block: sign, setting: sg, value: Hello }
+  - sample.expect-sign-text: { block: sign, text: Hello }
+  - undo
+  - sample.expect-sign-text: { block: sign, text: "" }
+  - redo
+  - sample.expect-sign-text: { block: sign, text: Hello }
   - expect-no-exceptions

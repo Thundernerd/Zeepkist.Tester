@@ -29,7 +29,7 @@ public sealed class ExpectBlockSetting : Step
             yield break;
 
         var properties = central.undoRedo.allBlocksDictionary[Block.Get(context).Uid].customBlockEditProperties;
-        var actual = properties.GetIntDictionaryValue(Setting).ToString(CultureInfo.InvariantCulture);
+        var actual = properties.t != null && properties.t.TryGetValue(Setting, out var text) ? text : properties.GetIntDictionaryValue(Setting).ToString(CultureInfo.InvariantCulture);
         if (actual == Value)
             context.Pass($"{Setting} is {actual}", Value, actual);
         else
