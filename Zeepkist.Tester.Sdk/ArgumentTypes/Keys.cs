@@ -6,6 +6,11 @@ namespace TNRD.Zeepkist.Tester.Sdk;
 /// </summary>
 public readonly struct Keys
 {
+    /// <summary>
+    /// Imui's backend keeps 16 key events a frame, and each key is two. <see cref="Pattern"/> holds this too.
+    /// </summary>
+    public const int MaxPerFrame = 8;
+
     private const string Key = @"(?:space|enter|tab|escape|backspace|delete|up|down|left|right|home|end|pageup|pagedown|[a-z0-9/\\.,;'\[\]=`-])";
     private const string Chord = @"(?:(?:shift|ctrl|alt|cmd)\+)*" + Key;
 

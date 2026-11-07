@@ -169,6 +169,29 @@ public class TesterInputTests
         }
     }
 
+    [Fact]
+    public void WhenNothingCanTakeTheRelease_TheInputWasStillSent_SoTheStepGoesOn()
+    {
+        var routine = _input.Click(_point);
+        NextFrame(routine);
+        NextFrame(routine);
+        _driver.Takes = false;
+
+        Assert.True(routine.MoveNext());
+        Assert.False(routine.MoveNext());
+    }
+
+    [Fact]
+    public void Drag_FailsTheStep_ForAMoveOfNoFrames_BeforeSendingAnything()
+    {
+        var routine = _input.Drag(_point, [new DragMove { By = 5, Over = 0 }]);
+
+        var failure = Assert.Throws<StepFailedException>(() => routine.MoveNext());
+
+        Assert.Equal("A drag's move takes at least 1 frame, and this one takes 0.", failure.Message);
+        Assert.Empty(_driver.Events);
+    }
+
     [Theory]
     [InlineData(InputRoute.InProcess)]
     [InlineData(InputRoute.Os)]

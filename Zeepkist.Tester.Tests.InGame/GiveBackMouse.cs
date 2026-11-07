@@ -1,9 +1,10 @@
 using System.Collections;
 using TNRD.Zeepkist.Tester.Sdk;
+using UnityEngine;
 
 namespace TNRD.Zeepkist.Tester.Tests.InGame;
 
-/// <summary>Moves the mouse somewhere the player's isn't, gives it back, and checks Imui reads the player's again.</summary>
+/// <summary>Moves the mouse, checks Imui finds it there, gives it back, and checks Imui reads the player's again.</summary>
 [Step("give-back-mouse")]
 public sealed class GiveBackMouse : Step
 {
@@ -13,6 +14,12 @@ public sealed class GiveBackMouse : Step
         var player = window.PlayerMouse;
         yield return context.Input.MoveMouse(window.SliderLeft);
         var moved = window.ImuiMouse;
+        if (Vector2.Distance(moved, window.SliderLeftInImui) > 0.5f)
+        {
+            context.Fail("Imui doesn't find the mouse where it was moved", window.SliderLeftInImui.ToString(), moved.ToString());
+            yield break;
+        }
+
         context.Input.GiveBack();
         yield return null;
         var after = window.ImuiMouse;

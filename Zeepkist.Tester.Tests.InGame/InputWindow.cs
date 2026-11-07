@@ -27,7 +27,14 @@ public sealed class InputWindow : IZeepGUIDrawer
 
     public Vector2 FieldCenter => ToScreen(_fieldRect.Center);
 
-    public Vector2 SliderLeft => ToScreen(new Vector2(_sliderRect.X + 4, _sliderRect.Center.y));
+    public Vector2 SliderLeft => ToScreen(SliderLeftInImui);
+
+    public Vector2 SliderLeftInImui => new Vector2(_sliderRect.X + 4, _sliderRect.Center.y);
+
+    /// <summary>
+    /// How many Imui backends there are, which should be the one the driver finds.
+    /// </summary>
+    public int Backends => Object.FindObjectsOfType<ImuiUnityGUIBackend>().Length;
 
     public int SliderWidth => Mathf.RoundToInt(_sliderRect.W * Backend.GetScale());
 

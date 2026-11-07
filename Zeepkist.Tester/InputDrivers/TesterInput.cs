@@ -30,11 +30,11 @@ internal sealed class TesterInput : IInput
     {
         var driver = CurrentDriver();
         var presses = KeyNames.Parse(keys);
-        Sent(driver.PressKeys(presses));
+        RequireTaken(driver.PressKeys(presses));
         yield return null;
 
         // A field handles them this frame, and what reads the field can do so once this ends
-        Sent(driver.ReleaseKeys(presses));
+        driver.ReleaseKeys(presses);
         yield return null;
     }
 
@@ -44,9 +44,9 @@ internal sealed class TesterInput : IInput
         foreach (var character in text)
         {
             KeyPress[] press = [KeyNames.ForCharacter(character)];
-            Sent(driver.PressKeys(press));
+            RequireTaken(driver.PressKeys(press));
             yield return null;
-            Sent(driver.ReleaseKeys(press));
+            driver.ReleaseKeys(press);
         }
 
         yield return null;
@@ -57,19 +57,19 @@ internal sealed class TesterInput : IInput
         var driver = CurrentDriver();
         var presses = KeyNames.Parse(keys);
         var until = _now() + duration.Value;
-        Sent(driver.PressKeys(presses));
+        RequireTaken(driver.PressKeys(presses));
         yield return null;
         while (_now() < until)
             yield return null;
 
-        Sent(driver.ReleaseKeys(presses));
+        driver.ReleaseKeys(presses);
         yield return null;
     }
 
     public IEnumerator MoveMouse(Vector2 screenPoint)
     {
         var driver = CurrentDriver();
-        Sent(driver.MoveMouse(screenPoint));
+        RequireTaken(driver.MoveMouse(screenPoint));
 
         // Imui finds the hovered control as it draws, for the frame after
         yield return null;
@@ -78,28 +78,32 @@ internal sealed class TesterInput : IInput
     public IEnumerator Click(Vector2 screenPoint, MouseButton button = MouseButton.Left)
     {
         var driver = CurrentDriver();
-        Sent(driver.MoveMouse(screenPoint));
+        RequireTaken(driver.MoveMouse(screenPoint));
         yield return null;
-        Sent(driver.PressButton(button));
+        RequireTaken(driver.PressButton(button));
         yield return null;
-        Sent(driver.ReleaseButton(button));
+        driver.ReleaseButton(button);
         yield return null;
     }
 
     public IEnumerator Drag(Vector2 from, IReadOnlyList<DragMove> moves, MouseButton button = MouseButton.Left)
     {
         var driver = CurrentDriver();
-        Sent(driver.MoveMouse(from));
+        var tooShort = moves.FirstOrDefault(move => move.Over < 1);
+        if (tooShort != null)
+            throw new StepFailedException($"A drag's move takes at least 1 frame, and this one takes {tooShort.Over}.");
+
+        RequireTaken(driver.MoveMouse(from));
         yield return null;
-        Sent(driver.PressButton(button));
+        RequireTaken(driver.PressButton(button));
         yield return null;
         foreach (var delta in moves.SelectMany(FrameDeltas))
         {
-            Sent(driver.DragMouse(delta, button));
+            RequireTaken(driver.DragMouse(delta, button));
             yield return null;
         }
 
-        Sent(driver.ReleaseButton(button));
+        driver.ReleaseButton(button);
         yield return null;
     }
 
@@ -122,7 +126,11 @@ internal sealed class TesterInput : IInput
         }
     }
 
-    private static void Sent(bool taken)
+    /// <summary>
+    /// Only for what goes down or moves. A release has already had its effect if what took the press is gone, so a key or
+    /// click that closed it is no failure.
+    /// </summary>
+    private static void RequireTaken(bool taken)
     {
         if (!taken)
             throw new StepFailedException("Nothing in the game could take the input.");

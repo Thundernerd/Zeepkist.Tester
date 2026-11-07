@@ -12,11 +12,6 @@ namespace TNRD.Zeepkist.Tester.InputDrivers;
 /// </summary>
 internal static class KeyNames
 {
-    /// <summary>
-    /// Imui's backend keeps 16 key events a frame, and each key is two.
-    /// </summary>
-    private const int MaxKeysPerFrame = 8;
-
     private static readonly Dictionary<string, EventModifiers> _modifiers = new Dictionary<string, EventModifiers>
     {
         ["shift"] = EventModifiers.Shift,
@@ -46,6 +41,8 @@ internal static class KeyNames
     private static readonly Dictionary<char, KeyCode> _symbols = new Dictionary<char, KeyCode>
     {
         [' '] = KeyCode.Space,
+        ['\n'] = KeyCode.Return,
+        ['\t'] = KeyCode.Tab,
         ['/'] = KeyCode.Slash,
         ['\\'] = KeyCode.Backslash,
         ['.'] = KeyCode.Period,
@@ -60,7 +57,8 @@ internal static class KeyNames
     };
 
     /// <summary>
-    /// Shift with a letter types it in upper case. A step's argument has passed <see cref="Keys.Pattern"/> already, but
+    /// Shift with a letter types it in upper case, and Ctrl, Alt or Cmd with a key types nothing, as a field would otherwise
+    /// put the letter of <c>ctrl+a</c> over what that selects. A step's argument has passed <see cref="Keys.Pattern"/> already, but
     /// a step can also build its own.
     /// </summary>
     /// <exception cref="StepFailedException">There are no keys, too many for a frame, or one it doesn't know.</exception>
@@ -70,8 +68,8 @@ internal static class KeyNames
         if (names.Length == 0)
             throw new StepFailedException("There are no keys to press.");
 
-        if (names.Length > MaxKeysPerFrame)
-            throw new StepFailedException($"At most {MaxKeysPerFrame} keys fit in a frame, and this is {names.Length}: '{keys.Value}'.");
+        if (names.Length > Keys.MaxPerFrame)
+            throw new StepFailedException($"At most {Keys.MaxPerFrame} keys fit in a frame, and this is {names.Length}: '{keys.Value}'.");
 
         return names.Select(ParseOne).ToList();
     }
@@ -100,14 +98,15 @@ internal static class KeyNames
         }
 
         var name = parts[parts.Length - 1];
+        var typesNothing = (modifiers & (EventModifiers.Control | EventModifiers.Alt | EventModifiers.Command)) != 0;
         if (_named.TryGetValue(name, out var named))
-            return new KeyPress(named.Key, named.Character, modifiers);
+            return new KeyPress(named.Key, typesNothing ? '\0' : named.Character, modifiers);
 
         if (name.Length != 1 || FindKey(name[0]) is not { } key)
             throw new StepFailedException($"There's no key '{written}'.");
 
         var character = (modifiers & EventModifiers.Shift) != 0 ? char.ToUpperInvariant(name[0]) : name[0];
-        return new KeyPress(key, character, modifiers);
+        return new KeyPress(key, typesNothing ? '\0' : character, modifiers);
     }
 
     /// <summary>

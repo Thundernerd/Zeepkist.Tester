@@ -48,6 +48,8 @@ sample.press-keys | imui-input | pass
 sample.expect-field | imui-input | pass
 sample.press-keys | imui-input | pass
 sample.expect-field | imui-input | pass
+sample.press-keys | imui-input | pass
+sample.expect-field | imui-input | pass
 sample.hold-keys | imui-input | pass
 sample.expect-field | imui-input | pass
 sample.drag-slider | imui-input | pass

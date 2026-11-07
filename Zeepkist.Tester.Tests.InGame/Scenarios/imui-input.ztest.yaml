@@ -7,7 +7,9 @@ steps:
   - sample.expect-field: Hello, World(1)!
   - sample.press-keys: backspace backspace
   - sample.expect-field: Hello, World(1
-  - sample.press-keys: ctrl+a backspace
+  - sample.press-keys: ctrl+a
+  - sample.expect-field: Hello, World(1
+  - sample.press-keys: backspace
   - sample.expect-field
   - sample.press-keys: a shift+b
   - sample.expect-field: aB

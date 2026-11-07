@@ -85,7 +85,7 @@ internal sealed class ImuiDriver : IInputDriver
 
     public bool PressButton(MouseButton button)
     {
-        if (!Queue(ImMouseEventType.Down, button, Vector2.zero))
+        if (!QueueMouseEvent(ImMouseEventType.Down, button, Vector2.zero))
             return false;
 
         _heldButtons.Add(button);
@@ -98,7 +98,7 @@ internal sealed class ImuiDriver : IInputDriver
         if (backend == null)
             return false;
 
-        Queue(ImMouseEventType.Drag, button, delta / backend.GetScale());
+        QueueMouseEvent(ImMouseEventType.Drag, button, delta / backend.GetScale());
 
         Position += delta;
         return true;
@@ -107,13 +107,13 @@ internal sealed class ImuiDriver : IInputDriver
     public bool ReleaseButton(MouseButton button)
     {
         _heldButtons.Remove(button);
-        return Queue(ImMouseEventType.Up, button, Vector2.zero);
+        return QueueMouseEvent(ImMouseEventType.Up, button, Vector2.zero);
     }
 
     public void GiveBack()
     {
         foreach (var button in _heldButtons)
-            Queue(ImMouseEventType.Up, button, Vector2.zero);
+            QueueMouseEvent(ImMouseEventType.Up, button, Vector2.zero);
 
         _heldButtons.Clear();
         ReleaseKeys([.. _heldKeys]);
@@ -121,7 +121,7 @@ internal sealed class ImuiDriver : IInputDriver
         Position = null;
     }
 
-    private bool Queue(ImMouseEventType type, MouseButton button, Vector2 delta)
+    private bool QueueMouseEvent(ImMouseEventType type, MouseButton button, Vector2 delta)
     {
         var backend = Backend;
         if (backend == null)

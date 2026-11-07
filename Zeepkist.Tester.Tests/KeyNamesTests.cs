@@ -58,11 +58,22 @@ public class KeyNamesTests
 
     [Theory]
     [InlineData("shift+a", 'A')]
-    [InlineData("ctrl+a", 'a')]
     [InlineData("shift+/", '/')]
     public void ShiftMakesALetterUpperCase_AndLeavesOtherCharactersAsTheyAre(string name, char character)
     {
         Assert.Equal(character, Assert.Single(KeyNames.Parse(name)).Character);
+    }
+
+    [Theory]
+    [InlineData("ctrl+a")]
+    [InlineData("alt+a")]
+    [InlineData("cmd+a")]
+    [InlineData("ctrl+shift+a")]
+    [InlineData("ctrl+space")]
+    [InlineData("ctrl+enter")]
+    public void ACommandChord_TypesNothing(string name)
+    {
+        Assert.Equal('\0', Assert.Single(KeyNames.Parse(name)).Character);
     }
 
     [Fact]
@@ -115,6 +126,8 @@ public class KeyNamesTests
     [InlineData('5', KeyCode.Alpha5, EventModifiers.None)]
     [InlineData(' ', KeyCode.Space, EventModifiers.None)]
     [InlineData('/', KeyCode.Slash, EventModifiers.None)]
+    [InlineData('\n', KeyCode.Return, EventModifiers.None)]
+    [InlineData('\t', KeyCode.Tab, EventModifiers.None)]
     public void ACharacter_ComesWithTheKeyThatTypesIt(char character, KeyCode key, EventModifiers modifiers)
     {
         var press = KeyNames.ForCharacter(character);
@@ -126,7 +139,6 @@ public class KeyNamesTests
 
     [Theory]
     [InlineData('(')]
-    [InlineData('\n')]
     [InlineData('é')]
     public void ACharacterWithoutAKeyOfItsOwn_ComesAsItsCharacterAlone(char character)
     {
