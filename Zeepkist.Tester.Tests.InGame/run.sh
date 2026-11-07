@@ -84,7 +84,7 @@ cp -a "$here/Scenarios" "$tester/scenarios"
 case "$mode" in
     --no-scenarios) scenarios='[]' ;;
     --start-fails) scenarios='["core-steps.ztest.yaml","start-fails.ztest.yaml","control-nodes.ztest.yaml"]' ;;
-    *) scenarios='["core-steps.ztest.yaml","a-step-fails.ztest.yaml","control-nodes.ztest.yaml"]' ;;
+    *) scenarios='["core-steps.ztest.yaml","a-step-fails.ztest.yaml","control-nodes.ztest.yaml","imui-input.ztest.yaml"]' ;;
 esac
 printf '{"runId":"%s","mods":[{"guid":"%s"}],"scenarios":%s}' "$run_id" "$guid" "$scenarios" >"$tester/run.json"
 
