@@ -46,6 +46,15 @@ public sealed class MergedPluginTests : IDisposable
         Assert.Equal(TypeAttributes.Public, Visibility("TNRD.Zeepkist.Tester", "Plugin"));
     }
 
+    [Theory]
+    [InlineData("InMainMenu")]
+    [InlineData("InEditor")]
+    [InlineData("InFreePlay")]
+    public void TheStartStates_StayPublic_ForAModsStepsToRequire(string name)
+    {
+        Assert.Equal(TypeAttributes.Public, Visibility("TNRD.Zeepkist.Tester.States", name));
+    }
+
     private TypeAttributes Visibility(string typeNamespace, string name)
     {
         var definitions = Metadata.TypeDefinitions.Select(Metadata.GetTypeDefinition);
