@@ -106,7 +106,7 @@ internal sealed class ScenarioParser
         {
             var names = state.Argument == null ? [] : new[] { state.Argument };
             foreach (var entry in ReadKeys(value, $"start: {name}", names, "argument"))
-                arguments.Add(entry.Key, ReadScalar(entry.Value, $"'{entry.Key}' of start: {name}"));
+                arguments.Add(entry.Key, ReadLiteral(entry.Value, $"'{entry.Key}' of start: {name}"));
         }
 
         if (state.NeedsArgument && !arguments.ContainsKey(state.Argument))
@@ -375,7 +375,7 @@ internal sealed class ScenarioParser
     }
 
     /// <summary>
-    /// The value of a control node, which has no expressions.
+    /// The value of a control node or of <c>start:</c>, which has no expressions, and no step has run yet to define a name.
     /// </summary>
     private string ReadLiteral(YamlNode node, string what)
     {

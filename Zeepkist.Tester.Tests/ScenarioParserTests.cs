@@ -27,6 +27,7 @@ public class ScenarioParserTests
         { "start-unknown-argument", 3, 5, "start: editor has no argument 'file'. It takes: level." },
         { "start-missing-argument", 1, 8, "start: free-play needs the argument 'uid'." },
         { "start-two-keys", 3, 3, "start: takes one state, but this is another." },
+        { "start-argument-with-a-name", 3, 12, "'level' of start: editor has to be a literal, not '${nope}'." },
         { "input-unknown", 1, 8, "input: takes in-process or os, not 'telepathy'." },
         { "unknown-step", 3, 5, "There's no step 'nope'." },
         { "unknown-prefixed-step", 2, 5, "There's no step 'zls.nope'." },
