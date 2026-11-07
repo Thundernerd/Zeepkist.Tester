@@ -1,0 +1,9 @@
+description: "Run from control-nodes, with what its with: passes in"
+use: [sample]
+steps:
+  - add: ${amount}
+  - log: The caller said ${said}
+  # A name of the caller's isn't defined here, so this file can define it for itself
+  - set-marker: { as: outside, text: from the file }
+  - expect-marker: { marker: outside, text: from the file }
+  - log: Ran from the caller, with ${amount}

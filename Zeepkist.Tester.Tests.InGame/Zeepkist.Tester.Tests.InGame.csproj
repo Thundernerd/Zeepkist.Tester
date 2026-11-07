@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <IsBepInExPlugin>true</IsBepInExPlugin>
+    <RootNamespace>TNRD.Zeepkist.Tester.Tests.InGame</RootNamespace>
+    <Product>Zeepkist Tester In-Game Tests</Product>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zeepkist.Tester.Sdk\Zeepkist.Tester.Sdk.csproj" />
+    <!-- For the states to require: the game loads the merged plugin, which keeps them public -->
+    <ProjectReference Include="..\Zeepkist.Tester\Zeepkist.Tester.csproj" Private="false" />
+  </ItemGroup>
+
+</Project>

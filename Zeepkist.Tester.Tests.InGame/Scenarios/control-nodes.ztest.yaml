@@ -1,0 +1,27 @@
+description: Hooks ran around the failed scenario, and for, repeat and run work in the level editor
+use: [sample]
+steps:
+  - expect-hooks: { run-started: 1, before: 2, after: 2 }
+  - expect-editor
+  - for: { h: [64, 120] }
+    steps:
+      # ${h} works in a number, a file name and a name
+      - add: ${h}
+      - screenshot: height-${h}
+      - set-marker: { as: "at-${h}", text: "${h}px" }
+      - expect-marker: { marker: "at-${h}", text: "${h}px" }
+  - expect-sum: 184
+  # Each pass has its own scope, so a name can be defined each time
+  - repeat: 2
+    steps:
+      - set-marker: { as: each-pass, text: again }
+      - add: 1
+  - expect-sum: 186
+  # A run: file sees only what with: passes in, and shares the scenario's state
+  - set-marker: { as: outside, text: from the caller }
+  - expect-marker: { marker: outside, text: from the caller }
+  - run: shared/add-and-check.ztest.yaml
+    with: { amount: 14, said: "${outside}" }
+  - expect-sum: 200
+  # What the file defined ended with it
+  - expect-marker: { marker: outside, text: from the caller }

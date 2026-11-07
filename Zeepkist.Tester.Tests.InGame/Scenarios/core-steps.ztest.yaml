@@ -1,0 +1,7 @@
+description: The tester's own steps, and a mod's step with a service, with no hook but RunStarted yet
+start: main-menu
+steps:
+  - log: On the main menu
+  - wait: 500ms
+  - screenshot: main-menu
+  - sample.expect-hooks: { run-started: 1, before: 0, after: 0 }

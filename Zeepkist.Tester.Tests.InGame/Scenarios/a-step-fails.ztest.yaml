@@ -1,0 +1,6 @@
+description: A failed step stops this scenario with a screenshot, and the run goes on with the next
+start: main-menu
+steps:
+  - log: Before the failure
+  - sample.fail-on-purpose: This step fails on purpose
+  - log: This never runs
