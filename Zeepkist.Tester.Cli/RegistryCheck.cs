@@ -19,13 +19,15 @@ internal static class RegistryCheck
 
     private static IEnumerable<string> StateSmells(StateDescriptor state, StepRegistry registry)
     {
-        var isEntered = ScenarioParser.StartStates.Contains(state.FullName) || registry.Steps.Any(step => step.Enters.Contains(state.FullName));
+        // A scenario can start in one with no step around to enter it or need it
+        var isStartState = StartState.All.Any(start => start.Name == state.FullName);
+        var isEntered = isStartState || registry.Steps.Any(step => step.Enters.Contains(state.FullName));
         if (!isEntered)
             yield return $"No step enters the state '{state.FullName}', so the offline check never sees it hold.";
 
         var isRequired = registry.Steps.Any(step => step.Requires.Any(alternatives => alternatives.Contains(state.FullName)));
         var hasInner = registry.States.Any(other => other.Within == state.FullName);
-        if (!isRequired && !hasInner)
+        if (!isRequired && !hasInner && !isStartState)
             yield return $"Nothing uses the state '{state.FullName}': no step requires it and no state is within it.";
         else if (state.Hint == null)
             yield return $"The state '{state.FullName}' has no Hint, so a step that needs it can't say how to get into it.";

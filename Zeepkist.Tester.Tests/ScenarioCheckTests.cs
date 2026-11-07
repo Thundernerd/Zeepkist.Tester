@@ -37,6 +37,8 @@ public class ScenarioCheckTests
         { "needs-a-state", ["2:5: warning: compile needs zls.window-open: Add open-window first."] },
         { "start-state", ["3:5: warning: open-window needs editor: Start with start: editor, or add back-to-editor."] },
         { "start-editor", [] },
+        { "start-level-missing", ["2:3: error: start: editor can't find 'shared/nope.zeeplevel' from this file."] },
+        { "start-level-found", [] },
         { "enters-then-needs", [] },
         { "leaving-leaves-what-is-within", ["6:5: warning: compile needs zls.script-selected: Add new-script first."] },
         {

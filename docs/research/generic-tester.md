@@ -171,7 +171,7 @@ Other mods depend on ZeepSDK too, so the runner should deploy the ZeepSDK build 
 2. ~~**Harmony on `UnityEngine.Input`** being inlined away in callers~~ **Works**, see §5a.
 3. **Rewired action injection timing:** a generic point after Rewired's update and before the game's `Update`, without a patch per consumer.
 4. **MoonSharp yield from a CLR callback** inside nested calls, and how much of Zua's registered API can be reused from a separate `Script` (option A). UserData is a single shared registry, so registered types carry over. Functions don't, because `ZuaFunctionCache` is internal.
-5. **Start states other than the editor.** Free play via `RacingApi.LoadTrackInFreePlayAsync` is there. Online/multiplayer is out of scope (Photon, other players).
+5. ~~**Start states other than the editor.**~~ **The walks work**, checked in game with a temporary plugin because the scenario runner (#13) that will call them isn't built: see *Where a scenario starts* in [step-registry.md](../design/step-registry.md). Online/multiplayer is out of scope (Photon, other players).
 
 ## 5a. Spike results (2026-11-04, Linux + Proton Experimental)
 

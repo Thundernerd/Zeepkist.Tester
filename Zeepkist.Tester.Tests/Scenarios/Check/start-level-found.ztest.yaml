@@ -1,0 +1,5 @@
+start:
+  editor:
+    level: shared/empty.zeeplevel
+steps:
+  - undo

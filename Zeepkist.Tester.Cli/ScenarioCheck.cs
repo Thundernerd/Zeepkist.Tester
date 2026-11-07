@@ -141,8 +141,11 @@ internal sealed class ScenarioCheck
     private void FollowFromItsStart(Scenario scenario, bool mayBeGivenNames)
     {
         _nodesFollowed = 0;
-        var start = scenario.Start?.Name ?? ScenarioStart.DefaultName;
-        Follow(scenario, new Scope(null) { DefinesUnknownNames = mayBeGivenNames }, [start]);
+        var level = scenario.Start.LevelPath(scenario.File);
+        if (level != null && !File.Exists(level))
+            Report(scenario.Start.Location, CheckSeverity.Error, $"start: {scenario.Start.State.Name} can't find '{scenario.Start.Value}' from this file.");
+
+        Follow(scenario, new Scope(null) { DefinesUnknownNames = mayBeGivenNames }, [scenario.Start.State.Name]);
     }
 
     private void Follow(Scenario scenario, Scope scope, HashSet<string> held)
@@ -380,7 +383,7 @@ internal sealed class ScenarioCheck
 
     private static string RunTarget(string file, RunNode run)
     {
-        return Path.Combine(Path.GetDirectoryName(file), run.File.Replace('/', Path.DirectorySeparatorChar));
+        return ScenarioPaths.FromScenario(file, run.File);
     }
 
     /// <summary>

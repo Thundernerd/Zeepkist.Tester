@@ -7,18 +7,37 @@ namespace TNRD.Zeepkist.Tester.Scenarios;
 /// </summary>
 internal sealed class ScenarioStart
 {
+    public ScenarioStart(StartState state, IReadOnlyDictionary<string, string> arguments, SourceLocation location = null)
+    {
+        State = state;
+        Arguments = arguments;
+        Location = location;
+    }
+
     /// <summary>
     /// Where a scenario whose header has no <c>start:</c> starts.
     /// </summary>
-    public const string DefaultName = "editor";
+    public static ScenarioStart Default { get; } = new ScenarioStart(StartState.Editor, new Dictionary<string, string>());
 
-    public ScenarioStart(string name, IReadOnlyDictionary<string, string> arguments)
-    {
-        Name = name;
-        Arguments = arguments;
-    }
-
-    public string Name { get; }
+    public StartState State { get; }
 
     public IReadOnlyDictionary<string, string> Arguments { get; }
+
+    /// <summary>
+    /// Null for <see cref="Default"/>, which isn't written anywhere.
+    /// </summary>
+    public SourceLocation Location { get; }
+
+    /// <summary>
+    /// What its state's argument was written as, or null without one.
+    /// </summary>
+    public string Value => State.Argument != null && Arguments.TryGetValue(State.Argument, out var value) ? value : null;
+
+    /// <summary>
+    /// The level file to open, or null for a new level.
+    /// </summary>
+    public string LevelPath(string scenarioFile)
+    {
+        return State == StartState.Editor && Value != null ? ScenarioPaths.FromScenario(scenarioFile, Value) : null;
+    }
 }
