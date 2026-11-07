@@ -1,0 +1,5 @@
+description: Only run with --start-fails. The level doesn't exist, so the walk fails and the run ends
+start:
+  free-play: { uid: no-such-level }
+steps:
+  - log: This never runs

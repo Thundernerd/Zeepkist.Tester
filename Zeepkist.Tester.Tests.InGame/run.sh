@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Runs this plugin's scenarios in the real game through Steam, and compares the results with expected-results.txt. It
 # puts back what it deploys and what a run changes, until the runner (#22, #23) does this for every mod.
-# Usage: Zeepkist.Tester.Tests.InGame/run.sh <out dir> [--no-scenarios]
+# Usage: Zeepkist.Tester.Tests.InGame/run.sh <out dir> [--no-scenarios|--start-fails]
 # With --no-scenarios it checks a run with the right builds and no scenarios fails, saying so.
+# With --start-fails it checks a start that fails ends the run, with what's left listed as not run.
 set -euo pipefail
 
 app_id=1440670
@@ -73,12 +74,12 @@ mkdir -p "$tester" "$mod"
 cp "$repo/Zeepkist.Tester/bin/Release/net472/plugin/"* "$tester/"
 cp "$here/bin/Release/net472/$guid.dll" "$mod/"
 run_id="$(date +%Y%m%d-%H%M%S)"
-if [[ "$mode" == --no-scenarios ]]; then
-    scenarios='[]'
-else
-    cp -a "$here/Scenarios" "$tester/scenarios"
-    scenarios='["core-steps.ztest.yaml","a-step-fails.ztest.yaml","control-nodes.ztest.yaml"]'
-fi
+cp -a "$here/Scenarios" "$tester/scenarios"
+case "$mode" in
+    --no-scenarios) scenarios='[]' ;;
+    --start-fails) scenarios='["core-steps.ztest.yaml","start-fails.ztest.yaml","control-nodes.ztest.yaml"]' ;;
+    *) scenarios='["core-steps.ztest.yaml","a-step-fails.ztest.yaml","control-nodes.ztest.yaml"]' ;;
+esac
 printf '{"runId":"%s","mods":[{"guid":"%s"}],"scenarios":%s}' "$run_id" "$guid" "$scenarios" >"$tester/run.json"
 
 log "starting the game, run $run_id"
@@ -116,6 +117,10 @@ jq -r '.Exceptions[]? | "exception in \(.Scenario): \(.Message)"' "$results"
 failed=0
 if [[ "$mode" == --no-scenarios ]]; then
     jq -e '.Done and (.Passed | not) and ([.Steps[] | select(.Passed | not)] | length == 1) and (.Steps[] | select(.Passed | not) | .Name == "scenarios")' "$results" >/dev/null || failed=1
+elif [[ "$mode" == --start-fails ]]; then
+    jq -e '.Done and (.Passed | not)
+        and ([.Steps[] | select(.Passed | not) | "\(.Scenario)/\(.Name)"] == ["start-fails/start: free-play", "control-nodes/not run"])
+        and (.Screenshots | index("start-fails-failure.png"))' "$results" >/dev/null || failed=1
 else
     jq -r '.Steps[] | "\(.Name) | \(.Scenario) | \(if .Passed then "pass" else "FAIL" end)"' "$results" >"$out/actual-results.txt"
     diff "$here/expected-results.txt" "$out/actual-results.txt" || failed=1

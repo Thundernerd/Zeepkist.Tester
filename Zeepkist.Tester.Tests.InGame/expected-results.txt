@@ -1,16 +1,16 @@
-right build: Zeepkist.Tester.Tests.InGame | | pass
-yaml parser | | pass
-start screen | | pass
-main menu | | pass
+right build: Zeepkist.Tester.Tests.InGame |  | pass
+yaml parser |  | pass
+start screen |  | pass
+main menu |  | pass
 log | core-steps | pass
 wait | core-steps | pass
 screenshot | core-steps | pass
 sample.expect-hooks | core-steps | pass
-main menu | | pass
+main menu |  | pass
 log | a-step-fails | pass
 sample.fail-on-purpose | a-step-fails | FAIL
-main menu | | pass
-new level | | pass
+main menu |  | pass
+new level |  | pass
 sample.expect-hooks | control-nodes | pass
 sample.expect-editor | control-nodes | pass
 sample.add | control-nodes | pass
