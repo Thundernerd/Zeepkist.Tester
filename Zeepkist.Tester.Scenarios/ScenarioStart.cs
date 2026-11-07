@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 
 namespace TNRD.Zeepkist.Tester.Scenarios;
 
@@ -30,12 +29,15 @@ internal sealed class ScenarioStart
     public SourceLocation Location { get; }
 
     /// <summary>
-    /// The level file to open, which is written relative to the scenario's file, or null for a new level.
+    /// What its state's argument was written as, or null without one.
+    /// </summary>
+    public string Value => State.Argument != null && Arguments.TryGetValue(State.Argument, out var value) ? value : null;
+
+    /// <summary>
+    /// The level file to open, or null for a new level.
     /// </summary>
     public string LevelPath(string scenarioFile)
     {
-        return State == StartState.Editor && Arguments.TryGetValue(StartState.Editor.Argument, out var level)
-            ? Path.Combine(Path.GetDirectoryName(scenarioFile), level.Replace('/', Path.DirectorySeparatorChar))
-            : null;
+        return State == StartState.Editor && Value != null ? ScenarioPaths.FromScenario(scenarioFile, Value) : null;
     }
 }

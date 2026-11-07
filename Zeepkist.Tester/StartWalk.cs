@@ -27,14 +27,14 @@ internal sealed class StartWalk
 
     private readonly GameEvents _game;
     private readonly ManualLogSource _logger;
-    private readonly Action<RunStep> _step;
+    private readonly Action<RunStep> _report;
     private bool _pastStartScreen;
 
-    public StartWalk(GameEvents game, ManualLogSource logger, Action<RunStep> step)
+    public StartWalk(GameEvents game, ManualLogSource logger, Action<RunStep> report)
     {
         _game = game;
         _logger = logger;
-        _step = step;
+        _report = report;
     }
 
     /// <param name="start">Where to go.</param>
@@ -44,8 +44,12 @@ internal sealed class StartWalk
         yield return _pastStartScreen ? ToMainMenu() : FromStartScreen();
         yield return AwaitMainMenu();
 
-        var location = GameLocation.MainMenu;
-        if (start.State == StartState.Editor)
+        GameLocation location;
+        if (start.State == StartState.MainMenu)
+        {
+            location = GameLocation.MainMenu;
+        }
+        else if (start.State == StartState.Editor)
         {
             location = GameLocation.Editor;
             yield return NewLevel();
@@ -55,7 +59,11 @@ internal sealed class StartWalk
         else if (start.State == StartState.FreePlay)
         {
             location = GameLocation.FreePlay;
-            yield return FreePlay(start.Arguments[start.State.Argument]);
+            yield return FreePlay(start.Value);
+        }
+        else
+        {
+            throw new StartFailedException($"{start.State.Name}: no way there");
         }
 
         if (GameLocations.Current != location)
@@ -73,16 +81,13 @@ internal sealed class StartWalk
         PlayerManager.Instance.epilepsyPanelHasAlreadyBeenDisplayed = true;
         startScreen.LoadNextLevel();
         _pastStartScreen = true;
-        _step(RunStep.Pass("start screen"));
+        _report(RunStep.Pass("start screen"));
     }
 
     private IEnumerator ToMainMenu()
     {
-        var from = GameLocations.Current;
-        switch (from)
+        switch (GameLocations.Current)
         {
-            case GameLocation.MainMenu:
-                yield break;
             case GameLocation.Editor:
                 QuitEditor();
                 break;
@@ -97,6 +102,8 @@ internal sealed class StartWalk
                 yield return Until(() => GameLocations.Current != GameLocation.FreePlay, "a menu, from free play");
                 GoHome();
                 break;
+            // Loading the main menu again closes whatever the last scenario opened in it
+            case GameLocation.MainMenu:
             case GameLocation.OtherMenu:
                 GoHome();
                 break;
@@ -106,13 +113,19 @@ internal sealed class StartWalk
     }
 
     /// <summary>
-    /// Back to the main menu without saving. The game still writes an autosave, which the runner puts back after a run.
+    /// Back to the main menu without saving. The game still writes an autosave, which the runner has to put back (#23).
     /// </summary>
     private static void QuitEditor()
     {
-        var central = ComponentCache.Get<LEV_LevelEditorCentral>();
+        var central = Editor();
         central.pause.QuitToMenu();
         SayYesToUnsavedContent(central);
+    }
+
+    private static LEV_LevelEditorCentral Editor()
+    {
+        var central = ComponentCache.Get<LEV_LevelEditorCentral>();
+        return central != null ? central : throw new StartFailedException("the level editor: not found in its scene");
     }
 
     private static void SayYesToUnsavedContent(LEV_LevelEditorCentral central)
@@ -136,7 +149,7 @@ internal sealed class StartWalk
     }
 
     /// <summary>
-    /// What the level select's Home button does.
+    /// What the level select's Home button does, which takes effect next frame.
     /// </summary>
     private static void GoHome()
     {
@@ -147,7 +160,7 @@ internal sealed class StartWalk
     {
         yield return AwaitObject(() => Find<LevelEditorUI>(), "the main menu");
         yield return new WaitForSecondsRealtime(SettleSeconds);
-        _step(RunStep.Pass("main menu"));
+        _report(RunStep.Pass("main menu"));
     }
 
     private IEnumerator NewLevel()
@@ -156,7 +169,7 @@ internal sealed class StartWalk
         PressLevelEditorButton(Find<LevelEditorUI>());
         yield return Until(() => _game.EditorEntries > entriesBefore, "the level editor");
         yield return new WaitForSecondsRealtime(SettleSeconds);
-        _step(RunStep.Pass("new level"));
+        _report(RunStep.Pass("new level"));
     }
 
     /// <summary>
@@ -190,7 +203,7 @@ internal sealed class StartWalk
         if (!File.Exists(path))
             throw new StartFailedException($"the level file: there's no {path}");
 
-        var central = ComponentCache.Get<LEV_LevelEditorCentral>();
+        var central = Editor();
         central.tool.EnableLoadPanel();
         SayYesToUnsavedContent(central);
         central.validation.BreakLock(false, null, "SaveLoad", false);
@@ -205,7 +218,7 @@ internal sealed class StartWalk
         if (central.undoRedo.allBlocksDictionary.Count == 0)
             throw new StartFailedException($"the level file: the game found no blocks in {path}");
 
-        _step(RunStep.Pass("level file"));
+        _report(RunStep.Pass("level file"));
     }
 
     private IEnumerator FreePlay(string uid)
@@ -221,7 +234,7 @@ internal sealed class StartWalk
             throw new StartFailedException($"free play: {result.Errors[0].Message}: {uid}");
 
         yield return Until(() => _game.RoundStarts > roundsBefore, "the round in free play");
-        _step(RunStep.Pass("free play"));
+        _report(RunStep.Pass("free play"));
     }
 
     /// <summary>

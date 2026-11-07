@@ -6,12 +6,14 @@ internal static class GameLocations
 {
     public const string MainMenuScene = "3D_MainMenu";
 
+    private const string RoundScene = "GameScene";
+
     public static GameLocation Current
     {
         get
         {
-            var manager = PlayerManager.Instance;
-            return Of(SceneManager.GetActiveScene().name, manager != null && manager.loader.GlobalLevel.IsTestLevel);
+            var scene = SceneManager.GetActiveScene().name;
+            return Of(scene, scene == RoundScene && PlayerManager.Instance.loader.GlobalLevel.IsTestLevel);
         }
     }
 
@@ -25,7 +27,7 @@ internal static class GameLocations
             MainMenuScene => GameLocation.MainMenu,
             "SelectLevelScene" or "Avonturenkaart" => GameLocation.OtherMenu,
             "LevelEditor2" => GameLocation.Editor,
-            "GameScene" => isTestLevel ? GameLocation.TestMode : GameLocation.FreePlay,
+            RoundScene => isTestLevel ? GameLocation.TestMode : GameLocation.FreePlay,
             _ => GameLocation.Elsewhere,
         };
     }

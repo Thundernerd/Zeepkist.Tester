@@ -378,7 +378,7 @@ steps:
 
 ### Where a scenario starts
 
-`StartState` lists what `start:` can name, each with its one argument. `StartWalk` (#12) takes the game there the way a player gets there, always through the main menu, so each scenario gets a new level or round whatever the last one left behind:
+`StartState` lists what `start:` can name, each with its one argument. `StartWalk` (#12) takes the game there the way a player gets there, always through the main menu, so each scenario gets a new menu, level or round whatever the last one left behind. The scenario runner (#13) is what will call it:
 
 | `start:` | From the main menu | State it holds |
 | --- | --- | --- |
@@ -387,8 +387,8 @@ steps:
 | `editor: { level: file }` | A new level, then what the load panel does with a file, because ZeepSDK has no way to do this. The path is relative to the scenario's file, as `run:` is. | `editor` |
 | `free-play: { uid: … }` | `RacingApi.LoadTrackInFreePlayAsync`, then the round starting. The UID has to be a level the game has loaded: a local, workshop or adventure one. | `free-play` |
 
-- **To the main menu:** the first walk of a run goes from the start screen and skips the one-time panels for that session, without changing settings. Later, test mode quits to the editor through the pause menu, the editor quits without saving, and free play quits through the pause menu to the level select or the adventure map, and goes home from there. The game still writes an autosave when the editor quits, which the runner has to put back (#23).
-- **Failing:** each wait gives up after 120 seconds, and every failure is a `StartFailedException` saying what wasn't reached, so a changed menu fails the run instead of hanging it. Unlike a failed step, this leaves the game somewhere unknown. A level file with no blocks in it fails too, because the game opens a file that isn't a level as an empty one. A damaged level still opens with the blocks the game could read, and only the game's own warning says so.
+- **To the main menu:** the first walk of a run goes from the start screen and skips the one-time panels for that session, without changing settings. Later, the main menu loads again, test mode quits to the editor through the pause menu, the editor quits without saving, and free play quits through the pause menu to the level select or the adventure map, and goes home from there. The game still writes an autosave when the editor quits, which the runner has to put back (#23).
+- **Failing:** each wait gives up after 120 seconds, and every failure is a `StartFailedException` saying what wasn't reached, so a changed menu fails the run instead of hanging it. Unlike a failed step, this leaves the game somewhere unknown. A level file with no blocks in it fails too, because the game opens a file that isn't a level as an empty one, and `start: editor` is the way to an empty level. A damaged level still opens with the blocks the game could read, and only the game's own warning says so.
 - **The states** are `InMainMenu`, `InEditor` and `InFreePlay`, public in the plugin so a mod's step can require them. The walk checks it ended up there. `ztest check` holds the state with the name of the start, and reports a level file that isn't there. A start state no step needs or enters isn't a smell for `ztest check --registry`.
 - `${name}` in a `start:` argument fails at load: no step has run yet to define a name.
 

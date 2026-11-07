@@ -183,6 +183,7 @@ public class ScenarioParserTests
         var start = ScenarioParser.Parse("start.ztest.yaml", new StringReader($"start: {written}\nsteps:\n  - undo\n"), ScenarioSteps.Descriptors).Start;
 
         Assert.Equal(name, start.State.Name);
+        Assert.Equal(value, start.Value);
         if (argument == null)
             Assert.Empty(start.Arguments);
         else

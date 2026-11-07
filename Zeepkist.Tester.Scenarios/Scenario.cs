@@ -20,12 +20,15 @@ internal sealed class Scenario
     public string File { get; }
 
     /// <summary>
-    /// Null when the header leaves it out, as it is for <see cref="Start"/> and <see cref="Input"/>.
+    /// Null when the header leaves it out, as it is for <see cref="Input"/>.
     /// </summary>
     public string Description { get; }
 
     public IReadOnlyList<string> Use { get; }
 
+    /// <summary>
+    /// <see cref="ScenarioStart.Default"/> when the header leaves it out.
+    /// </summary>
     public ScenarioStart Start { get; }
 
     /// <summary>
