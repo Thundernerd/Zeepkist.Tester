@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Runs this plugin's scenarios in the real game through Steam, and compares the results with expected-results.txt. It
 # puts back what it deploys and what a run changes, until the runner (#22, #23) does this for every mod.
-# Usage: Zeepkist.Tester.Tests.InGame/run.sh <out dir> [--no-scenarios|--start-fails]
+# Usage: Zeepkist.Tester.Tests.InGame/run.sh <out dir> [--no-scenarios|--start-fails|--start-states]
 # With --no-scenarios it checks a run with the right builds and no scenarios fails, saying so.
 # With --start-fails it checks a start that fails ends the run, with what's left listed as not run.
+# With --start-states it walks to each start state from each of the editor, test mode and free play, and compares the
+# results with expected-start-states.txt.
 set -euo pipefail
 
 app_id=1440670
@@ -12,7 +14,7 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo="$(dirname "$here")"
 out="${1:?out dir}"
 mode="${2:-}"
-[[ "$mode" =~ ^(|--no-scenarios|--start-fails)$ ]] || { printf 'Unknown option %s\n' "$mode"; exit 1; }
+[[ "$mode" =~ ^(|--no-scenarios|--start-fails|--start-states)$ ]] || { printf 'Unknown option %s\n' "$mode"; exit 1; }
 game="${ZEEPKIST_DIR:-$HOME/.steam/steam/steamapps/common/Zeepkist}"
 plugins="$game/BepInEx/plugins/Sideloaded/Plugins"
 tester="$plugins/Zeepkist.Tester"
@@ -84,6 +86,13 @@ cp -a "$here/Scenarios" "$tester/scenarios"
 case "$mode" in
     --no-scenarios) scenarios='[]' ;;
     --start-fails) scenarios='["core-steps.ztest.yaml","start-fails.ztest.yaml","control-nodes.ztest.yaml"]' ;;
+    # Each scenario's start is walked to from where the one before it ended: each of the editor (with unsaved content),
+    # test mode and free play is left for each start, after the first one
+    --start-states) scenarios='["start-editor.ztest.yaml","start-editor.ztest.yaml",
+        "start-level-to-test-mode.ztest.yaml","start-level-to-test-mode.ztest.yaml","start-editor-to-test-mode.ztest.yaml",
+        "start-main-menu.ztest.yaml","start-editor-to-test-mode.ztest.yaml","start-free-play.ztest.yaml",
+        "start-free-play.ztest.yaml","start-level.ztest.yaml","start-free-play.ztest.yaml","start-editor.ztest.yaml",
+        "start-main-menu.ztest.yaml","start-free-play.ztest.yaml","start-main-menu.ztest.yaml"]' ;;
     *) scenarios='["core-steps.ztest.yaml","a-step-fails.ztest.yaml","control-nodes.ztest.yaml","screenshots.ztest.yaml","exceptions.ztest.yaml","blocks.ztest.yaml","test-mode.ztest.yaml","test-mode-needs-a-start.ztest.yaml","a-setting-it-does-not-have.ztest.yaml","imui-input.ztest.yaml"]' ;;
 esac
 printf '{"runId":"%s","mods":[{"guid":"%s"}],"scenarios":%s}' "$run_id" "$guid" "$scenarios" >"$tester/run.json"
@@ -127,6 +136,10 @@ elif [[ "$mode" == --start-fails ]]; then
     jq -e '.Done and (.Passed | not)
         and ([.Steps[] | select(.Passed | not) | "\(.Scenario)/\(.Name)"] == ["start-fails/start: free-play", "control-nodes/not run"])
         and (.Screenshots | index("start-fails-failure.png"))' "$results" >/dev/null || failed=1
+elif [[ "$mode" == --start-states ]]; then
+    jq -r '.Steps[] | "\(.Name) | \(.Scenario) | \(if .Passed then "pass" else "FAIL" end)"' "$results" >"$out/actual-results.txt"
+    diff "$here/expected-start-states.txt" "$out/actual-results.txt" || failed=1
+    jq -e '(.Exceptions // []) | length == 0' "$results" >/dev/null || { log "the game logged exceptions"; failed=1; }
 else
     jq -r '.Steps[] | "\(.Name) | \(.Scenario) | \(if .Passed then "pass" else "FAIL" end)"' "$results" >"$out/actual-results.txt"
     diff "$here/expected-results.txt" "$out/actual-results.txt" || failed=1

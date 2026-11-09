@@ -1,0 +1,4 @@
+description: start main-menu reaches the main menu, from wherever the scenario before it ended
+start: main-menu
+steps:
+  - sample.expect-main-menu

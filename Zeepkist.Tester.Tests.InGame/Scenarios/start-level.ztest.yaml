@@ -1,0 +1,7 @@
+description: start editor with a level file opens that level, with its blocks
+start:
+  editor: { level: levels/three-blocks.zeeplevel }
+steps:
+  - sample.expect-editor
+  - expect-block-count: 3
+  - expect-block-count: { count: 1, type: 1 }

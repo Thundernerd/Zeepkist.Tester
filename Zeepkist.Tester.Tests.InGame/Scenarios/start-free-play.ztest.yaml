@@ -1,0 +1,5 @@
+description: start free-play plays the first adventure level, whose UID is the same on every install
+start:
+  free-play: { uid: EZ01 }
+steps:
+  - sample.expect-free-play: EZ01
