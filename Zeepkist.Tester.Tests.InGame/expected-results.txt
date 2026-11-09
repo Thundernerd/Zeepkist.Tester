@@ -140,3 +140,8 @@ wait | rewired-input | pass
 sample.expect-steering | rewired-input | pass
 sample.expect-steering | rewired-input | pass
 back-to-editor | rewired-input | pass
+main menu |  | pass
+sample.hover-level-editor-button | ugui-input | pass
+sample.show-ugui-button | ugui-input | pass
+sample.click-ugui-button | ugui-input | pass
+sample.hide-ugui-button | ugui-input | pass
