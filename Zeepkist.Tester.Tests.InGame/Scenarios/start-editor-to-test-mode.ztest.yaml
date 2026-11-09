@@ -1,0 +1,6 @@
+description: start editor opens a new, empty level, and ends in test mode for the next walk to leave
+start: editor
+steps:
+  - expect-block-count: 0
+  - place-start
+  - test-mode

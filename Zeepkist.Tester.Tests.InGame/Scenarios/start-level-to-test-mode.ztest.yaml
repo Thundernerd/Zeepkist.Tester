@@ -1,0 +1,6 @@
+description: start editor with a level file opens that level, and ends in test mode for the next walk to leave
+start:
+  editor: { level: levels/three-blocks.zeeplevel }
+steps:
+  - expect-block-count: 3
+  - test-mode

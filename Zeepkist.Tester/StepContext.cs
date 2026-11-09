@@ -12,12 +12,20 @@ namespace TNRD.Zeepkist.Tester;
 internal sealed class StepContext : ScenarioContext, IStepContext
 {
     private readonly IRunHost _host;
+    private readonly Func<Step, IEnumerator> _run;
     private string _detail = string.Empty;
 
-    public StepContext(ScenarioContext scenario, IRunHost host, IExceptionLog exceptions, IValues values, Dictionary<Type, object> state)
+    /// <param name="scenario">The scenario or C# test it's part of.</param>
+    /// <param name="host">The game.</param>
+    /// <param name="exceptions">What the game logged.</param>
+    /// <param name="values">The named values of the running scope.</param>
+    /// <param name="state">What <see cref="ScenarioContext.Scenario{T}"/> keeps, which the scenario's steps share.</param>
+    /// <param name="run">What <see cref="Run"/> does, or null for a scenario's step, which can't run steps.</param>
+    public StepContext(ScenarioContext scenario, IRunHost host, IExceptionLog exceptions, IValues values, Dictionary<Type, object> state, Func<Step, IEnumerator> run)
         : base(scenario, scenario.ScenarioName, state)
     {
         _host = host;
+        _run = run;
         Exceptions = exceptions;
         Values = values;
     }
@@ -100,6 +108,14 @@ internal sealed class StepContext : ScenarioContext, IStepContext
             Fail("This step needs the level editor, and the game isn't in it.");
 
         return editor;
+    }
+
+    public IEnumerator Run(Step step)
+    {
+        if (_run != null)
+            return _run(step);
+
+        throw new StepFailedException($"A scenario's step can't run {step?.GetType().Name ?? "a step"}: context.Run is for [InGameTest] methods.");
     }
 
     private void Record(string detail, string expected, string actual)

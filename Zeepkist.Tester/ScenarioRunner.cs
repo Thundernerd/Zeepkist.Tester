@@ -9,8 +9,9 @@ using TNRD.Zeepkist.Tester.Sdk;
 namespace TNRD.Zeepkist.Tester;
 
 /// <summary>
-/// Runs scenarios in order. A failed step stops its scenario with a screenshot, and the run goes on with the next. A start
-/// that fails ends the run, because that leaves the game somewhere unknown, and what follows there would say nothing.
+/// Runs scenarios in order, then C# tests. A failed step stops its scenario or test with a screenshot, and the run goes on
+/// with the next. A start that fails ends the run, because that leaves the game somewhere unknown, and what follows there
+/// would say nothing.
 /// </summary>
 internal sealed class ScenarioRunner
 {
@@ -23,6 +24,7 @@ internal sealed class ScenarioRunner
     private readonly Action<RunStep> _report;
     private readonly ScenarioLoader _loader;
     private readonly string _folder;
+    private readonly InGameTests _tests;
 
     /// <param name="host">The game.</param>
     /// <param name="exceptions">Where the game's exceptions are listed under each scenario.</param>
@@ -30,7 +32,8 @@ internal sealed class ScenarioRunner
     /// <param name="plugins">What the test plugins gave.</param>
     /// <param name="report">Takes each step's result.</param>
     /// <param name="folder">What a scenario's name is relative to, so two files of one name in two folders stay apart.</param>
-    public ScenarioRunner(IRunHost host, ExceptionLog exceptions, StepTypes steps, IReadOnlyList<TestPluginRegistration> plugins, Action<RunStep> report, string folder)
+    /// <param name="tests">The C# tests a run can choose from.</param>
+    public ScenarioRunner(IRunHost host, ExceptionLog exceptions, StepTypes steps, IReadOnlyList<TestPluginRegistration> plugins, Action<RunStep> report, string folder, InGameTests tests)
     {
         _folder = folder;
         _host = host;
@@ -38,40 +41,54 @@ internal sealed class ScenarioRunner
         _steps = steps;
         _plugins = plugins;
         _report = report;
+        _tests = tests;
         _loader = new ScenarioLoader(steps.Descriptors);
     }
 
     private IEnumerable<IScenarioHooks> Hooks => _plugins.SelectMany(plugin => plugin.ScenarioHooks);
 
-    public IEnumerator Run(IReadOnlyList<string> files)
+    /// <param name="files">The scenario files to run, in order.</param>
+    /// <param name="tests">The C# tests to run after them: each a test's name, or its class's for each test in it.</param>
+    public IEnumerator Run(IReadOnlyList<string> files, IReadOnlyList<string> tests)
     {
-        if (files.Count == 0)
+        if (files.Count == 0 && tests.Count == 0)
         {
-            _report(RunStep.Fail("scenarios", "run.json names no scenarios, so this run tested nothing."));
+            _report(RunStep.Fail("scenarios", "run.json names no scenarios or tests, so this run tested nothing."));
             yield break;
         }
 
         var run = new RunContext(_host.Logger, Services());
-        var scenarios = LoadAll(files);
-        if (scenarios.Count == 0)
+        var units = LoadAll(files).Select(scenario => RunningScenario.Of(scenario, new ScenarioContext(run, ScenarioName(scenario.File)), RunScenarioSteps))
+            .Concat(SelectTests(tests).Select(test => RunningScenario.Of(test, new ScenarioContext(run, test.Descriptor.Name), RunTest)))
+            .ToList();
+        if (units.Count == 0)
             yield break;
 
         if (!RunStartedHooks(run, out var problem))
         {
-            ReportNotRun(scenarios, problem);
+            ReportNotRun(units, problem);
             yield break;
         }
 
-        for (var i = 0; i < scenarios.Count; i++)
+        for (var i = 0; i < units.Count; i++)
         {
-            var scenario = new RunningScenario(scenarios[i], new ScenarioContext(run, ScenarioName(scenarios[i].File)));
-            yield return RunScenario(scenario, isFirst: i == 0);
-            if (scenario.StartFailed)
+            var unit = units[i];
+            yield return RunScenario(unit, isFirst: i == 0);
+            if (unit.StartFailed)
             {
-                ReportNotRun(scenarios.Skip(i + 1), $"{scenario.Name} couldn't get to where it starts, so the game is somewhere unknown.");
+                ReportNotRun(units.Skip(i + 1), $"{unit.Name} couldn't get to where it starts, so the game is somewhere unknown.");
                 yield break;
             }
         }
+    }
+
+    private List<InGameTest> SelectTests(IReadOnlyList<string> selectors)
+    {
+        var selected = _tests.Select(selectors, out var unknown);
+        foreach (var selector in unknown)
+            _report(new RunStep { Name = "load", Scenario = selector, Detail = $"No [InGameTest] is named {selector}: a test is selected by its class's name, or by Class.Method." });
+
+        return selected;
     }
 
     private string ScenarioName(string file)
@@ -151,10 +168,10 @@ internal sealed class ScenarioRunner
         return true;
     }
 
-    private void ReportNotRun(IEnumerable<Scenario> scenarios, string why)
+    private void ReportNotRun(IEnumerable<RunningScenario> scenarios, string why)
     {
         foreach (var scenario in scenarios)
-            _report(new RunStep { Name = "not run", Scenario = ScenarioName(scenario.File), File = scenario.File, Detail = why });
+            _report(new RunStep { Name = "not run", Scenario = scenario.Name, File = scenario.File, Detail = why });
     }
 
     private IEnumerator RunScenario(RunningScenario scenario, bool isFirst)
@@ -174,7 +191,7 @@ internal sealed class ScenarioRunner
         {
             yield return EnterStart(scenario);
             if (!scenario.StartFailed)
-                yield return RunNodes(scenario, scenario.Steps, Frame.Top(scenario.File));
+                yield return scenario.RunBody();
         }
 
         foreach (var hooks in Hooks)
@@ -196,7 +213,7 @@ internal sealed class ScenarioRunner
     }
 
     /// <summary>
-    /// A hook needn't be an iterator, so the call itself can throw too.
+    /// A hook or a test's class needn't be an iterator, so the call itself can throw too.
     /// </summary>
     private static IEnumerator Called(Func<IEnumerator> routine)
     {
@@ -226,6 +243,86 @@ internal sealed class ScenarioRunner
             Seconds = Seconds(startedAt),
         });
         yield return FailureScreenshot(scenario);
+    }
+
+    private IEnumerator RunScenarioSteps(RunningScenario scenario, Scenario file)
+    {
+        return RunNodes(scenario, file.Steps, Frame.Top(file.File));
+    }
+
+    /// <summary>
+    /// The test's steps record themselves as <see cref="IStepContext.Run"/> runs them. The test's own entry, <c>test</c>, is
+    /// there when the test failed outside a step, recorded a check of its own, or ran no step, so every test shows. A failed step
+    /// that stops the test doesn't hide what the test recorded before it.
+    /// </summary>
+    private IEnumerator RunTest(RunningScenario scenario, InGameTest test)
+    {
+        var values = new ScenarioValues();
+        var stepsRun = 0;
+        var context = scenario.Context.ForStep(_host, _exceptions, values, step => RunTestStep(scenario, values, step, () => stepsRun++));
+        var startedAt = _host.Now;
+        Exception error = null;
+        yield return GuardedRoutine.Run(Called(() => test.Run(context)), exception => error = exception);
+        var stopped = error is TestStoppedException;
+        if (error != null && !stopped)
+        {
+            if (error is not StepFailedException)
+                LogError(error);
+
+            context.Fail(Describe(error));
+        }
+
+        if (!context.Failed && stepsRun > 0 && context.Detail.Length == 0 && context.Expected == null)
+            yield break;
+
+        _report(new RunStep
+        {
+            Name = "test",
+            Passed = !context.Failed,
+            Detail = context.Detail,
+            Expected = context.Expected,
+            Actual = context.Actual,
+            Scenario = scenario.Name,
+            Seconds = Seconds(startedAt),
+        });
+
+        // The step that stopped it took one already
+        if (context.Failed && !stopped)
+            yield return FailureScreenshot(scenario);
+    }
+
+    /// <exception cref="TestStoppedException">The step failed, which stops the test that ran it.</exception>
+    private IEnumerator RunTestStep(RunningScenario scenario, ScenarioValues values, Step step, Action ran)
+    {
+        var context = scenario.Context.ForStep(_host, _exceptions, values);
+        var startedAt = _host.Now;
+        Exception error = null;
+        yield return GuardedRoutine.Run(StepPreconditions.Run(step, context), exception => error = exception);
+        if (error != null)
+        {
+            if (error is not StepFailedException)
+                LogError(error);
+
+            context.Fail(Describe(error));
+        }
+
+        ran();
+        _report(new RunStep
+        {
+            Name = step == null ? "null" : _steps.NameOf(step.GetType()),
+            Passed = !context.Failed,
+            Detail = context.Detail,
+            Expected = context.Expected,
+            Actual = context.Actual,
+            Scenario = scenario.Name,
+            Seconds = Seconds(startedAt),
+        });
+
+        if (!context.Failed)
+            yield break;
+
+        yield return FailureScreenshot(scenario);
+        throw new TestStoppedException();
     }
 
     private IEnumerator RunNodes(RunningScenario scenario, IReadOnlyList<ScenarioNode> nodes, Frame frame)
@@ -397,23 +494,30 @@ internal sealed class ScenarioRunner
         return Math.Round(_host.Now - startedAt, 2);
     }
 
+    /// <summary>
+    /// A scenario or a C# test, which run alike: hooks around them, from where they start, and their steps.
+    /// </summary>
     private sealed class RunningScenario
     {
-        private readonly Scenario _scenario;
+        private readonly Func<RunningScenario, IEnumerator> _body;
 
-        public RunningScenario(Scenario scenario, ScenarioContext context)
+        private RunningScenario(ScenarioContext context, string file, ScenarioStart start, InputRoute inputRoute, Func<RunningScenario, IEnumerator> body)
         {
-            _scenario = scenario;
             Context = context;
+            File = file;
+            Start = start;
+            InputRoute = inputRoute;
+            _body = body;
         }
 
-        public string File => _scenario.File;
+        /// <summary>
+        /// Empty for a C# test.
+        /// </summary>
+        public string File { get; }
 
-        public ScenarioStart Start => _scenario.Start;
+        public ScenarioStart Start { get; }
 
-        public InputRoute InputRoute => _scenario.Input;
-
-        public IReadOnlyList<ScenarioNode> Steps => _scenario.Steps;
+        public InputRoute InputRoute { get; }
 
         public ScenarioContext Context { get; }
 
@@ -422,6 +526,29 @@ internal sealed class ScenarioRunner
         public bool Stopped { get; set; }
 
         public bool StartFailed { get; set; }
+
+        public static RunningScenario Of(Scenario scenario, ScenarioContext context, Func<RunningScenario, Scenario, IEnumerator> run)
+        {
+            return new RunningScenario(context, scenario.File, scenario.Start, scenario.Input, running => run(running, scenario));
+        }
+
+        public static RunningScenario Of(InGameTest test, ScenarioContext context, Func<RunningScenario, InGameTest, IEnumerator> run)
+        {
+            var start = new ScenarioStart(StartState.All.Single(state => state.Name == test.Descriptor.Start), new Dictionary<string, string>());
+            return new RunningScenario(context, string.Empty, start, InputRoute.InProcess, running => run(running, test));
+        }
+
+        public IEnumerator RunBody()
+        {
+            return _body(this);
+        }
+    }
+
+    /// <summary>
+    /// Thrown out of a C# test by the step that failed, to stop it as a failed step stops a scenario.
+    /// </summary>
+    private sealed class TestStoppedException : Exception
+    {
     }
 
     /// <summary>
