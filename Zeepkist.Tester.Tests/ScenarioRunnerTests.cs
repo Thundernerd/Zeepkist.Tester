@@ -814,6 +814,24 @@ public sealed class ScenarioRunnerTests : IDisposable
         Assert.Equal(["run started", "enter editor", "after RunnerTests.Empty"], Events);
     }
 
+    [Fact]
+    public void ATestWhoseClassCantBeMade_FailsThatTest_AndTheRunGoesOn()
+    {
+        Run([], ["BrokenRunnerTests.CantBeMade", "RunnerTests.TwoNotes"]);
+
+        Assert.Equal("test BrokenRunnerTests.CantBeMade FAIL InvalidOperationException: no instance", $"{_steps[0].Name} {_steps[0].Scenario} {(_steps[0].Passed ? "pass" : "FAIL")} {_steps[0].Detail}");
+        Assert.Contains("b", Events);
+    }
+
+    [Fact]
+    public void ATestsOwnFailure_BeforeAFailedStep_IsStillRecorded()
+    {
+        Run([], ["RunnerTests.FailsItselfThenAStep"]);
+
+        Assert.Equal(["t.fail FAIL why", "test FAIL first its own"], _steps.Select(step => $"{step.Name} {(step.Passed ? "pass" : "FAIL")} {step.Detail}"));
+        Assert.Single(Events, @event => @event.StartsWith("screenshot", StringComparison.Ordinal));
+    }
+
     private string Write(string name, string yaml)
     {
         var path = Path.Combine(_folder.Path, $"{name}.ztest.yaml");
@@ -841,7 +859,7 @@ public sealed class ScenarioRunnerTests : IDisposable
     private Exception RunExpectingError(string[] files, string[] tests)
     {
         Exception error = null;
-        var runner = new ScenarioRunner(_host, _exceptions, StepTypes.Build(_stepTypes), _plugins, _steps.Add, _folder.Path, InGameTests.Build(typeof(RunnerTests).GetMethods().Where(method => method.IsDefined(typeof(InGameTestAttribute), false))));
+        var runner = new ScenarioRunner(_host, _exceptions, StepTypes.Build(_stepTypes), _plugins, _steps.Add, _folder.Path, InGameTests.Build(new[] { typeof(RunnerTests), typeof(BrokenRunnerTests) }.SelectMany(type => type.GetMethods()).Where(method => method.IsDefined(typeof(InGameTestAttribute), false))));
         var routine = GuardedRoutine.Run(runner.Run(files, tests), exception => error = exception);
         var frames = 0;
         while (routine.MoveNext())

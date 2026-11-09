@@ -76,6 +76,13 @@ public sealed class RunnerTests
     }
 
     [InGameTest]
+    public IEnumerator FailsItselfThenAStep(IStepContext context)
+    {
+        context.Fail("first its own");
+        yield return context.Run(new Fail { Why = "why" });
+    }
+
+    [InGameTest]
     public IEnumerator NeedsAState(IStepContext context)
     {
         yield return context.Run(new NeedsAState());

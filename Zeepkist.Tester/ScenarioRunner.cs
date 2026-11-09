@@ -35,13 +35,13 @@ internal sealed class ScenarioRunner
     /// <param name="tests">The C# tests a run can choose from.</param>
     public ScenarioRunner(IRunHost host, ExceptionLog exceptions, StepTypes steps, IReadOnlyList<TestPluginRegistration> plugins, Action<RunStep> report, string folder, InGameTests tests)
     {
-        _tests = tests;
         _folder = folder;
         _host = host;
         _exceptions = exceptions;
         _steps = steps;
         _plugins = plugins;
         _report = report;
+        _tests = tests;
         _loader = new ScenarioLoader(steps.Descriptors);
     }
 
@@ -211,7 +211,7 @@ internal sealed class ScenarioRunner
     }
 
     /// <summary>
-    /// A hook needn't be an iterator, so the call itself can throw too.
+    /// A hook or a test's class needn't be an iterator, so the call itself can throw too.
     /// </summary>
     private static IEnumerator Called(Func<IEnumerator> routine)
     {
@@ -250,7 +250,8 @@ internal sealed class ScenarioRunner
 
     /// <summary>
     /// The test's steps record themselves as <see cref="IStepContext.Run"/> runs them. The test's own entry, <c>test</c>, is
-    /// there when the test failed outside a step, recorded a check of its own, or ran no step, so every test shows.
+    /// there when the test failed outside a step, recorded a check of its own, or ran no step, so every test shows. A failed step
+    /// that stops the test doesn't hide what the test recorded before it.
     /// </summary>
     private IEnumerator RunTest(RunningScenario scenario, InGameTest test)
     {
@@ -259,11 +260,9 @@ internal sealed class ScenarioRunner
         var context = scenario.Context.ForStep(_host, _exceptions, values, step => RunTestStep(scenario, values, step, () => stepsRun++));
         var startedAt = _host.Now;
         Exception error = null;
-        yield return GuardedRoutine.Run(test.Run(context), exception => error = exception);
-        if (error is TestStoppedException)
-            yield break;
-
-        if (error != null)
+        yield return GuardedRoutine.Run(Called(() => test.Run(context)), exception => error = exception);
+        var stopped = error is TestStoppedException;
+        if (error != null && !stopped)
         {
             if (error is not StepFailedException)
                 LogError(error);
@@ -285,7 +284,8 @@ internal sealed class ScenarioRunner
             Seconds = Seconds(startedAt),
         });
 
-        if (context.Failed)
+        // The step that stopped it took one already
+        if (context.Failed && !stopped)
             yield return FailureScreenshot(scenario);
     }
 
