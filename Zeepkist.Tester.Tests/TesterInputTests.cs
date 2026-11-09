@@ -18,12 +18,13 @@ public class TesterInputTests
     private static readonly Vector2 _point = new Vector2 { x = 10, y = 20 };
 
     private readonly FakeDriver _driver = new FakeDriver();
+    private readonly FakeActions _actions = new FakeActions();
     private readonly TesterInput _input;
     private float _now;
 
     public TesterInputTests()
     {
-        _input = new TesterInput(_driver, () => _now);
+        _input = new TesterInput(_driver, _actions, () => _now);
     }
 
     private static Func<IInput, IEnumerator>[] Calls =>
@@ -34,6 +35,12 @@ public class TesterInputTests
         input => input.MoveMouse(_point),
         input => input.Click(_point),
         input => input.Drag(_point, [new DragMove { By = 1 }]),
+    ];
+
+    private static Func<IInput, IEnumerator>[] ActionCalls =>
+    [
+        input => input.PressAction("EditorUndo"),
+        input => input.HoldAction("Horizontal", 1, -1),
     ];
 
     [Fact]
@@ -80,6 +87,43 @@ public class TesterInputTests
         _now = 2;
         Assert.Equal(["up A", "up B"], NextFrame(routine));
         Assert.False(routine.MoveNext());
+    }
+
+    [Fact]
+    public void PressAction_HoldsTheActionDownForOneFrame_AndLetsGoInTheNext()
+    {
+        Assert.Equal(
+        [
+            ["EditorUndo 1"],
+            ["EditorUndo 0"],
+        ], ActionFrames(_input.PressAction("EditorUndo")));
+    }
+
+    [Fact]
+    public void HoldAction_HoldsTheActionAtItsValue_UntilTheTimeIsUp()
+    {
+        var routine = _input.HoldAction("Horizontal", 2, -0.5f);
+
+        Assert.Equal(["Horizontal -0.5"], NextActionFrame(routine));
+        Assert.Empty(NextActionFrame(routine));
+        _now = 1.9f;
+        Assert.Empty(NextActionFrame(routine));
+        _now = 2;
+        Assert.Equal(["Horizontal 0"], NextActionFrame(routine));
+        Assert.False(routine.MoveNext());
+    }
+
+    [Theory]
+    [InlineData(1.5f)]
+    [InlineData(-2f)]
+    public void HoldAction_FailsTheStep_ForAValuePastFull_BeforeSendingAnything(float value)
+    {
+        var routine = _input.HoldAction("Horizontal", 1, value);
+
+        var failure = Assert.Throws<StepFailedException>(() => routine.MoveNext());
+
+        Assert.Equal($"An input action's value is from -1 to 1, and this one is {value}.", failure.Message);
+        Assert.Empty(_actions.Events);
     }
 
     [Fact]
@@ -148,6 +192,21 @@ public class TesterInputTests
     }
 
     [Fact]
+    public void TheOsRoute_FailsTheStepThatSendsAnAction_WithoutReachingTheGame()
+    {
+        _input.Route = InputRoute.Os;
+
+        foreach (var call in ActionCalls)
+        {
+            var routine = call(_input);
+            var failure = Assert.Throws<StepFailedException>(() => routine.MoveNext());
+            Assert.Equal("An input action can only be sent in-process, and this step is on input: os.", failure.Message);
+        }
+
+        Assert.Empty(_actions.Events);
+    }
+
+    [Fact]
     public void AStepCanSwitchTheRouteBack()
     {
         _input.Route = InputRoute.Os;
@@ -162,6 +221,19 @@ public class TesterInputTests
         _driver.Takes = false;
 
         foreach (var call in Calls)
+        {
+            var routine = call(_input);
+            var failure = Assert.Throws<StepFailedException>(() => routine.MoveNext());
+            Assert.Equal("Nothing in the game could take the input.", failure.Message);
+        }
+    }
+
+    [Fact]
+    public void WhenNothingCanTakeTheAction_TheStepFails()
+    {
+        _actions.Takes = false;
+
+        foreach (var call in ActionCalls)
         {
             var routine = call(_input);
             var failure = Assert.Throws<StepFailedException>(() => routine.MoveNext());
@@ -202,6 +274,7 @@ public class TesterInputTests
         _input.GiveBack();
 
         Assert.Equal(["give back"], _driver.Events);
+        Assert.Equal(["give back"], _actions.Events);
     }
 
     [Fact]
@@ -262,6 +335,46 @@ public class TesterInputTests
         }
 
         return frames;
+    }
+
+    private List<string> NextActionFrame(IEnumerator routine)
+    {
+        _actions.Events.Clear();
+        Assert.True(routine.MoveNext());
+        return [.. _actions.Events];
+    }
+
+    private List<List<string>> ActionFrames(IEnumerator routine)
+    {
+        var frames = new List<List<string>>();
+        _actions.Events.Clear();
+        while (routine.MoveNext())
+        {
+            frames.Add([.. _actions.Events]);
+            _actions.Events.Clear();
+        }
+
+        return frames;
+    }
+
+    private sealed class FakeActions : IActionDriver
+    {
+        public List<string> Events { get; } = [];
+
+        public bool Takes { get; set; } = true;
+
+        public bool Set(string action, float value)
+        {
+            if (Takes)
+                Events.Add($"{action} {value}");
+
+            return Takes;
+        }
+
+        public void GiveBack()
+        {
+            Events.Add("give back");
+        }
     }
 
     private sealed class FakeDriver : IInputDriver

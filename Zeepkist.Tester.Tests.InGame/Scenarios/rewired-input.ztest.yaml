@@ -1,0 +1,9 @@
+description: Steers the soapbox in test mode through the game's input actions, whatever keys they're bound to
+start: editor
+steps:
+  - place-start
+  - test-mode
+  - wait: 1
+  - sample.expect-steering: { action: Horizontal, value: -1, for: 500ms }
+  - sample.expect-steering: { action: Horizontal, value: 1, for: 500ms }
+  - back-to-editor

@@ -31,7 +31,7 @@ The game reads input in four separate places, so "send a keypress" means a diffe
 
 | Input path | Who reads it | Today's tester |
 | --- | --- | --- |
-| **Rewired** (actions → `InputActionScriptableObject.buttonDown/Held/axis`, filled by `InputPlayerScriptableObject.OnInputAction`) | Driving, the editor's bound keys (undo, redo, test, …), the pause menu | Only undo/redo: `EditorKeys` sets `buttonDown` in a Harmony prefix/postfix around `LEV_UndoRedo.Update`. One patch per consumer. |
+| **Rewired** (actions → `InputActionScriptableObject.buttonDown/Held/axis`, filled by `InputPlayerScriptableObject.OnInputAction`) | Driving, the editor's bound keys (undo, redo, test, …), the pause menu | Any action by name, in a postfix on Rewired's update (§5b). ZLS patched each consumer instead (`EditorKeys` around `LEV_UndoRedo.Update`). |
 | **Legacy `UnityEngine.Input`** (≈250 call sites; `activeInputHandler: 0`, so no new Input System and no `Unity.InputSystem.dll`) | The level editor's mouse (`LEV_ClickScript`, `LEV_GizmoHandler`, `LEV_ConnectorTool`, …), Escape checks, ZeepSDK's own hotkeys (`ConfigEntry<KeyCode>`) | Never reached ("Unity's own `Input` never sees these keys"). |
 | **Imui** (Unity's `OnGUI` events → `ImuiUnityGUIBackend`) | ZeepSDK windows and the Script window | `ImuiKeys` pushes `ImKeyboardEvent`s onto `nextKeyboardEvents`; `ImuiMouse` patches `GetMousePosition` and queues `ImMouseEvent`s. |
 | **uGUI EventSystem** | Main menu and other menus | The walk calls `GenericButton.onClick.Invoke()` directly. |
@@ -169,7 +169,7 @@ Other mods depend on ZeepSDK too, so the runner should deploy the ZeepSDK build 
 
 1. ~~**`SendInput` under Proton reaching Rewired**~~ **Works**, see §5a.
 2. ~~**Harmony on `UnityEngine.Input`** being inlined away in callers~~ **Works**, see §5a.
-3. **Rewired action injection timing:** a generic point after Rewired's update and before the game's `Update`, without a patch per consumer.
+3. ~~**Rewired action injection timing:**~~ **A postfix on Rewired's update**, see §5b.
 4. **MoonSharp yield from a CLR callback** inside nested calls, and how much of Zua's registered API can be reused from a separate `Script` (option A). UserData is a single shared registry, so registered types carry over. Functions don't, because `ZuaFunctionCache` is internal.
 5. ~~**Start states other than the editor.**~~ **The walks work**, checked in game with a temporary plugin because the scenario runner (#13) that will call them isn't built: see *Where a scenario starts* in [step-registry.md](../design/step-registry.md). Online/multiplayer is out of scope (Photon, other players).
 
@@ -191,6 +191,17 @@ What follows from this:
 - **Tier 2 legacy `Input` patching is viable.**
 - Rewired action injection (risk 3) now matters only for deterministic in-process tests, not for reaching gameplay at all.
 - **The game needs a display.** With the monitor off, Unity logs `MonitorFromWindow failed: Success.` in `Player.log` and either stalls before the first scene, so BepInEx never loads plugins, or loads them and takes longer than the spike's 90 s wait to reach the start screen. The runner should look for that line in `Player.log` (`AppData/LocalLow/Steelpan Interactive/Zeepkist/`) and fail fast with "no display", rather than time out.
+
+## 5b. Rewired actions (#17)
+
+From the game's source and Rewired's DLLs:
+
+- The game fills each `InputActionScriptableObject` in `InputPlayerScriptableObject.OnInputAction` and `OnAxixUpdate`, which Rewired calls as `UpdateLoopType.Update` input events. Rewired only sends one when something changes, on a press, a release, and each frame an axis is off 0, so the fields keep their values until the next event.
+- Rewired raises those events in `InputManager_Base.Update`, a private, non-inlined method in `Rewired_Core.dll`. Its `InputManager` has execution order -32000, before everything else in the game, whose earliest is `RewiredEventSystem` at -1000. So **a Harmony postfix on `InputManager_Base.Update` is the one point after Rewired's update and before any reader**. It needs no execution order of its own, which a plugin's `MonoBehaviour` can't count on getting.
+- An action is found by its Rewired name with `ReInput.mapping.GetActionId`, and its id matches `InputActionScriptableObject.ID`. One action can have several of them, such as a negative and a positive button for one axis, and each reads it through its own `UseAsButton` and `UseNegativeInput`, as `OnAxixUpdate` does.
+- Names as the game's Input Manager has them: steering is `Horizontal`, braking `Break`, arms up `ArmsUp`, reset `Reset`, and the editor's are `EditorUndo`, `EditorRedo`, `EditorTestMap`, ….
+- **A Rewired `CustomController` isn't usable.** The game's `Rewired Input Manager` has `customControllers: []` and `customControllerMaps: []`, and Rewired only makes a custom controller from a definition in that data, so there'd be nothing to make one from or map to an action.
+- Unlike a key, an action written this way doesn't care whether the game turned its map category off (`DisableLevelEditorInput`, ZeepSDK's `InputOverrideStack`), so a step can press an action the player couldn't at that moment.
 
 ### Running it on Windows (#2)
 

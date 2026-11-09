@@ -173,6 +173,8 @@ public interface IInput
     IEnumerator Press(Keys keys);    // in one frame, as `press` today
     IEnumerator Type(string text);   // one key a frame
     IEnumerator Hold(Keys keys, Seconds duration);
+    IEnumerator PressAction(string action);   // the game's input action by its Rewired name, such as EditorUndo
+    IEnumerator HoldAction(string action, Seconds duration, float value = 1);   // -1 to 1 for an axis, such as Horizontal
     IEnumerator MoveMouse(Vector2 screenPoint);
     IEnumerator Click(Vector2 screenPoint, MouseButton button = MouseButton.Left);
     IEnumerator Drag(Vector2 from, IReadOnlyList<DragMove> moves, MouseButton button = MouseButton.Left);
@@ -188,6 +190,7 @@ public enum InputRoute
 
 - One `IInput` lives for the whole run. The runner sets `Route` from a scenario's header as it starts, `InProcess` when the header leaves it out, so a route a step switched to ends with its scenario.
 - `TesterInput` decides what goes in which frame, and hands it to an `IInputDriver`. The `InProcess` route is a composite of one driver per input path, which all get the same input, and it only fails a step when none of them has anything to take it. Imui's is the first; #16, #17 and #18 add the others.
+- The game's input actions aren't keys, so they don't go through that composite: `PressAction` and `HoldAction` hand an `IActionDriver` an action by its Rewired name (`EditorUndo`, `Horizontal`, `Break`, …), whatever keys it's bound to. The game reads each action from `InputActionScriptableObject`s, which it fills from Rewired's events in Rewired's update, the first `Update` of a frame (execution order -32000). The Rewired driver writes them in a Harmony postfix on that update, so every reader sees them in the same frame, with no patch per reader. An action goes down in the frame its value leaves 0, up in the frame it comes back, and is cleared the frame after, as the game's handlers set the fields for a key. Every field with the action's id gets it, each as its own `UseAsButton` and `UseNegativeInput` read it. They're in-process only: on `input: os` they fail the step, since a key there reaches an action only through what it's bound to.
 - A key is a key event, then the character it types as an event of its own, as Unity hands them to Imui. Ctrl, Alt or Cmd with a key types nothing. `press` lets go in the frame after, and `type` as it sends the next key. The Escapes in one `press` come in one frame, as a quick double press does, because Unity reports one Escape a frame however often it was pressed.
 - Unity's own `Input` never sees what the Imui driver sends, so code that reads Escape or anything else there, the level editor included, doesn't see it until the legacy `Input` driver (#17).
 - A point, and a `DragMove`'s pixels, are in Unity's screen pixels, with a point counted from the bottom left. The Imui driver turns them into Imui's own pixels with its backend's scale, so a step that got its point from an `ImRect` scales it back first.
