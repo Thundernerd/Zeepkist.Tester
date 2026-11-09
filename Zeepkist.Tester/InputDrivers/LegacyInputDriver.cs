@@ -97,6 +97,7 @@ internal sealed class LegacyInputDriver : IInputDriver
         return true;
     }
 
+    /// <remarks>Unity's <c>Input</c> has no drag of its own: the button stays held from <see cref="PressButton"/>.</remarks>
     public bool DragMouse(Vector2 delta, MouseButton button)
     {
         // The game's Update reads this frame's in the next
@@ -188,24 +189,17 @@ internal sealed class LegacyInputDriver : IInputDriver
     /// </summary>
     public float Axis(string name, float player)
     {
-        if (_keyAxes.ContainsKey(name ?? string.Empty))
-            return Math.Max(-1, Math.Min(1, player + Added(name)));
+        name ??= string.Empty;
+        if (_keyAxes.TryGetValue(name, out var keys))
+        {
+            var pushed = (keys.Positive.Any(GetKey) ? 1 : 0) - (keys.Negative.Any(GetKey) ? 1 : 0);
+            return Math.Max(-1, Math.Min(1, player + pushed));
+        }
 
-        return player + Added(name);
-    }
+        if (!_mouseAxes.TryGetValue(name, out var mouse) || _mouseDelta.Frame != _frame())
+            return player;
 
-    private float Added(string name)
-    {
-        if (_keyAxes.TryGetValue(name ?? string.Empty, out var keys))
-            return (keys.Positive.Any(GetKey) ? 1 : 0) - (keys.Negative.Any(GetKey) ? 1 : 0);
-
-        if (!_mouseAxes.TryGetValue(name ?? string.Empty, out var mouse))
-            return 0;
-
-        if (_mouseDelta.Frame != _frame())
-            return 0;
-
-        return (mouse.Sideways ? _mouseDelta.X : _mouseDelta.Y) * mouse.Sensitivity;
+        return player + ((mouse.Sideways ? _mouseDelta.X : _mouseDelta.Y) * mouse.Sensitivity);
     }
 
     /// <summary>
@@ -214,17 +208,22 @@ internal sealed class LegacyInputDriver : IInputDriver
     /// <remarks>A name it doesn't know is no key it holds, so Unity's own <c>Input</c> answers, and fails it as before.</remarks>
     public bool GetKey(string name)
     {
-        return _names.TryGetValue(name ?? string.Empty, out var key) && GetKey(key);
+        return Named(name) is { } key && GetKey(key);
     }
 
     public bool GetKeyDown(string name)
     {
-        return _names.TryGetValue(name ?? string.Empty, out var key) && GetKeyDown(key);
+        return Named(name) is { } key && GetKeyDown(key);
     }
 
     public bool GetKeyUp(string name)
     {
-        return _names.TryGetValue(name ?? string.Empty, out var key) && GetKeyUp(key);
+        return Named(name) is { } key && GetKeyUp(key);
+    }
+
+    private static KeyCode? Named(string name)
+    {
+        return name != null && _names.TryGetValue(name, out var key) ? key : null;
     }
 
     /// <summary>
