@@ -86,8 +86,9 @@ cp -a "$here/Scenarios" "$tester/scenarios"
 case "$mode" in
     --no-scenarios) scenarios='[]' ;;
     --start-fails) scenarios='["core-steps.ztest.yaml","start-fails.ztest.yaml","control-nodes.ztest.yaml"]' ;;
-    # Each scenario's start is walked to from where the one before it ended: each of the editor (with unsaved content),
-    # test mode and free play is left for each start, after the first one
+    # Each walk leaves where the scenario before it ended. start-editor and start-level end in the editor with unsaved
+    # content, the *-to-test-mode ones in test mode and start-free-play in free play, and in this order each of those
+    # three is left for each of the four starts. The first start-editor only sets up the second.
     --start-states) scenarios='["start-editor.ztest.yaml","start-editor.ztest.yaml",
         "start-level-to-test-mode.ztest.yaml","start-level-to-test-mode.ztest.yaml","start-editor-to-test-mode.ztest.yaml",
         "start-main-menu.ztest.yaml","start-editor-to-test-mode.ztest.yaml","start-free-play.ztest.yaml",
@@ -136,13 +137,15 @@ elif [[ "$mode" == --start-fails ]]; then
     jq -e '.Done and (.Passed | not)
         and ([.Steps[] | select(.Passed | not) | "\(.Scenario)/\(.Name)"] == ["start-fails/start: free-play", "control-nodes/not run"])
         and (.Screenshots | index("start-fails-failure.png"))' "$results" >/dev/null || failed=1
-elif [[ "$mode" == --start-states ]]; then
-    jq -r '.Steps[] | "\(.Name) | \(.Scenario) | \(if .Passed then "pass" else "FAIL" end)"' "$results" >"$out/actual-results.txt"
-    diff "$here/expected-start-states.txt" "$out/actual-results.txt" || failed=1
-    jq -e '(.Exceptions // []) | length == 0' "$results" >/dev/null || { log "the game logged exceptions"; failed=1; }
 else
+    expected="$here/expected-results.txt"
+    [[ "$mode" == --start-states ]] && expected="$here/expected-start-states.txt"
     jq -r '.Steps[] | "\(.Name) | \(.Scenario) | \(if .Passed then "pass" else "FAIL" end)"' "$results" >"$out/actual-results.txt"
-    diff "$here/expected-results.txt" "$out/actual-results.txt" || failed=1
+    diff "$expected" "$out/actual-results.txt" || failed=1
+fi
+if [[ "$mode" == --start-states ]]; then
+    jq -e '(.Exceptions // []) | length == 0' "$results" >/dev/null || { log "the game logged exceptions"; failed=1; }
+elif [[ -z "$mode" ]]; then
     jq -e '(.Screenshots | index("a-step-fails-failure.png")) and (.Screenshots | index("control-nodes-height-64.png")) and (.BlankScreenshots | keys == ["screenshots-covered.png"])' "$results" >/dev/null || { log "the screenshots aren't what they should be"; failed=1; }
 fi
 
