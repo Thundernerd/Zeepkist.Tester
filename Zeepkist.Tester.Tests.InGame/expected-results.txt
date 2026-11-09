@@ -122,3 +122,8 @@ sample.expect-field | imui-input | pass
 sample.drag-slider | imui-input | pass
 sample.give-back-mouse | imui-input | pass
 sample.hide-input-window | imui-input | pass
+main menu |  | pass
+sample.hover-level-editor-button | ugui-input | pass
+sample.show-ugui-button | ugui-input | pass
+sample.click-ugui-button | ugui-input | pass
+sample.hide-ugui-button | ugui-input | pass

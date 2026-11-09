@@ -27,7 +27,7 @@ internal sealed class GameHost : IRunHost
         Game = game;
         _screenshots = screenshots;
         _walk = new StartWalk(game, logger, report);
-        Input = new TesterInput(new InProcessDrivers(new ImuiDriver()), () => Now);
+        Input = new TesterInput(new InProcessDrivers(new ImuiDriver(), new UguiPointer<GameObject>(new UguiScene())), () => Now);
     }
 
     public ManualLogSource Logger { get; }
