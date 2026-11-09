@@ -33,6 +33,20 @@ public interface IInput
     public IEnumerator Hold(Keys keys, Seconds duration);
 
     /// <summary>
+    /// Presses one of the game's input actions in one frame and lets go in the next, which is when it's been handled. An
+    /// action is named as the game's input settings name it, such as <c>EditorUndo</c>, so the keys it's bound to don't
+    /// matter.
+    /// </summary>
+    public IEnumerator PressAction(string action);
+
+    /// <summary>
+    /// Holds one of the game's input actions at <paramref name="value"/> in one frame, and lets go of it when
+    /// <paramref name="duration"/> is over. A button takes 1, and an axis, such as steering's <c>Horizontal</c>, takes a
+    /// value from -1 to 1.
+    /// </summary>
+    public IEnumerator HoldAction(string action, Seconds duration, float value = 1);
+
+    /// <summary>
     /// Moves the mouse to a point on the screen, in Unity's screen pixels, counted from the bottom left. It stays there
     /// for the steps after it, until <see cref="GiveBack"/>.
     /// </summary>

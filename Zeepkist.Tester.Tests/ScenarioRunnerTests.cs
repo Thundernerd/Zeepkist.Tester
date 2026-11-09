@@ -902,7 +902,7 @@ public sealed class ScenarioRunnerTests : IDisposable
         // Time goes on every time it's asked, so a wait always ends
         public float Now => _now += 1;
 
-        public IInput Input { get; } = new TesterInput(new InProcessDrivers(), () => 0);
+        public IInput Input { get; } = new TesterInput(new InProcessDrivers(), new NoActions(), () => 0);
 
         public IGameEvents Game { get; } = new FakeEvents();
 
@@ -1001,6 +1001,18 @@ public sealed class ScenarioRunnerTests : IDisposable
 
             _recorder.Events.Add($"after {scenario.ScenarioName}");
             yield break;
+        }
+    }
+
+    private sealed class NoActions : IActionDriver
+    {
+        public bool Set(string action, float value)
+        {
+            return false;
+        }
+
+        public void GiveBack()
+        {
         }
     }
 }

@@ -1,0 +1,7 @@
+description: Reaches the game's uGUI menus and a uGUI button through context.Input's pointer, as a player's mouse does
+start: main-menu
+steps:
+  - sample.hover-level-editor-button
+  - sample.show-ugui-button
+  - sample.click-ugui-button
+  - sample.hide-ugui-button
