@@ -517,7 +517,7 @@ public sealed class WindowTests
 ```
 
 - An `[InGameTest]` is a public `IEnumerator` method that takes one `IStepContext`, on a concrete class with a public constructor that takes nothing, in a `[TestPlugin]` assembly. Each test gets a new instance of its class. The descriptor builder finds them in the game and offline (`StepRegistry.Tests`, as `TestDescriptor`s), and a method of another shape, or two tests with one `Class.Method`, is a `StepDefinitionException`.
-- `Start` is `Start.Editor` (a new level, the default) or `Start.MainMenu`. A level file or free play isn't there yet.
+- `Start` is `Start.Editor` (a new level, the default) or `Start.MainMenu`. A level file or free play isn't there yet (#75).
 - `context.Run(step)` runs a step as one entry in the results, with its own pass or fail, after checking the states it requires. Within a scenario's step, `context.Run` fails the step: steps don't run steps.
 - A failed step stops the test, as it stops a scenario, with a screenshot. So a test needs no `if (context.Failed)` after each step.
 - The test's own context is for checks of its own: `Pass`, `Fail`, `Detail`, or an exception thrown outside a step. Those are recorded as an entry named `test`, which is also there when the test ran no step, so every test shows in the results. A test that only ran steps, which all passed, has no `test` entry.
