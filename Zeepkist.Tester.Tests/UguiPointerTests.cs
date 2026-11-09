@@ -88,6 +88,24 @@ public class UguiPointerTests
     }
 
     [Fact]
+    public void APressAndARelease_GoToWhatIsUnderThePointerThen_AsItMayHaveChangedSinceItMoved()
+    {
+        _pointer.MoveMouse(_onButton);
+        _scene.Hit(_onButton, "menu/other");
+        _scene.Sent.Clear();
+
+        _pointer.PressButton(MouseButton.Left);
+        _scene.Hit(_onButton, "menu/button/label");
+        _pointer.ReleaseButton(MouseButton.Left);
+
+        Assert.Equal(
+        [
+            "Down menu/other Left", "Exit menu/button", "Enter menu/other",
+            "Up menu/other Left", "Exit menu/other", "Enter menu/button",
+        ], _scene.Sent);
+    }
+
+    [Fact]
     public void WithNoEventSystem_ThePointerDoesntTakeTheInput()
     {
         _scene.Ready = false;

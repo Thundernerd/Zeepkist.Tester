@@ -7,7 +7,9 @@ namespace TNRD.Zeepkist.Tester.InputDrivers;
 
 /// <summary>
 /// Sends a mouse to uGUI as Unity's own input module sends the player's: what the pointer enters and leaves, what takes a
-/// press, and a click when the button goes up over what took it.
+/// press, and a click when the button goes up over what took it. Each call finds what's under the pointer again, because
+/// that can change while the pointer stands still, and a press or release goes out before the pointer enters or leaves
+/// anything, in the order the input module sends them.
 /// </summary>
 /// <typeparam name="TNode">An object of the scene.</typeparam>
 internal sealed class UguiPointer<TNode> : IInputDriver
@@ -20,6 +22,11 @@ internal sealed class UguiPointer<TNode> : IInputDriver
     /// What the pointer is in, from the object it's over up to the top.
     /// </summary>
     private readonly List<TNode> _entered = [];
+
+    /// <summary>
+    /// Whether a move has put the pointer somewhere since it was last given back.
+    /// </summary>
+    private bool _placed;
 
     public UguiPointer(IUguiScene<TNode> scene)
     {
@@ -45,6 +52,7 @@ internal sealed class UguiPointer<TNode> : IInputDriver
             return false;
 
         _state.Position = screenPoint;
+        _placed = true;
         _state.Hit = _scene.HitAt(screenPoint);
         EnterHit();
         return true;
@@ -55,6 +63,7 @@ internal sealed class UguiPointer<TNode> : IInputDriver
         if (!_scene.Ready)
             return false;
 
+        FindHit();
         _state.Button = button;
         _state.PressPosition = _state.Position;
         _state.Pressed = Handler(_state.Hit, PointerEvent.Down);
@@ -63,6 +72,7 @@ internal sealed class UguiPointer<TNode> : IInputDriver
         else
             _state.Pressed = Handler(_state.Hit, PointerEvent.Click);
 
+        EnterHit();
         return true;
     }
 
@@ -77,6 +87,7 @@ internal sealed class UguiPointer<TNode> : IInputDriver
         if (!_scene.Ready)
             return false;
 
+        FindHit();
         _state.Button = button;
         var pressed = _state.Pressed;
         if (pressed != null)
@@ -87,6 +98,7 @@ internal sealed class UguiPointer<TNode> : IInputDriver
         }
 
         _state.Pressed = null;
+        EnterHit();
         return true;
     }
 
@@ -101,10 +113,19 @@ internal sealed class UguiPointer<TNode> : IInputDriver
 
         _state.Pressed = null;
         _state.Hit = null;
+        _placed = false;
         if (_scene.Ready)
             EnterHit();
         else
             _entered.Clear();
+    }
+
+    /// <summary>
+    /// What's under the pointer now, or nothing while it's given back.
+    /// </summary>
+    private void FindHit()
+    {
+        _state.Hit = _placed ? _scene.HitAt(_state.Position) : null;
     }
 
     private void SendIfHandled(TNode node, PointerEvent pointerEvent)
