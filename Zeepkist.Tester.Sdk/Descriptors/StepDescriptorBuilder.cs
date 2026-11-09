@@ -70,8 +70,10 @@ public sealed class StepDescriptorBuilder
     internal static IEnumerable<MethodInfo> FindTests(Assembly assembly)
     {
         const BindingFlags everyMethod = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+        // Reflection doesn't promise any order, and metadata keeps the source's
         return assembly.GetTypes()
-            .SelectMany(type => type.GetMethods(everyMethod))
+            .OrderBy(type => type.MetadataToken)
+            .SelectMany(type => type.GetMethods(everyMethod).OrderBy(method => method.MetadataToken))
             .Where(method => FindAttribute<InGameTestAttribute>(method) != null);
     }
 
@@ -185,8 +187,9 @@ public sealed class StepDescriptorBuilder
 
     /// <summary>
     /// Builds steps and states: <paramref name="stateTypes"/>, and those the steps and states name, which can't share a name within a namespace.
+    /// With <paramref name="testMethods"/>, it builds those C# tests too.
     /// </summary>
-    public StepRegistry BuildRegistry(IEnumerable<Type> stepTypes, IEnumerable<Type> stateTypes)
+    public StepRegistry BuildRegistry(IEnumerable<Type> stepTypes, IEnumerable<Type> stateTypes, IEnumerable<MethodInfo> testMethods = null)
     {
         var stepTypeList = stepTypes.ToList();
         var steps = BuildAll(stepTypeList);
@@ -214,7 +217,7 @@ public sealed class StepDescriptorBuilder
                 pending.Enqueue(within);
         }
 
-        return new StepRegistry { Steps = steps, States = states };
+        return new StepRegistry { Steps = steps, States = states, Tests = BuildTests(testMethods ?? []) };
     }
 
     private StateDescriptor BuildState(Type stateType, List<Type> inner)

@@ -21,6 +21,7 @@ internal sealed class InGameTests
     public static InGameTests Build(IEnumerable<MethodInfo> methods)
     {
         var list = methods.ToList();
+        // BuildTests gives one descriptor for each method, in their order
         var descriptors = new StepDescriptorBuilder().BuildTests(list);
         return new InGameTests([.. descriptors.Zip(list, (descriptor, method) => new InGameTest(descriptor, method))]);
     }

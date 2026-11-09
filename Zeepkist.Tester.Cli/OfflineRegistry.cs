@@ -32,7 +32,9 @@ internal static class OfflineRegistry
             Summaries = XmlDocs.Read(withSteps.Select(assembly => assembly.Location)),
         };
 
-        var registry = builder.BuildRegistry(withSteps.SelectMany(StepDescriptorBuilder.FindSteps), withSteps.SelectMany(StepDescriptorBuilder.FindStates));
-        return new StepRegistry { Steps = registry.Steps, States = registry.States, Tests = builder.BuildTests(withSteps.SelectMany(StepDescriptorBuilder.FindTests)) };
+        return builder.BuildRegistry(
+            withSteps.SelectMany(StepDescriptorBuilder.FindSteps),
+            withSteps.SelectMany(StepDescriptorBuilder.FindStates),
+            withSteps.SelectMany(StepDescriptorBuilder.FindTests));
     }
 }
