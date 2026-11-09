@@ -196,6 +196,8 @@ internal sealed class ScenarioRunner
 
         foreach (var hooks in Hooks)
             yield return RunHook(scenario, hooks, nameof(IScenarioHooks.AfterScenario), () => hooks.AfterScenario(scenario.Context), null);
+
+        _host.Input.GiveBack();
     }
 
     private IEnumerator RunHook(RunningScenario scenario, IScenarioHooks hooks, string hook, Func<IEnumerator> routine, Action failed)

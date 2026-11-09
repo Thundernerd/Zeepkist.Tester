@@ -1,0 +1,4 @@
+description: Runs after mouse-held, and finds the player's mouse given back
+start: editor
+steps:
+  - sample.expect-player-mouse

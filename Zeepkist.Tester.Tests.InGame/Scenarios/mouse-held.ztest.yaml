@@ -1,0 +1,6 @@
+description: Ends with the mouse held, for the harness to give back before the next scenario
+start: editor
+steps:
+  - sample.show-input-window
+  - sample.hold-mouse
+  - sample.hide-input-window

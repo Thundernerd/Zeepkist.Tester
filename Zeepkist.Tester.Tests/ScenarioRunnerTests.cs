@@ -8,6 +8,7 @@ using TNRD.Zeepkist.Tester.InputDrivers;
 using TNRD.Zeepkist.Tester.Scenarios;
 using TNRD.Zeepkist.Tester.Sdk;
 using TNRD.Zeepkist.Tester.Steps;
+using UnityEngine;
 using Xunit;
 using static TNRD.Zeepkist.Tester.Tests.RunnerSteps;
 
@@ -603,6 +604,55 @@ public sealed class ScenarioRunnerTests : IDisposable
     }
 
     [Fact]
+    public void TheMouseIsGivenBack_AfterEachScenario_AfterItsAfterHooks()
+    {
+        _plugins.Add(new TestPluginRegistration("hooks").Hooks(new RecordingHooks(_recorder)));
+        _host.Input.RecordsGiveBack = true;
+
+        Run(Write("one", "steps:\n  - t.note: a\n"), Write("two", "steps:\n  - t.note: b\n"));
+
+        Assert.Equal(
+            ["run started", "enter editor", "a", "after one", "give back", "before two", "enter editor", "b", "after two", "give back"],
+            Events);
+    }
+
+    [Fact]
+    public void TheMouseIsGivenBack_AfterAFailedScenario_EvenWhenAnAfterHookThrows()
+    {
+        _plugins.Add(new TestPluginRegistration("hooks").Hooks(new RecordingHooks(_recorder) { ThrowAfter = "one" }));
+        _host.Input.RecordsGiveBack = true;
+
+        Run(Write("one", "steps:\n  - t.fail: why\n  - t.note: a\n"), Write("two", "steps:\n  - t.note: b\n"));
+
+        Assert.Equal(
+            ["run started", "enter editor", "screenshot one-failure", "give back", "before two", "enter editor", "b", "after two", "give back"],
+            Events);
+    }
+
+    [Fact]
+    public void TheMouseIsGivenBack_AfterAFailedStart_BeforeTheRunEnds()
+    {
+        _plugins.Add(new TestPluginRegistration("hooks").Hooks(new RecordingHooks(_recorder)));
+        _host.Input.RecordsGiveBack = true;
+        _host.FailEnterAt = 1;
+
+        Run(Write("one", "steps:\n  - t.note: a\n"), Write("two", "steps:\n  - t.note: b\n"));
+
+        Assert.Equal(["run started", "screenshot one-failure", "after one", "give back"], Events);
+    }
+
+    [Fact]
+    public void TheMouseIsGivenBack_AfterABeforeHookFails()
+    {
+        _plugins.Add(new TestPluginRegistration("hooks").Hooks(new RecordingHooks(_recorder) { ThrowBefore = "two" }));
+        _host.Input.RecordsGiveBack = true;
+
+        Run(Write("one", "steps:\n  - t.note: a\n"), Write("two", "steps:\n  - t.note: b\n"));
+
+        Assert.Equal(["run started", "enter editor", "a", "after one", "give back", "after two", "give back"], Events);
+    }
+
+    [Fact]
     public void AScenarioStartsOnTheRouteOfItsHeader_WhateverAStepSwitchedTheOneBeforeTo()
     {
         Run(
@@ -795,6 +845,44 @@ public sealed class ScenarioRunnerTests : IDisposable
     }
 
     [Fact]
+    public void TheMouseIsGivenBack_AfterEachTest_AfterItsAfterHooks_AlsoAfterAFailedOne()
+    {
+        _plugins.Add(new TestPluginRegistration("hooks").Hooks(new RecordingHooks(_recorder)));
+        _host.Input.RecordsGiveBack = true;
+
+        Run([], ["RunnerTests.FailsHalfway", "RunnerTests.TwoNotes"]);
+
+        Assert.Equal(
+            [
+                "run started",
+                "enter editor",
+                "before",
+                "screenshot RunnerTests-FailsHalfway-failure",
+                "after RunnerTests.FailsHalfway",
+                "give back",
+                "before RunnerTests.TwoNotes",
+                "enter editor",
+                "a",
+                "b",
+                "after RunnerTests.TwoNotes",
+                "give back",
+            ],
+            Events);
+    }
+
+    [Fact]
+    public void TheMouseIsGivenBack_AfterATestsStartFails()
+    {
+        _plugins.Add(new TestPluginRegistration("hooks").Hooks(new RecordingHooks(_recorder)));
+        _host.Input.RecordsGiveBack = true;
+        _host.FailEnterAt = 1;
+
+        Run([], ["RunnerTests.Empty"]);
+
+        Assert.Equal(["run started", "screenshot RunnerTests-Empty-failure", "after RunnerTests.Empty", "give back"], Events);
+    }
+
+    [Fact]
     public void AStartThatFails_ListsTheTestsLeftAsNotRun()
     {
         _host.FailEnterAt = 1;
@@ -880,6 +968,7 @@ public sealed class ScenarioRunnerTests : IDisposable
         public FakeHost(Recorder recorder)
         {
             _recorder = recorder;
+            Input = new RecordingInput(recorder);
         }
 
         public int FailEnterAt { get; set; }
@@ -902,7 +991,9 @@ public sealed class ScenarioRunnerTests : IDisposable
         // Time goes on every time it's asked, so a wait always ends
         public float Now => _now += 1;
 
-        public IInput Input { get; } = new TesterInput(new InProcessDrivers(), new NoActions(), () => 0);
+        public RecordingInput Input { get; }
+
+        IInput IRunHost.Input => Input;
 
         public IGameEvents Game { get; } = new FakeEvents();
 
@@ -926,6 +1017,52 @@ public sealed class ScenarioRunnerTests : IDisposable
             _recorder.Events.Add(covered ? $"covered screenshot {name}" : $"screenshot {name}");
             LastBlankColor = BlankColor;
             yield return null;
+        }
+    }
+
+    /// <summary>
+    /// The harness's input with no drivers, which writes down each time it's given back when asked to.
+    /// </summary>
+    private sealed class RecordingInput : IInput
+    {
+        private readonly IInput _input = new TesterInput(new InProcessDrivers(), new NoActions(), () => 0);
+        private readonly Recorder _recorder;
+
+        public RecordingInput(Recorder recorder)
+        {
+            _recorder = recorder;
+        }
+
+        public bool RecordsGiveBack { get; set; }
+
+        public InputRoute Route
+        {
+            get => _input.Route;
+            set => _input.Route = value;
+        }
+
+        public IEnumerator Press(Keys keys) => _input.Press(keys);
+
+        public IEnumerator Type(string text) => _input.Type(text);
+
+        public IEnumerator Hold(Keys keys, Seconds duration) => _input.Hold(keys, duration);
+
+        public IEnumerator PressAction(string action) => _input.PressAction(action);
+
+        public IEnumerator HoldAction(string action, Seconds duration, float value = 1) => _input.HoldAction(action, duration, value);
+
+        public IEnumerator MoveMouse(Vector2 screenPoint) => _input.MoveMouse(screenPoint);
+
+        public IEnumerator Click(Vector2 screenPoint, MouseButton button = MouseButton.Left) => _input.Click(screenPoint, button);
+
+        public IEnumerator Drag(Vector2 from, IReadOnlyList<DragMove> moves, MouseButton button = MouseButton.Left) => _input.Drag(from, moves, button);
+
+        public void GiveBack()
+        {
+            if (RecordsGiveBack)
+                _recorder.Events.Add("give back");
+
+            _input.GiveBack();
         }
     }
 

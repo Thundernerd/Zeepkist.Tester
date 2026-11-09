@@ -48,6 +48,16 @@ public sealed class InputWindow : IZeepGUIDrawer
     /// </summary>
     public Vector2 PlayerMouse => (Vector2)(UnityEngine.Input.mousePosition - (Vector3)Backend.GetWorldRect().position) / Backend.GetScale();
 
+    /// <summary>
+    /// Whether Imui finds the mouse at the slider's left end, where <see cref="SliderLeft"/> moves it.
+    /// </summary>
+    public bool ImuiMouseAtSliderLeft => Vector2.Distance(ImuiMouse, SliderLeftInImui) <= 0.5f;
+
+    /// <summary>
+    /// Whether Imui reads the player's mouse, and not one <c>context.Input</c> holds.
+    /// </summary>
+    public bool ImuiReadsPlayerMouse => ImuiMouse == PlayerMouse;
+
     private static ImuiUnityGUIBackend Backend => Object.FindObjectOfType<ImuiUnityGUIBackend>();
 
     public void OnZeepGUI(ImGui gui)

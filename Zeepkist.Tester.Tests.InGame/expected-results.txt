@@ -147,6 +147,14 @@ sample.click-ugui-button | ugui-input | pass
 sample.hide-ugui-button | ugui-input | pass
 main menu |  | pass
 new level |  | pass
+sample.show-input-window | mouse-held | pass
+sample.hold-mouse | mouse-held | pass
+sample.hide-input-window | mouse-held | pass
+main menu |  | pass
+new level |  | pass
+sample.expect-player-mouse | mouse-given-back | pass
+main menu |  | pass
+new level |  | pass
 sample.expect-editor | CSharpTests.StepsFromCSharp | pass
 sample.add | CSharpTests.StepsFromCSharp | pass
 sample.add | CSharpTests.StepsFromCSharp | pass
