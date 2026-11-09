@@ -2,7 +2,7 @@
 
 The typed list of steps that the YAML parser, the editor schema, the step reference docs, `ztest check`, `ztest convert` and C# tests all come from. It replaces ZeepLogicScript's `StepList` + `StepArgument` + the hand-kept step table + `StepListTests`. Background: [generic-tester.md](../research/generic-tester.md) §4 and §7, and [scenario-format.md](../research/scenario-format.md).
 
-Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4), named values (#5), the states with their runtime check (#6), the parser (#7), `ztest check` (#8), the walks to where a scenario starts (#12), the scenario runner with its context and hooks (#13) and the core steps (#14); the rest isn't, and its names are placeholders.
+Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4), named values (#5), the states with their runtime check (#6), the parser (#7), `ztest check` (#8), the walks to where a scenario starts (#12), the scenario runner with its context and hooks (#13), the core steps (#14) and C# tests (#21); the rest isn't, and its names are placeholders.
 
 ## The one constraint that shapes it
 
@@ -511,16 +511,18 @@ public sealed class WindowTests
         {
             yield return context.Run(new SetWindowHeight { Pixels = height });
             yield return context.Run(new ExpectFooterInView());
-            if (context.Failed)
-                yield break;
         }
     }
 }
 ```
 
-- `context.Run(step)` runs a step as one entry in the results, with its own pass or fail.
-- The test method stops at the first failed step, as a scenario does.
-- An `[InGameTest]` shows in the results like a scenario does, named `WindowTests.MinimumHeightKeepsTheFooter`.
+- An `[InGameTest]` is a public `IEnumerator` method that takes one `IStepContext`, on a concrete class with a public constructor that takes nothing, in a `[TestPlugin]` assembly. Each test gets a new instance of its class. The descriptor builder finds them in the game and offline (`StepRegistry.Tests`, as `TestDescriptor`s), and a method of another shape, or two tests with one `Class.Method`, is a `StepDefinitionException`.
+- `Start` is `Start.Editor` (a new level, the default) or `Start.MainMenu`. A level file or free play isn't there yet.
+- `context.Run(step)` runs a step as one entry in the results, with its own pass or fail, after checking the states it requires. Within a scenario's step, `context.Run` fails the step: steps don't run steps.
+- A failed step stops the test, as it stops a scenario, with a screenshot. So a test needs no `if (context.Failed)` after each step.
+- The test's own context is for checks of its own: `Pass`, `Fail`, `Detail`, or an exception thrown outside a step. Those are recorded as an entry named `test`, which is also there when the test ran no step, so every test shows in the results. A test that only ran steps, which all passed, has no `test` entry.
+- An `[InGameTest]` shows in the results like a scenario does, named `WindowTests.MinimumHeightKeepsTheFooter`, with an empty `File` and a `Line` of 0. Tests run after the scenarios, each from its start and with the hooks around it as a scenario has. Its steps share one scope of named values and one `Scenario<T>()` state, both new for each test.
+- `run.json`'s `tests` selects them: a class's name runs each test in it, in the order they're written, and `Class.Method` runs one. A name that selects nothing is a failed `load` step. The CLI selects them like scenarios (`ztest WindowTests`, `ztest WindowTests.MinimumHeight`) once it runs the game (#22), with `TestDescriptor.IsSelectedBy`.
 - `${x}` belongs to the YAML format. `context.Run` doesn't change a step's arguments, so one step object can run twice, and `$$` stays what it looks like. A test that needs a named value's text asks for it: `context.Values.Substitute("placed(\"${lamp}\")")`, or `context.Values.Get<BlockValue>("lamp").Uid`. A `${lamp}` pasted from a scenario stays literal text in C#, so the step gets `${lamp}` as written.
 
 ## What's generated from it
