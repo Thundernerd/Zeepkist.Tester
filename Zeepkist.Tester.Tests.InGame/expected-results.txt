@@ -124,6 +124,16 @@ sample.give-back-mouse | imui-input | pass
 sample.hide-input-window | imui-input | pass
 main menu |  | pass
 new level |  | pass
+place-block | legacy-input | pass
+sample.look-at-block | legacy-input | pass
+place-block | legacy-input | pass
+sample.expect-selected | legacy-input | pass
+sample.click-block | legacy-input | pass
+sample.expect-selected | legacy-input | pass
+sample.turn-camera | legacy-input | pass
+expect-no-exceptions | legacy-input | pass
+main menu |  | pass
+new level |  | pass
 place-start | rewired-input | pass
 test-mode | rewired-input | pass
 wait | rewired-input | pass
