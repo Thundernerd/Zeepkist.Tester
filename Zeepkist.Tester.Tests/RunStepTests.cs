@@ -23,4 +23,12 @@ public class RunStepTests
 
         Assert.Equal("smoke:3 expect-blocks 3 FAIL wrong count (expected: 3, actual: 2)", step.ToString());
     }
+
+    [Fact]
+    public void AStepOfACSharpTest_ReadsWithTheTestsName_AndNoLine()
+    {
+        var step = new RunStep { Scenario = "WindowTests.MinimumHeight", Name = "wait", Passed = true };
+
+        Assert.Equal("WindowTests.MinimumHeight wait PASS", step.ToString());
+    }
 }

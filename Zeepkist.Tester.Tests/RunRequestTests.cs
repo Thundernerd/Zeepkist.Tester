@@ -37,6 +37,18 @@ public class RunRequestTests
         Assert.True(RunRequest.TryRead(folder.Path, ["Zeepkist.exe", "-ztest", "abc"], out var request));
 
         Assert.Empty(request.ScenarioFiles(folder.Path));
+        Assert.Empty(request.Tests);
+    }
+
+    [Fact]
+    public void TheTests_AreWhatItNames_InOrder()
+    {
+        using var folder = new TemporaryFolder();
+        File.WriteAllText(Path.Combine(folder.Path, "run.json"), """{ "runId": "abc", "tests": ["WindowTests", "OtherTests.One"] }""");
+
+        Assert.True(RunRequest.TryRead(folder.Path, ["Zeepkist.exe", "-ztest", "abc"], out var request));
+
+        Assert.Equal(["WindowTests", "OtherTests.One"], request.Tests);
     }
 
     [Fact]

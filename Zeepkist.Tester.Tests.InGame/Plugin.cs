@@ -21,6 +21,7 @@ public class Plugin : BaseUnityPlugin
         Sdk.Tester.Register(this)
             .Service(new HookCounts())
             .Service(_window)
+            .Service(new UguiButton())
             .Hooks(new CountingHooks());
     }
 }

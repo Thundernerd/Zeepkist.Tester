@@ -7,7 +7,7 @@ using TNRD.Zeepkist.Tester.Sdk;
 namespace TNRD.Zeepkist.Tester.Cli;
 
 /// <summary>
-/// Reads the steps and states of the tester and of test plugins from their built DLLs, without running them or the game.
+/// Reads the steps, states and C# tests of the tester and of test plugins from their built DLLs, without running them or the game.
 /// </summary>
 internal static class OfflineRegistry
 {
@@ -32,6 +32,9 @@ internal static class OfflineRegistry
             Summaries = XmlDocs.Read(withSteps.Select(assembly => assembly.Location)),
         };
 
-        return builder.BuildRegistry(withSteps.SelectMany(StepDescriptorBuilder.FindSteps), withSteps.SelectMany(StepDescriptorBuilder.FindStates));
+        return builder.BuildRegistry(
+            withSteps.SelectMany(StepDescriptorBuilder.FindSteps),
+            withSteps.SelectMany(StepDescriptorBuilder.FindStates),
+            withSteps.SelectMany(StepDescriptorBuilder.FindTests));
     }
 }

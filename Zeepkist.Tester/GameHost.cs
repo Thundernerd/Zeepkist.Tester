@@ -6,6 +6,7 @@ using System.Reflection;
 using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using TNRD.Zeepkist.Tester.InputDrivers;
+using TNRD.Zeepkist.Tester.Patches;
 using TNRD.Zeepkist.Tester.Scenarios;
 using TNRD.Zeepkist.Tester.Sdk;
 using UnityEngine;
@@ -27,7 +28,8 @@ internal sealed class GameHost : IRunHost
         Game = game;
         _screenshots = screenshots;
         _walk = new StartWalk(game, logger, report);
-        Input = new TesterInput(new InProcessDrivers(new ImuiDriver()), () => Now);
+        Input_Legacy.Driver = new LegacyInputDriver(() => Time.frameCount);
+        Input = new TesterInput(new InProcessDrivers(new ImuiDriver(), Input_Legacy.Driver, new UguiPointer<GameObject>(new UguiScene())), new RewiredDriver(), () => Now);
     }
 
     public ManualLogSource Logger { get; }
@@ -57,13 +59,24 @@ internal sealed class GameHost : IRunHost
     /// </summary>
     public static IEnumerable<Type> FindStepTypes()
     {
-        var plugins = Chainloader.PluginInfos.Values
+        return TestPlugins().Prepend(typeof(GameHost).Assembly).Distinct().SelectMany(StepDescriptorBuilder.FindSteps);
+    }
+
+    /// <summary>
+    /// The <see cref="InGameTestAttribute"/> methods of each loaded plugin in a <see cref="TestPluginAttribute"/> assembly.
+    /// </summary>
+    public static IEnumerable<MethodInfo> FindTests()
+    {
+        return TestPlugins().Distinct().SelectMany(StepDescriptorBuilder.FindTests);
+    }
+
+    private static IEnumerable<Assembly> TestPlugins()
+    {
+        return Chainloader.PluginInfos.Values
             .Where(plugin => plugin.Instance != null)
             .Select(plugin => plugin.Instance.GetType().Assembly)
             .Where(CompiledAgainstTheSdk)
             .Where(StepDescriptorBuilder.IsTestPlugin);
-
-        return plugins.Prepend(typeof(GameHost).Assembly).Distinct().SelectMany(StepDescriptorBuilder.FindSteps);
     }
 
     public IEnumerator EnterStart(ScenarioStart start, string scenarioFile)

@@ -2,7 +2,7 @@
 
 The typed list of steps that the YAML parser, the editor schema, the step reference docs, `ztest check`, `ztest convert` and C# tests all come from. It replaces ZeepLogicScript's `StepList` + `StepArgument` + the hand-kept step table + `StepListTests`. Background: [generic-tester.md](../research/generic-tester.md) §4 and §7, and [scenario-format.md](../research/scenario-format.md).
 
-Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4), named values (#5), the states with their runtime check (#6), the parser (#7), `ztest check` (#8), the walks to where a scenario starts (#12), the scenario runner with its context and hooks (#13) and the core steps (#14); the rest isn't, and its names are placeholders.
+Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4), named values (#5), the states with their runtime check (#6), the parser (#7), `ztest check` (#8), the walks to where a scenario starts (#12), the scenario runner with its context and hooks (#13), the core steps (#14) and C# tests (#21); the rest isn't, and its names are placeholders.
 
 ## The one constraint that shapes it
 
@@ -173,6 +173,8 @@ public interface IInput
     IEnumerator Press(Keys keys);    // in one frame, as `press` today
     IEnumerator Type(string text);   // one key a frame
     IEnumerator Hold(Keys keys, Seconds duration);
+    IEnumerator PressAction(string action);   // the game's input action by its Rewired name, such as EditorUndo
+    IEnumerator HoldAction(string action, Seconds duration, float value = 1);   // -1 to 1 for an axis, such as Horizontal
     IEnumerator MoveMouse(Vector2 screenPoint);
     IEnumerator Click(Vector2 screenPoint, MouseButton button = MouseButton.Left);
     IEnumerator Drag(Vector2 from, IReadOnlyList<DragMove> moves, MouseButton button = MouseButton.Left);
@@ -188,8 +190,15 @@ public enum InputRoute
 
 - One `IInput` lives for the whole run. The runner sets `Route` from a scenario's header as it starts, `InProcess` when the header leaves it out, so a route a step switched to ends with its scenario.
 - `TesterInput` decides what goes in which frame, and hands it to an `IInputDriver`. The `InProcess` route is a composite of one driver per input path, which all get the same input, and it only fails a step when none of them has anything to take it. Imui's is the first; #16, #17 and #18 add the others.
+- The game's input actions aren't keys, so they don't go through that composite: `PressAction` and `HoldAction` hand an `IActionDriver` an action by its Rewired name (`EditorUndo`, `Horizontal`, `Break`, …), whatever keys it's bound to. The game reads each action from `InputActionScriptableObject`s, which it fills from Rewired's events in Rewired's update, the first `Update` of a frame (execution order -32000). The Rewired driver writes them in a Harmony postfix on that update, so every reader sees them in the same frame, with no patch per reader. An action goes down in the frame its value leaves 0 and up in the frame it comes back, as the game's handlers set the fields for a key, and is cleared the frame after, where the game would leave it up until the next event. Until then what the driver writes wins over the player's own input for that action. Every field with the action's id gets it, each as its own `UseAsButton` and `UseNegativeInput` read it. They're in-process only: on `input: os` they fail the step, since a key there reaches an action only through what it's bound to.
 - A key is a key event, then the character it types as an event of its own, as Unity hands them to Imui. Ctrl, Alt or Cmd with a key types nothing. `press` lets go in the frame after, and `type` as it sends the next key. The Escapes in one `press` come in one frame, as a quick double press does, because Unity reports one Escape a frame however often it was pressed.
-- Unity's own `Input` never sees what the Imui driver sends, so code that reads Escape or anything else there, the level editor included, doesn't see it until the legacy `Input` driver (#17).
+- Unity's own `Input` never sees what the Imui driver sends, so the legacy `Input` driver (#16) hands the same input to the code that reads it there, the level editor's mouse and Escape checks included. Harmony prefixes on `Input`'s keys, mouse buttons, `mousePosition` and `anyKey` answer from it first, and its axes add to the player's, so the player's input still works alongside it.
+- Input the legacy driver is handed in a frame is down from the next, as the game's `Update` has read that frame's already. A key or button is down for one frame, held until the frame after it's let go, and up for that one. `GiveBack` drops what the game hasn't seen go down yet, so it never ends in a click.
+- A modifier holds its left key, such as Left Ctrl for `ctrl+z`. A character without a key of its own, such as `(`, doesn't reach `Input`. `Horizontal` and `Vertical` snap to the arrows and WASD, and the mouse axes follow a drag's moves with the game's sensitivities.
+- Unity's `Input` is always there, so on the `InProcess` route a mouse step, or a key step with a key of its own, always has something to take it, even with no Imui backend.
+- The uGUI driver sends the mouse to uGUI as Unity's input module does: the event system's raycast finds what's under the point, the pointer enters and leaves what it's over, a press goes down to the closest object up from there that takes it, and the click only comes when the button goes up over what took the press. It sends no keys and no drag events. A point over an Imui window finds nothing for it, because the window's backend is a uGUI graphic too and the Imui driver already hands it the mouse.
+- The game's event system uses Unity's `StandaloneInputModule`, which reads the mouse from `Input`, so the legacy `Input` driver already moves its pointer and the game's own module sends the pointer events. The uGUI driver stands down while the module reads `Input`, so a click doesn't land twice, and only sends them for a module that reads its own mouse, such as Rewired's.
+- The game's own `GenericButton`, which most of its menus use, takes the pointer's enter and exit from uGUI and reads the press from `Input` itself.
 - A point, and a `DragMove`'s pixels, are in Unity's screen pixels, with a point counted from the bottom left. The Imui driver turns them into Imui's own pixels with its backend's scale, so a step that got its point from an `ImRect` scales it back first.
 - The mouse stays where a call left it until `GiveBack`, so a step can check what's under it. `GiveBack` can't fail: it works with nothing held, on any route and without an Imui backend, so the runner can call it after any scenario (#62).
 - Until the OS driver (#19) exists, `input: os` loads and `ztest check` accepts it, and every `IInput` call that sends input on that route fails its step, saying so. `Route` and `GiveBack` still work there, and a scenario on that route with no input step passes.
@@ -513,16 +522,18 @@ public sealed class WindowTests
         {
             yield return context.Run(new SetWindowHeight { Pixels = height });
             yield return context.Run(new ExpectFooterInView());
-            if (context.Failed)
-                yield break;
         }
     }
 }
 ```
 
-- `context.Run(step)` runs a step as one entry in the results, with its own pass or fail.
-- The test method stops at the first failed step, as a scenario does.
-- An `[InGameTest]` shows in the results like a scenario does, named `WindowTests.MinimumHeightKeepsTheFooter`.
+- An `[InGameTest]` is a public `IEnumerator` method that takes one `IStepContext`, on a concrete class with a public constructor that takes nothing, in a `[TestPlugin]` assembly. Each test gets a new instance of its class. The descriptor builder finds them in the game and offline (`StepRegistry.Tests`, as `TestDescriptor`s), and a method of another shape, or two tests with one `Class.Method`, is a `StepDefinitionException`.
+- `Start` is `Start.Editor` (a new level, the default) or `Start.MainMenu`. A level file or free play isn't there yet (#75).
+- `context.Run(step)` runs a step as one entry in the results, with its own pass or fail, after checking the states it requires. Within a scenario's step, `context.Run` fails the step: steps don't run steps.
+- A failed step stops the test, as it stops a scenario, with a screenshot. So a test needs no `if (context.Failed)` after each step.
+- The test's own context is for checks of its own: `Pass`, `Fail`, `Detail`, or an exception thrown outside a step. Those are recorded as an entry named `test`, which is also there when the test ran no step, so every test shows in the results. A test that only ran steps, which all passed, has no `test` entry.
+- An `[InGameTest]` shows in the results like a scenario does, named `WindowTests.MinimumHeightKeepsTheFooter`, with an empty `File` and a `Line` of 0. Tests run after the scenarios, each from its start and with the hooks around it as a scenario has. Its steps share one scope of named values and one `Scenario<T>()` state, both new for each test.
+- `run.json`'s `tests` selects them: a class's name runs each test in it, in the order they're written, and `Class.Method` runs one. A name that selects nothing is a failed `load` step. The CLI selects them like scenarios (`ztest WindowTests`, `ztest WindowTests.MinimumHeight`) once it runs the game (#22), with `TestDescriptor.IsSelectedBy`.
 - `${x}` belongs to the YAML format. `context.Run` doesn't change a step's arguments, so one step object can run twice, and `$$` stays what it looks like. A test that needs a named value's text asks for it: `context.Values.Substitute("placed(\"${lamp}\")")`, or `context.Values.Get<BlockValue>("lamp").Uid`. A `${lamp}` pasted from a scenario stays literal text in C#, so the step gets `${lamp}` as written.
 
 ## What's generated from it

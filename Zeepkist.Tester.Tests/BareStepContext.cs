@@ -74,4 +74,9 @@ public abstract class BareStepContext : IStepContext
     {
         throw new NotSupportedException();
     }
+
+    public IEnumerator Run(Step step)
+    {
+        throw new NotSupportedException();
+    }
 }

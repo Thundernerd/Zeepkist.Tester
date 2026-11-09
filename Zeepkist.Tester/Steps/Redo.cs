@@ -12,6 +12,6 @@ public sealed class Redo : Step
 {
     public override IEnumerator Run(IStepContext context)
     {
-        return EditorHistory.Press(context, EditorKey.Redo);
+        return EditorHistory.Press(context, "EditorRedo", "redo");
     }
 }

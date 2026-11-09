@@ -14,13 +14,16 @@ namespace TNRD.Zeepkist.Tester.InputDrivers;
 internal sealed class TesterInput : IInput
 {
     private readonly IInputDriver _inProcess;
+    private readonly IActionDriver _actions;
     private readonly Func<float> _now;
 
-    /// <param name="inProcess">What the in-process route sends through.</param>
+    /// <param name="inProcess">What the in-process route sends keys and the mouse through.</param>
+    /// <param name="actions">What the in-process route sends the game's input actions through.</param>
     /// <param name="now">Seconds of real time, for how long a key is held.</param>
-    public TesterInput(IInputDriver inProcess, Func<float> now)
+    public TesterInput(IInputDriver inProcess, IActionDriver actions, Func<float> now)
     {
         _inProcess = inProcess;
+        _actions = actions;
         _now = now;
     }
 
@@ -63,6 +66,31 @@ internal sealed class TesterInput : IInput
             yield return null;
 
         driver.ReleaseKeys(presses);
+        yield return null;
+    }
+
+    public IEnumerator PressAction(string action)
+    {
+        RequireInProcessForActions();
+        RequireTaken(_actions.Set(action, 1));
+        yield return null;
+        _actions.Set(action, 0);
+        yield return null;
+    }
+
+    public IEnumerator HoldAction(string action, Seconds duration, float value = 1)
+    {
+        RequireInProcessForActions();
+        if (value is < -1 or > 1)
+            throw new StepFailedException($"An input action's value is from -1 to 1, and this one is {value}.");
+
+        var until = _now() + duration.Value;
+        RequireTaken(_actions.Set(action, value));
+        yield return null;
+        while (_now() < until)
+            yield return null;
+
+        _actions.Set(action, 0);
         yield return null;
     }
 
@@ -110,6 +138,7 @@ internal sealed class TesterInput : IInput
     public void GiveBack()
     {
         _inProcess.GiveBack();
+        _actions.GiveBack();
     }
 
     /// <summary>
@@ -134,6 +163,16 @@ internal sealed class TesterInput : IInput
     {
         if (!taken)
             throw new StepFailedException("Nothing in the game could take the input.");
+    }
+
+    /// <summary>
+    /// Only what reads the game's input from inside it has its actions. The OS route sends keys, which reach an action
+    /// only through what it's bound to.
+    /// </summary>
+    private void RequireInProcessForActions()
+    {
+        if (Route != InputRoute.InProcess)
+            throw new StepFailedException("An input action can only be sent in-process, and this step is on input: os.");
     }
 
     private IInputDriver CurrentDriver()

@@ -56,7 +56,7 @@ public sealed class ScenarioRunnerTests : IDisposable
         var step = Assert.Single(_steps);
         Assert.False(step.Passed);
         Assert.Equal("scenarios", step.Name);
-        Assert.Equal("run.json names no scenarios, so this run tested nothing.", step.Detail);
+        Assert.Equal("run.json names no scenarios or tests, so this run tested nothing.", step.Detail);
     }
 
     [Fact]
@@ -687,6 +687,151 @@ public sealed class ScenarioRunnerTests : IDisposable
         Assert.Equal("3: 2× Exception: boom at at Here; Exception: bang", step.Actual);
     }
 
+    [Fact]
+    public void ATest_RunsFromItsStart_AfterTheScenarios_EachStepAsItsOwnEntry()
+    {
+        Run([Write("a", "steps:\n  - t.note: scenario\n")], ["RunnerTests.TwoNotes", "RunnerTests.FromTheMenu"]);
+
+        Assert.Equal(["enter editor", "scenario", "enter editor", "a", "b", "enter main-menu", "menu"], Events);
+        Assert.Equal(
+            ["a t.note", "RunnerTests.TwoNotes t.note", "RunnerTests.TwoNotes t.note", "RunnerTests.FromTheMenu t.note"],
+            _steps.Select(step => $"{step.Scenario} {step.Name}"));
+        Assert.All(_steps, step => Assert.True(step.Passed));
+        Assert.Equal(string.Empty, _steps[1].File);
+        Assert.Equal(0, _steps[1].Line);
+    }
+
+    [Fact]
+    public void AFailedStep_StopsItsTestWithAScreenshot_AndTheRunGoesOn()
+    {
+        Run([], ["RunnerTests.FailsHalfway", "RunnerTests.TwoNotes"]);
+
+        Assert.Equal(["enter editor", "before", "screenshot RunnerTests-FailsHalfway-failure", "enter editor", "a", "b"], Events);
+        Assert.Equal(["t.note pass", "t.fail FAIL", "t.note pass", "t.note pass"], _steps.Select(step => $"{step.Name} {(step.Passed ? "pass" : "FAIL")}"));
+        Assert.Equal("why", _steps[1].Detail);
+        Assert.Equal("expected", _steps[1].Expected);
+    }
+
+    [Theory]
+    [InlineData("RunnerTests.Throws", "InvalidOperationException: boom")]
+    [InlineData("RunnerTests.FailsItself", "not right")]
+    [InlineData("RunnerTests.StopsItself", "stopped")]
+    public void ATestThatFailsOutsideAStep_IsAFailedTestEntry(string test, string detail)
+    {
+        Run([], [test]);
+
+        var failed = _steps.Last();
+        Assert.Equal("test", failed.Name);
+        Assert.Equal(test, failed.Scenario);
+        Assert.False(failed.Passed);
+        Assert.Equal(detail, failed.Detail);
+        Assert.Contains($"screenshot {test.Replace('.', '-')}-failure", Events);
+        Assert.DoesNotContain("after", Events);
+    }
+
+    [Fact]
+    public void ATestThatChecksItself_OrRunsNoStep_HasAnEntryOfItsOwn()
+    {
+        Run([], ["RunnerTests.ChecksItself", "RunnerTests.Empty"]);
+
+        Assert.Equal(["t.note RunnerTests.ChecksItself pass ", "test RunnerTests.ChecksItself pass 3", "test RunnerTests.Empty pass "], _steps.Select(step => $"{step.Name} {step.Scenario} {(step.Passed ? "pass" : "FAIL")} {step.Actual}"));
+    }
+
+    [Fact]
+    public void AClassName_SelectsEachOfItsTests_OnceEach_AndAnUnknownNameFailsAtLoad()
+    {
+        Run([], ["RunnerTests.Empty", "RunnerTests", "Nothing.Here"]);
+
+        Assert.Equal("load Nothing.Here FAIL", $"{_steps[0].Name} {_steps[0].Scenario} {(_steps[0].Passed ? "pass" : "FAIL")}");
+        Assert.Equal("No [InGameTest] is named Nothing.Here: a test is selected by its class's name, or by Class.Method.", _steps[0].Detail);
+        var tests = _steps.Skip(1).Select(step => step.Scenario).Distinct().ToList();
+        Assert.Equal("RunnerTests.Empty", tests[0]);
+        Assert.Equal(1, tests.Count(test => test == "RunnerTests.Empty"));
+        Assert.Contains("RunnerTests.TwoNotes", tests);
+        Assert.Contains("RunnerTests.Throws", tests);
+    }
+
+    [Fact]
+    public void ATest_SharesItsNamedValuesWithItsSteps_AndLeavesTheirTextAsItIs()
+    {
+        Run([], ["RunnerTests.NamedValues"]);
+
+        Assert.Equal(["t.define-text", "t.use-text", "t.raw", "test"], _steps.Select(step => step.Name));
+        Assert.All(_steps, step => Assert.True(step.Passed, step.Detail));
+        Assert.Equal("${lamp} $${", _steps[2].Detail);
+        Assert.Equal("from a step", _steps[3].Detail);
+    }
+
+    [Fact]
+    public void ATestsStep_IsCheckedForItsStatesFirst()
+    {
+        Run([], ["RunnerTests.NeedsAState"]);
+
+        var step = Assert.Single(_steps);
+        Assert.Equal("t.needs-a-state", step.Name);
+        Assert.False(step.Passed);
+        Assert.Equal("t.needs-a-state needs t.never: Add t.note first.", step.Detail);
+        Assert.DoesNotContain("ran without its state", Events);
+    }
+
+    [Fact]
+    public void AScenariosStep_CantRunAStep()
+    {
+        Run(Write("a", "steps:\n  - t.runs-a-step\n"));
+
+        var step = Assert.Single(_steps);
+        Assert.False(step.Passed);
+        Assert.Equal("A scenario's step can't run Note: context.Run is for [InGameTest] methods.", step.Detail);
+    }
+
+    [Fact]
+    public void Hooks_RunAroundTests_AsAroundScenarios()
+    {
+        _plugins.Add(new TestPluginRegistration("hooks").Hooks(new RecordingHooks(_recorder)));
+
+        Run([Write("one", "steps:\n  - t.note: x\n")], ["RunnerTests.Empty"]);
+
+        Assert.Equal(["run started", "enter editor", "x", "after one", "before RunnerTests.Empty", "enter editor", "after RunnerTests.Empty"], Events);
+    }
+
+    [Fact]
+    public void AStartThatFails_ListsTheTestsLeftAsNotRun()
+    {
+        _host.FailEnterAt = 1;
+
+        Run([Write("one", "steps:\n  - t.note: x\n")], ["RunnerTests.Empty"]);
+
+        Assert.Equal(["one start: editor", "RunnerTests.Empty not run"], _steps.Select(step => $"{step.Scenario} {step.Name}"));
+    }
+
+    [Fact]
+    public void OnlyTests_StillRunTheRunStartedHooks()
+    {
+        _plugins.Add(new TestPluginRegistration("hooks").Hooks(new RecordingHooks(_recorder)));
+
+        Run([], ["RunnerTests.Empty"]);
+
+        Assert.Equal(["run started", "enter editor", "after RunnerTests.Empty"], Events);
+    }
+
+    [Fact]
+    public void ATestWhoseClassCantBeMade_FailsThatTest_AndTheRunGoesOn()
+    {
+        Run([], ["BrokenRunnerTests.CantBeMade", "RunnerTests.TwoNotes"]);
+
+        Assert.Equal("test BrokenRunnerTests.CantBeMade FAIL InvalidOperationException: no instance", $"{_steps[0].Name} {_steps[0].Scenario} {(_steps[0].Passed ? "pass" : "FAIL")} {_steps[0].Detail}");
+        Assert.Contains("b", Events);
+    }
+
+    [Fact]
+    public void ATestsOwnFailure_BeforeAFailedStep_IsStillRecorded()
+    {
+        Run([], ["RunnerTests.FailsItselfThenAStep"]);
+
+        Assert.Equal(["t.fail FAIL why", "test FAIL first its own"], _steps.Select(step => $"{step.Name} {(step.Passed ? "pass" : "FAIL")} {step.Detail}"));
+        Assert.Single(Events, @event => @event.StartsWith("screenshot", StringComparison.Ordinal));
+    }
+
     private string Write(string name, string yaml)
     {
         var path = Path.Combine(_folder.Path, $"{name}.ztest.yaml");
@@ -696,16 +841,26 @@ public sealed class ScenarioRunnerTests : IDisposable
 
     private void Run(params string[] files)
     {
-        var error = RunExpectingError(files);
+        Run(files, []);
+    }
+
+    private void Run(string[] files, string[] tests)
+    {
+        var error = RunExpectingError(files, tests);
         if (error != null)
             throw new InvalidOperationException("The runner threw", error);
     }
 
     private Exception RunExpectingError(params string[] files)
     {
+        return RunExpectingError(files, []);
+    }
+
+    private Exception RunExpectingError(string[] files, string[] tests)
+    {
         Exception error = null;
-        var runner = new ScenarioRunner(_host, _exceptions, StepTypes.Build(_stepTypes), _plugins, _steps.Add, _folder.Path);
-        var routine = GuardedRoutine.Run(runner.Run(files), exception => error = exception);
+        var runner = new ScenarioRunner(_host, _exceptions, StepTypes.Build(_stepTypes), _plugins, _steps.Add, _folder.Path, InGameTests.Build(new[] { typeof(RunnerTests), typeof(BrokenRunnerTests) }.SelectMany(type => type.GetMethods()).Where(method => method.IsDefined(typeof(InGameTestAttribute), false))));
+        var routine = GuardedRoutine.Run(runner.Run(files, tests), exception => error = exception);
         var frames = 0;
         while (routine.MoveNext())
         {
@@ -747,7 +902,7 @@ public sealed class ScenarioRunnerTests : IDisposable
         // Time goes on every time it's asked, so a wait always ends
         public float Now => _now += 1;
 
-        public IInput Input { get; } = new TesterInput(new InProcessDrivers(), () => 0);
+        public IInput Input { get; } = new TesterInput(new InProcessDrivers(), new NoActions(), () => 0);
 
         public IGameEvents Game { get; } = new FakeEvents();
 
@@ -846,6 +1001,18 @@ public sealed class ScenarioRunnerTests : IDisposable
 
             _recorder.Events.Add($"after {scenario.ScenarioName}");
             yield break;
+        }
+    }
+
+    private sealed class NoActions : IActionDriver
+    {
+        public bool Set(string action, float value)
+        {
+            return false;
+        }
+
+        public void GiveBack()
+        {
         }
     }
 }
