@@ -34,6 +34,13 @@ internal sealed class UguiPointer<TNode> : IInputDriver
     }
 
     /// <summary>
+    /// Whether there's an event system to send to, and its input module doesn't read Unity's <c>Input</c>. When it does,
+    /// as the game's does, the legacy <c>Input</c> driver already moves its pointer, and sending the same mouse here as
+    /// well would click everything twice.
+    /// </summary>
+    private bool Active => _scene.Ready && !_scene.ModuleReadsUnityInput;
+
+    /// <summary>
     /// uGUI's pointer events are the mouse's only.
     /// </summary>
     public bool PressKeys(IReadOnlyList<KeyPress> keys)
@@ -48,7 +55,7 @@ internal sealed class UguiPointer<TNode> : IInputDriver
 
     public bool MoveMouse(Vector2 screenPoint)
     {
-        if (!_scene.Ready)
+        if (!Active)
             return false;
 
         _state.Position = screenPoint;
@@ -60,7 +67,7 @@ internal sealed class UguiPointer<TNode> : IInputDriver
 
     public bool PressButton(MouseButton button)
     {
-        if (!_scene.Ready)
+        if (!Active)
             return false;
 
         FindHit();
@@ -84,7 +91,7 @@ internal sealed class UguiPointer<TNode> : IInputDriver
 
     public bool ReleaseButton(MouseButton button)
     {
-        if (!_scene.Ready)
+        if (!Active)
             return false;
 
         FindHit();
@@ -108,13 +115,13 @@ internal sealed class UguiPointer<TNode> : IInputDriver
     /// </summary>
     public void GiveBack()
     {
-        if (_state.Pressed != null && _scene.Ready)
+        if (_state.Pressed != null && Active)
             SendIfHandled(_state.Pressed, PointerEvent.Up);
 
         _state.Pressed = null;
         _state.Hit = null;
         _placed = false;
-        if (_scene.Ready)
+        if (Active)
             EnterHit();
         else
             _entered.Clear();

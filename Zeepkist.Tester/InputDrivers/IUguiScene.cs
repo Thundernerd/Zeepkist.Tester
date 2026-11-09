@@ -15,6 +15,12 @@ internal interface IUguiScene<TNode>
     public bool Ready { get; }
 
     /// <summary>
+    /// Whether the event system's input module reads the mouse from Unity's <c>Input</c>, which the legacy <c>Input</c>
+    /// driver hands the same mouse to.
+    /// </summary>
+    public bool ModuleReadsUnityInput { get; }
+
+    /// <summary>
     /// The topmost object at the point, or null over none.
     /// </summary>
     /// <param name="screenPoint">In Unity's screen pixels, counted from the bottom left.</param>

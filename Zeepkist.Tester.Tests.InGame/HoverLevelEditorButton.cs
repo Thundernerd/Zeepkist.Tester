@@ -6,8 +6,7 @@ namespace TNRD.Zeepkist.Tester.Tests.InGame;
 
 /// <summary>
 /// Opens the main menu's Level Editor page as its button does, moves the mouse onto the page's Level Editor button, which
-/// should take it as hovered, then gives the mouse back, which should leave it. The game's buttons read their press from
-/// Unity's <c>Input</c>, which the uGUI driver doesn't reach, so it can't open the page with a click.
+/// should take it as hovered, then gives the mouse back, which should leave it. Clicking it is #81's.
 /// </summary>
 [Step("hover-level-editor-button")]
 public sealed class HoverLevelEditorButton : Step

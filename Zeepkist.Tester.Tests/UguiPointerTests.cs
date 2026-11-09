@@ -117,6 +117,18 @@ public class UguiPointerTests
     }
 
     [Fact]
+    public void WhileTheGamesInputModuleReadsUnitysInput_ThePointerLeavesItToThat_AndDoesntTakeTheInput()
+    {
+        _scene.ModuleReadsUnityInput = true;
+
+        Assert.False(_pointer.MoveMouse(_onButton));
+        Assert.False(_pointer.PressButton(MouseButton.Left));
+        Assert.False(_pointer.ReleaseButton(MouseButton.Left));
+        _pointer.GiveBack();
+        Assert.Empty(_scene.Sent);
+    }
+
+    [Fact]
     public void WhatOnlyTakesClicks_TakesThePress_AndItsClick()
     {
         _scene.Handlers["menu/button"] = [PointerEvent.Click];
@@ -146,6 +158,8 @@ public class UguiPointerTests
         public List<string> Sent { get; } = [];
 
         public bool Ready { get; set; } = true;
+
+        public bool ModuleReadsUnityInput { get; set; }
 
         public void Hit(Vector2 screenPoint, string node)
         {

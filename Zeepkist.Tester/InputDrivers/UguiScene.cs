@@ -26,6 +26,15 @@ internal sealed class UguiScene : IUguiScene<GameObject>
 
     public bool Ready => EventSystem.current != null;
 
+    /// <summary>
+    /// Unity's own pointer modules read the mouse through <see cref="BaseInput"/>, which reads <c>Input</c>, unless
+    /// something overrides it. A module of another kind, such as Rewired's, reads its own.
+    /// </summary>
+    public bool ModuleReadsUnityInput => EventSystem.current != null
+        && EventSystem.current.currentInputModule is StandaloneInputModule module
+        && module.input != null
+        && module.input.GetType() == typeof(BaseInput);
+
     public GameObject HitAt(Vector2 screenPoint)
     {
         _results.Clear();
