@@ -6,6 +6,7 @@ using System.Reflection;
 using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using TNRD.Zeepkist.Tester.InputDrivers;
+using TNRD.Zeepkist.Tester.Patches;
 using TNRD.Zeepkist.Tester.Scenarios;
 using TNRD.Zeepkist.Tester.Sdk;
 using UnityEngine;
@@ -27,7 +28,8 @@ internal sealed class GameHost : IRunHost
         Game = game;
         _screenshots = screenshots;
         _walk = new StartWalk(game, logger, report);
-        Input = new TesterInput(new InProcessDrivers(new ImuiDriver(), new UguiPointer<GameObject>(new UguiScene())), () => Now);
+        Input_Legacy.Driver = new LegacyInputDriver(() => Time.frameCount);
+        Input = new TesterInput(new InProcessDrivers(new ImuiDriver(), Input_Legacy.Driver, new UguiPointer<GameObject>(new UguiScene())), new RewiredDriver(), () => Now);
     }
 
     public ManualLogSource Logger { get; }
