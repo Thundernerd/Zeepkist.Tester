@@ -1,0 +1,14 @@
+description: Reaches the level editor's mouse, which reads Unity's own Input, through context.Input
+start: editor
+steps:
+  - place-block: { type: 2448, as: first }
+  - sample.look-at-block: first
+
+  # Placed below the camera, which now isn't above the first
+  - place-block: { type: 2448, as: second }
+  - sample.expect-selected: second
+  - sample.click-block: first
+  - sample.expect-selected: first
+
+  - sample.turn-camera
+  - expect-no-exceptions
