@@ -5,17 +5,20 @@ using UnityEngine;
 
 namespace TNRD.Zeepkist.Tester.Tests.InGame;
 
-/// <summary>Checks the main menu's Level Editor panel is there, past the state the tester declares.</summary>
+/// <summary>Checks the main menu is open, with no other menu over it, past the state the tester declares.</summary>
 [Step("expect-main-menu")]
 [Requires(typeof(InMainMenu))]
 public sealed class ExpectMainMenu : Step
 {
     public override IEnumerator Run(IStepContext context)
     {
-        if (Object.FindObjectOfType<LevelEditorUI>(true) is { } menu)
-            context.Detail = $"Found {menu.name}";
+        var menu = Object.FindObjectOfType<MainMenuUI>(true);
+        if (menu == null)
+            context.Fail("There's no MainMenuUI");
+        else if (!menu.IsOpen)
+            context.Fail($"{menu.name} isn't open");
         else
-            context.Fail("The main menu has no LevelEditorUI.");
+            context.Detail = $"{menu.name} is open";
 
         yield break;
     }
