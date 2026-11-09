@@ -9,7 +9,7 @@ namespace TNRD.Zeepkist.Tester.InputDrivers;
 
 /// <summary>
 /// What each call sends in which frame, on the route it's on. One lives for the whole run, so the runner sets
-/// <see cref="Route"/> as each scenario starts, and can call <see cref="GiveBack"/> as each ends.
+/// <see cref="Route"/> as each scenario starts, and calls <see cref="GiveBack"/> as each ends.
 /// </summary>
 internal sealed class TesterInput : IInput
 {

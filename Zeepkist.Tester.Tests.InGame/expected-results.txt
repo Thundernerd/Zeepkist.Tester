@@ -122,3 +122,11 @@ sample.expect-field | imui-input | pass
 sample.drag-slider | imui-input | pass
 sample.give-back-mouse | imui-input | pass
 sample.hide-input-window | imui-input | pass
+main menu |  | pass
+new level |  | pass
+sample.show-input-window | mouse-held | pass
+sample.hold-mouse | mouse-held | pass
+sample.hide-input-window | mouse-held | pass
+main menu |  | pass
+new level |  | pass
+sample.expect-player-mouse | mouse-given-back | pass
