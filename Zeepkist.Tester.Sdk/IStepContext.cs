@@ -68,4 +68,12 @@ public interface IStepContext : IScenarioContext
     /// The level editor. Outside it this fails the step and gives null.
     /// </summary>
     public LEV_LevelEditorCentral RequireEditor();
+
+    /// <summary>
+    /// In an <see cref="InGameTestAttribute"/> method, runs <paramref name="step"/> as its own entry in the results, after
+    /// checking the states it requires. A step that fails stops the test. The step's arguments are used as they are:
+    /// <c>${name}</c> is only substituted in scenarios, so ask <see cref="Values"/> for a named value's text. Within a
+    /// scenario's step this fails the step, because steps don't run steps.
+    /// </summary>
+    public IEnumerator Run(Step step);
 }

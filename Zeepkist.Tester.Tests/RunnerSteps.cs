@@ -287,4 +287,26 @@ public static class RunnerSteps
             yield break;
         }
     }
+
+    [Step("runs-a-step", Namespace = "t")]
+    public sealed class RunsAStep : Step
+    {
+        public override IEnumerator Run(IStepContext context)
+        {
+            yield return context.Run(new Note { Text = "inner" });
+        }
+    }
+
+    [Step("use-text", Namespace = "t")]
+    public sealed class UseText : Step
+    {
+        [Arg(Primary = true)]
+        public required Ref<TextValue> Value { get; set; }
+
+        public override IEnumerator Run(IStepContext context)
+        {
+            Value.Get(context);
+            yield break;
+        }
+    }
 }

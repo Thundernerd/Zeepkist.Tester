@@ -12,7 +12,8 @@ The runner deploys it next to the plugin. The plugin does nothing unless the gam
   "mods": [
     { "guid": "Zeepkist.LogicScripting", "oldGuids": ["net.tnrd.zeepkist.logicscripting"] }
   ],
-  "scenarios": ["window.ztest.yaml", "compile/errors.ztest.yaml"]
+  "scenarios": ["window.ztest.yaml", "compile/errors.ztest.yaml"],
+  "tests": ["WindowTests", "CompileTests.ReportsTheLine"]
 }
 ```
 
@@ -23,7 +24,7 @@ Each mod in `mods` has to pass the build check, as a step in the results named `
 
 After the build check, a run has a `yaml parser` step. It parses and binds a small scenario, and fails unless that worked and YamlDotNet is the copy merged into the plugin. Its `Detail` says which assembly YamlDotNet came from.
 
-Then each file in `scenarios` runs, in order, from the `scenarios` folder next to the plugin, unless one of those checks failed. See *Running scenarios* in [step-registry.md](step-registry.md). A run with no `scenarios` ends with a failed step named `scenarios`, so it can't pass.
+Then each file in `scenarios` runs, in order, from the `scenarios` folder next to the plugin, unless one of those checks failed. See *Running scenarios* in [step-registry.md](step-registry.md). After them, the C# tests that `tests` selects run: each a class's name, for every test in it, or `Class.Method` (see *C# tests* there). A run with no `scenarios` and no `tests` ends with a failed step named `scenarios`, so it can't pass.
 
 ## `out/results.json`
 
@@ -34,7 +35,7 @@ In the `out` folder next to the plugin, rewritten after every step, so a crash s
 | `RunId` | The run's id. |
 | `Done` | The run finished and the game is about to quit. |
 | `Passed` | There are steps, and they all passed. Only meaningful with `Done`. |
-| `Steps` | Each with `Name`, `Passed`, `Detail`, `Scenario`, `File`, `Line`, `RanFrom`, `Passes`, `Expected`, `Actual`, `Seconds`. `Expected` and `Actual` are null except on checks. Steps outside a scenario, and the walks to where each one starts, have an empty `Scenario` and `File` and a `Line` of 0. `Scenario` is the file relative to the `scenarios` folder without `.ztest.yaml`, such as `compile/errors`. `File` and `Line` are where the step is written, and `RanFrom` is each `run:` that led there, as `file:line` outermost first, joined by ` > `. `Passes` says which pass of the `for`s and `repeat`s around it, such as `h=64, repeat 2/3`. |
+| `Steps` | Each with `Name`, `Passed`, `Detail`, `Scenario`, `File`, `Line`, `RanFrom`, `Passes`, `Expected`, `Actual`, `Seconds`. `Expected` and `Actual` are null except on checks. Steps outside a scenario, and the walks to where each one starts, have an empty `Scenario` and `File` and a `Line` of 0. `Scenario` is the file relative to the `scenarios` folder without `.ztest.yaml`, such as `compile/errors`, or a C# test's `Class.Method`, whose steps have an empty `File` and a `Line` of 0. A C# test's own checks are a step named `test`. `File` and `Line` are where the step is written, and `RanFrom` is each `run:` that led there, as `file:line` outermost first, joined by ` > `. `Passes` says which pass of the `for`s and `repeat`s around it, such as `h=64, repeat 2/3`. |
 | `Screenshots` | File names, in `out` too, each `<scenario>-<name>.png`, with a `/` in the scenario as `-`. A failed step or start takes `<scenario>-failure.png`, and a failure outside a scenario takes `failure.png`. |
 | `BlankScreenshots` | File name to color, for those where every pixel is the same color. |
 | `Display` | The game's resolution, window mode and screen size, as the run ended. |

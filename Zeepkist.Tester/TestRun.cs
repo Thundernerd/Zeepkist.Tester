@@ -80,8 +80,8 @@ internal sealed class TestRun : IDisposable
 
         var host = new GameHost(_logger, _game, _screenshots, Step);
         var folder = Path.Combine(_folder, RunRequest.ScenariosFolder);
-        var runner = new ScenarioRunner(host, _exceptions, StepTypes.Build(GameHost.FindStepTypes()), Sdk.Tester.Registered, Step, folder);
-        yield return runner.Run(_request.ScenarioFiles(_folder));
+        var runner = new ScenarioRunner(host, _exceptions, StepTypes.Build(GameHost.FindStepTypes()), Sdk.Tester.Registered, Step, folder, InGameTests.Build(GameHost.FindTests()));
+        yield return runner.Run(_request.ScenarioFiles(_folder), _request.Tests);
     }
 
     private void RecordDisplay()

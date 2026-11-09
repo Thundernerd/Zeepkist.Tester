@@ -59,13 +59,24 @@ internal sealed class GameHost : IRunHost
     /// </summary>
     public static IEnumerable<Type> FindStepTypes()
     {
-        var plugins = Chainloader.PluginInfos.Values
+        return TestPlugins().Prepend(typeof(GameHost).Assembly).Distinct().SelectMany(StepDescriptorBuilder.FindSteps);
+    }
+
+    /// <summary>
+    /// The <see cref="InGameTestAttribute"/> methods of each loaded plugin in a <see cref="TestPluginAttribute"/> assembly.
+    /// </summary>
+    public static IEnumerable<MethodInfo> FindTests()
+    {
+        return TestPlugins().Distinct().SelectMany(StepDescriptorBuilder.FindTests);
+    }
+
+    private static IEnumerable<Assembly> TestPlugins()
+    {
+        return Chainloader.PluginInfos.Values
             .Where(plugin => plugin.Instance != null)
             .Select(plugin => plugin.Instance.GetType().Assembly)
             .Where(CompiledAgainstTheSdk)
             .Where(StepDescriptorBuilder.IsTestPlugin);
-
-        return plugins.Prepend(typeof(GameHost).Assembly).Distinct().SelectMany(StepDescriptorBuilder.FindSteps);
     }
 
     public IEnumerator EnterStart(ScenarioStart start, string scenarioFile)

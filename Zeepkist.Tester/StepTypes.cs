@@ -32,4 +32,12 @@ internal sealed class StepTypes
     {
         return _types[step.FullName];
     }
+
+    /// <summary>
+    /// The name a scenario writes the step as, or the type's own name for a type that isn't one of these steps.
+    /// </summary>
+    public string NameOf(Type stepType)
+    {
+        return _types.Where(pair => pair.Value == stepType).Select(pair => pair.Key).FirstOrDefault() ?? stepType.Name;
+    }
 }
