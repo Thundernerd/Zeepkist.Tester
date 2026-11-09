@@ -33,6 +33,23 @@ public class OfflineRegistryTests
     }
 
     [Fact]
+    public void Read_InGameTests_GivesWhatRuntimeReflectionGives()
+    {
+        var builder = new StepDescriptorBuilder { Summaries = XmlDocs.Read([_modPath]) };
+        var atRuntime = builder.BuildTests(StepDescriptorBuilder.FindTests(typeof(WindowTests).Assembly));
+
+        var offline = OfflineRegistry.Read([_modPath], _sampleTesterPath).Tests;
+
+        Assert.Equal(["WindowTests.MinimumHeight", "WindowTests.FromTheMenu"], offline.Select(test => test.Name));
+        Assert.Equal("WindowTests", offline[0].ClassName);
+        Assert.Equal(typeof(WindowTests).FullName, offline[0].TypeName);
+        Assert.Equal("editor", offline[0].Start);
+        Assert.Equal("main-menu", offline[1].Start);
+        Assert.Equal("The window keeps its footer at the smallest height.", offline[0].Documentation);
+        Assert.Equal(JsonSerializer.Serialize(atRuntime), JsonSerializer.Serialize(offline));
+    }
+
+    [Fact]
     public void Read_StatesOfAModAndOfTheTester_RecordsThemAndWhatStepsDoWithThem()
     {
         var registry = OfflineRegistry.Read([_modPath], _sampleTesterPath);

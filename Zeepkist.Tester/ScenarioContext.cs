@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using TNRD.Zeepkist.Tester.Sdk;
 
@@ -40,10 +41,10 @@ internal class ScenarioContext : RunContext, IScenarioContext
     }
 
     /// <summary>
-    /// A context for one step of this scenario.
+    /// A context for one step of this scenario, or for a C# test, which runs steps with <paramref name="run"/>.
     /// </summary>
-    public StepContext ForStep(IRunHost host, IExceptionLog exceptions, IValues values)
+    public StepContext ForStep(IRunHost host, IExceptionLog exceptions, IValues values, Func<Step, IEnumerator> run = null)
     {
-        return new StepContext(this, host, exceptions, values, _state);
+        return new StepContext(this, host, exceptions, values, _state, run);
     }
 }

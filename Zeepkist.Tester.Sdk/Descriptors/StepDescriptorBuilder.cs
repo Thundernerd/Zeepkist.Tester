@@ -65,6 +65,17 @@ public sealed class StepDescriptorBuilder
     }
 
     /// <summary>
+    /// The methods in an assembly with <see cref="InGameTestAttribute"/>, in the order they're written.
+    /// </summary>
+    internal static IEnumerable<MethodInfo> FindTests(Assembly assembly)
+    {
+        const BindingFlags everyMethod = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+        return assembly.GetTypes()
+            .SelectMany(type => type.GetMethods(everyMethod))
+            .Where(method => FindAttribute<InGameTestAttribute>(method) != null);
+    }
+
+    /// <summary>
     /// Whether a type in the assembly has <see cref="TestPluginAttribute"/>.
     /// </summary>
     internal static bool IsTestPlugin(Assembly assembly)
@@ -119,6 +130,52 @@ public sealed class StepDescriptorBuilder
         }
 
         return descriptors;
+    }
+
+    public TestDescriptor BuildTest(MethodInfo method)
+    {
+        var testAttribute = FindAttribute<InGameTestAttribute>(method)
+            ?? throw new StepDefinitionException($"{method.DeclaringType.FullName}.{method.Name} has no [InGameTest] attribute.");
+
+        var owner = method.DeclaringType;
+        var what = $"[InGameTest] {owner.FullName}.{method.Name}";
+        var parameters = method.GetParameters();
+        var takesAContext = parameters.Length == 1 && parameters[0].ParameterType.FullName == typeof(IStepContext).FullName;
+        if (!method.IsPublic || method.IsStatic || method.IsGenericMethodDefinition || method.ReturnType.FullName != typeof(System.Collections.IEnumerator).FullName || !takesAContext)
+            throw new StepDefinitionException($"{what} has to be public IEnumerator {method.Name}(IStepContext context), not static or generic.");
+
+        if (owner.IsAbstract || owner.ContainsGenericParameters || owner.GetConstructor(Type.EmptyTypes) == null)
+            throw new StepDefinitionException($"{what} is in a class that can't be made: it has to be a concrete, non-generic class with a public constructor that takes nothing.");
+
+        var start = testAttribute.NamedArguments.Where(argument => argument.MemberName == nameof(InGameTestAttribute.Start)).Select(argument => argument.TypedValue).ToList();
+        return new TestDescriptor
+        {
+            ClassName = owner.Name,
+            MethodName = method.Name,
+            TypeName = owner.FullName,
+            Start = start.Count == 0 ? ToKebabCase(nameof(Start.Editor)) : ToKebabCase(EnumMemberName(start[0])),
+            Documentation = Summaries($"M:{DocName(owner)}.{method.Name}({typeof(IStepContext).FullName})"),
+        };
+    }
+
+    /// <summary>
+    /// Builds several C# tests, which can't share a <see cref="TestDescriptor.Name"/>.
+    /// </summary>
+    public IReadOnlyList<TestDescriptor> BuildTests(IEnumerable<MethodInfo> methods)
+    {
+        var tests = new List<TestDescriptor>();
+        var typesByName = new Dictionary<string, Type>();
+        foreach (var method in methods)
+        {
+            var test = BuildTest(method);
+            if (typesByName.TryGetValue(test.Name, out var other))
+                throw new StepDefinitionException($"{other.FullName} and {method.DeclaringType.FullName} both have the test '{test.Name}'. Rename one of them.");
+
+            typesByName.Add(test.Name, method.DeclaringType);
+            tests.Add(test);
+        }
+
+        return tests;
     }
 
     public StateDescriptor BuildState(Type stateType)
@@ -440,6 +497,12 @@ public sealed class StepDescriptorBuilder
         }
 
         return null;
+    }
+
+    private static string EnumMemberName(CustomAttributeTypedArgument value)
+    {
+        var member = EnumMembers(value.ArgumentType).FirstOrDefault(field => Equals(field.GetRawConstantValue(), value.Value));
+        return member?.Name ?? value.Value.ToString();
     }
 
     private static string DocName(Type type)

@@ -25,6 +25,11 @@ internal sealed class RunRequest
     public List<string> Scenarios { get; set; } = [];
 
     /// <summary>
+    /// The C# tests to run after the scenarios: each a test's <c>Class.Method</c>, or its class's name for each test in it.
+    /// </summary>
+    public List<string> Tests { get; set; } = [];
+
+    /// <summary>
     /// The scenario files to run, as paths, from the folder of this plugin.
     /// </summary>
     public List<string> ScenarioFiles(string folder)
