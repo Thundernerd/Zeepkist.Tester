@@ -12,6 +12,9 @@ namespace TNRD.Zeepkist.Tester.InputDrivers;
 /// </summary>
 internal sealed class RewiredDriver : IActionDriver
 {
+    private const int AnyAction = -1;
+
+    // Static for the patch on Rewired's update to reach, so every instance shares it
     private static readonly ActionFrames _frames = new ActionFrames();
 
     public bool Set(string action, float value)
@@ -41,13 +44,14 @@ internal sealed class RewiredDriver : IActionDriver
         if (frames.Count == 0)
             return;
 
-        // Every player's, since each has its own for one action; the ones without a controller go unread
+        // Every player's, since each has its own for one action; the ones without a controller go unread. One with id -1
+        // takes any button, as the game's own handler gives it every button's event.
         var actions = Resources.FindObjectsOfTypeAll<InputActionScriptableObject>();
         foreach (var frame in frames)
         {
             foreach (var action in actions)
             {
-                if (action.ID == frame.ActionId)
+                if (action.ID == frame.ActionId || action.ID == AnyAction)
                     Write(action, frame.For(action.UseAsButton, action.UseNegativeInput));
             }
         }

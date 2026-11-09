@@ -9,9 +9,9 @@ namespace TNRD.Zeepkist.Tester;
 /// </summary>
 internal static class EditorHistory
 {
-    private const int FreeSeconds = 5;
+    private const int ReadySeconds = 5;
 
-    /// <param name="context">The step's.</param>
+    /// <param name="context">The undo or redo step's context.</param>
     /// <param name="action">The game's input action, <c>EditorUndo</c> or <c>EditorRedo</c>.</param>
     /// <param name="what">What it does, for a failure.</param>
     public static IEnumerator Press(IStepContext context, string action, string what)
@@ -23,7 +23,7 @@ internal static class EditorHistory
         // The editor leaves its history alone while a gizmo drags, a level loads or its input is locked
         yield return context.WaitUntil(
             () => !central.gizmos.isDragging && !central.saveload.isLoading && !central.input.inputLocked,
-            FreeSeconds,
+            ReadySeconds,
             "the level editor to take its keys");
 
         var before = central.undoRedo.currentHistoryPosition;

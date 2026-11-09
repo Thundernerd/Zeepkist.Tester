@@ -6,7 +6,9 @@ namespace TNRD.Zeepkist.Tester.InputDrivers;
 /// <summary>
 /// The values the tester holds the game's input actions at, and what each action reads from them in a frame. An action
 /// goes down in the frame its value leaves 0 and up in the frame it comes back, as Rewired reports a key. The frame after
-/// that clears it, and from then on the player's own input has it to itself.
+/// that clears it, where the game would leave it up until the next event, so no reader sees a stale release; from then on
+/// the player's own input has it to itself. While the tester has a hand in an action, what it writes wins over the
+/// player's.
 /// </summary>
 internal sealed class ActionFrames
 {

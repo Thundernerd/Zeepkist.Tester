@@ -96,7 +96,7 @@ public class TesterInputTests
         [
             ["EditorUndo 1"],
             ["EditorUndo 0"],
-        ], ActionFrames(_input.PressAction("EditorUndo")));
+        ], Frames(_input.PressAction("EditorUndo"), _actions.Events));
     }
 
     [Fact]
@@ -104,12 +104,12 @@ public class TesterInputTests
     {
         var routine = _input.HoldAction("Horizontal", 2, -0.5f);
 
-        Assert.Equal(["Horizontal -0.5"], NextActionFrame(routine));
-        Assert.Empty(NextActionFrame(routine));
+        Assert.Equal(["Horizontal -0.5"], NextFrame(routine, _actions.Events));
+        Assert.Empty(NextFrame(routine, _actions.Events));
         _now = 1.9f;
-        Assert.Empty(NextActionFrame(routine));
+        Assert.Empty(NextFrame(routine, _actions.Events));
         _now = 2;
-        Assert.Equal(["Horizontal 0"], NextActionFrame(routine));
+        Assert.Equal(["Horizontal 0"], NextFrame(routine, _actions.Events));
         Assert.False(routine.MoveNext());
     }
 
@@ -317,44 +317,34 @@ public class TesterInputTests
         Assert.False(composite.MoveMouse(_point));
     }
 
+    private static List<string> NextFrame(IEnumerator routine, List<string> events)
+    {
+        events.Clear();
+        Assert.True(routine.MoveNext());
+        return [.. events];
+    }
+
+    private static List<List<string>> Frames(IEnumerator routine, List<string> events)
+    {
+        var frames = new List<List<string>>();
+        events.Clear();
+        while (routine.MoveNext())
+        {
+            frames.Add([.. events]);
+            events.Clear();
+        }
+
+        return frames;
+    }
+
     private List<string> NextFrame(IEnumerator routine)
     {
-        _driver.Events.Clear();
-        Assert.True(routine.MoveNext());
-        return [.. _driver.Events];
+        return NextFrame(routine, _driver.Events);
     }
 
     private List<List<string>> Frames(IEnumerator routine)
     {
-        var frames = new List<List<string>>();
-        _driver.Events.Clear();
-        while (routine.MoveNext())
-        {
-            frames.Add([.. _driver.Events]);
-            _driver.Events.Clear();
-        }
-
-        return frames;
-    }
-
-    private List<string> NextActionFrame(IEnumerator routine)
-    {
-        _actions.Events.Clear();
-        Assert.True(routine.MoveNext());
-        return [.. _actions.Events];
-    }
-
-    private List<List<string>> ActionFrames(IEnumerator routine)
-    {
-        var frames = new List<List<string>>();
-        _actions.Events.Clear();
-        while (routine.MoveNext())
-        {
-            frames.Add([.. _actions.Events]);
-            _actions.Events.Clear();
-        }
-
-        return frames;
+        return Frames(routine, _driver.Events);
     }
 
     private sealed class FakeActions : IActionDriver
