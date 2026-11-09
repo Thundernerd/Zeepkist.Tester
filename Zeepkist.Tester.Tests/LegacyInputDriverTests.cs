@@ -197,6 +197,24 @@ public class LegacyInputDriverTests
     }
 
     [Fact]
+    public void GiveBack_InTheFrameOfAPressOrDrag_DropsWhatTheGameHasntSeen()
+    {
+        _driver.MoveMouse(Point(100, 200));
+        _driver.PressButton(MouseButton.Left);
+        _driver.PressKeys([Key(KeyCode.A)]);
+        _driver.DragMouse(Point(5, 0), MouseButton.Left);
+
+        _driver.GiveBack();
+
+        _frame = 11;
+        Assert.False(_driver.GetMouseButtonDown(0));
+        Assert.False(_driver.GetMouseButtonUp(0));
+        Assert.False(_driver.GetKeyDown(KeyCode.A));
+        Assert.False(_driver.AnyKeyDown);
+        Assert.Equal(0, _driver.Axis("mouse x", 0));
+    }
+
+    [Fact]
     public void GiveBack_WithNothingHeld_DoesNothing()
     {
         _driver.GiveBack();

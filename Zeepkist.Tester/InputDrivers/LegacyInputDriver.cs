@@ -118,12 +118,17 @@ internal sealed class LegacyInputDriver : IInputDriver
 
     public void GiveBack()
     {
+        // What the game hasn't seen go down never does, so giving back after a press isn't a click
         foreach (var key in _heldKeys.Keys.ToList())
         {
             _heldKeys.Remove(key);
-            _upFrames[key] = _frame() + 1;
+            if (_downFrames[key] > _frame())
+                _downFrames.Remove(key);
+            else
+                _upFrames[key] = _frame() + 1;
         }
 
+        _mouseDelta = default;
         MousePosition = null;
     }
 
