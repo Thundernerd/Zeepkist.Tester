@@ -12,6 +12,6 @@ public sealed class Undo : Step
 {
     public override IEnumerator Run(IStepContext context)
     {
-        return EditorHistory.Press(context, EditorKey.Undo);
+        return EditorHistory.Press(context, "EditorUndo", "undo");
     }
 }

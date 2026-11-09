@@ -4,36 +4,33 @@ using TNRD.Zeepkist.Tester.Sdk;
 namespace TNRD.Zeepkist.Tester;
 
 /// <summary>
-/// Presses the level editor's undo or redo key once, and fails when the editor's history didn't move, such as with
+/// Presses the level editor's undo or redo action once, and fails when the editor's history didn't move, such as with
 /// nothing left to undo.
 /// </summary>
 internal static class EditorHistory
 {
-    private const int PressFrames = 300;
+    private const int ReadySeconds = 5;
 
-    public static IEnumerator Press(IStepContext context, EditorKey key)
+    /// <param name="context">The undo or redo step's context.</param>
+    /// <param name="action">The game's input action, <c>EditorUndo</c> or <c>EditorRedo</c>.</param>
+    /// <param name="what">What it does, for a failure.</param>
+    public static IEnumerator Press(IStepContext context, string action, string what)
     {
         var central = context.RequireEditor();
         if (central == null)
             yield break;
 
+        // The editor leaves its history alone while a gizmo drags, a level loads or its input is locked
+        yield return context.WaitUntil(
+            () => !central.gizmos.isDragging && !central.saveload.isLoading && !central.input.inputLocked,
+            ReadySeconds,
+            "the level editor to take its keys");
+
         var before = central.undoRedo.currentHistoryPosition;
-        EditorKeys.Press(key);
-
-        // Not WaitUntil: a wait that gives up stops the step, and the key has to be let go first
-        for (var frame = 0; EditorKeys.IsPressed && frame < PressFrames; frame++)
-            yield return null;
-
-        if (EditorKeys.IsPressed)
-        {
-            EditorKeys.Release();
-            context.Fail($"The level editor didn't read the key within {PressFrames} frames.");
-            yield break;
-        }
-
+        yield return context.Input.PressAction(action);
         var after = central.undoRedo.currentHistoryPosition;
         if (after == before)
-            context.Fail($"Nothing to {key.ToString().ToLowerInvariant()}, or the editor was busy.");
+            context.Fail($"Nothing to {what}.");
         else
             context.Detail = $"History position {before} → {after}";
     }

@@ -132,3 +132,11 @@ sample.click-block | legacy-input | pass
 sample.expect-selected | legacy-input | pass
 sample.turn-camera | legacy-input | pass
 expect-no-exceptions | legacy-input | pass
+main menu |  | pass
+new level |  | pass
+place-start | rewired-input | pass
+test-mode | rewired-input | pass
+wait | rewired-input | pass
+sample.expect-steering | rewired-input | pass
+sample.expect-steering | rewired-input | pass
+back-to-editor | rewired-input | pass
