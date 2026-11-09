@@ -451,7 +451,7 @@ The steps the tester ships with so far:
 | `test-mode` | Starts test mode and waits for the round. The level needs a start block. | `editor` | leaves `editor`, enters `test-mode` |
 | `back-to-editor` | Quits through the pause menu and waits for the level to load. | `test-mode` | leaves `test-mode`, enters `editor` |
 
-Input steps come with #20. `Zeepkist.Tester.Tests.InGame` is a test plugin and scenarios for the in-game check, and its `run.sh` deploys and runs them.
+Input steps come with #20. `Zeepkist.Tester.Tests.InGame` is a test plugin and scenarios for the in-game check, and its `run.sh` deploys and runs them. With `--start-states` it runs a scenario per start state in an order that leaves each of the editor (with unsaved content), test mode and free play for each start, and `free-play` plays the adventure level `EZ01`, whose UID is the same on every install.
 
 The runner handles the control nodes itself; they aren't registry steps, but the schema includes them:
 
