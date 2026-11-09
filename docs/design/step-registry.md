@@ -462,6 +462,8 @@ The steps the tester ships with so far:
 
 Input steps come with #20. `Zeepkist.Tester.Tests.InGame` is a test plugin and scenarios for the in-game check, and its `run.sh` deploys and runs them.
 
+`run.sh --start-states` runs a scenario per start state, in an order that leaves each of the editor with unsaved content, test mode and free play for each start. Its `free-play` scenario plays the adventure level `EZ01`, whose UID is the same on every install.
+
 The runner handles the control nodes itself; they aren't registry steps, but the schema includes them:
 
 | Node | Form |

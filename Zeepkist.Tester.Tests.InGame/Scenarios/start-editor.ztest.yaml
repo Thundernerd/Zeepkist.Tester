@@ -1,0 +1,6 @@
+description: start editor opens a new, empty level, and leaves it with unsaved content for the next walk to quit
+start: editor
+steps:
+  - sample.expect-editor
+  - expect-block-count: 0
+  - place-block: 2448

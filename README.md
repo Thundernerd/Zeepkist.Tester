@@ -25,7 +25,7 @@ dotnet test
 | `Zeepkist.Tester.Scenarios` | The scenario parser, which the plugin and the CLI share |
 | `Zeepkist.Tester.Cli` | The `ztest` dotnet tool: the runner and offline tools |
 | `Zeepkist.Tester.Tests` | Unit tests |
-| `Zeepkist.Tester.Tests.InGame` | A test plugin and scenarios for checking the harness in the real game. `run.sh <out dir>` deploys them, runs the game through Steam, compares the results with `expected-results.txt` and puts everything back. Four scenarios and two C# tests fail on purpose |
+| `Zeepkist.Tester.Tests.InGame` | A test plugin and scenarios for checking the harness in the real game. `run.sh <out dir>` deploys them, runs the game through Steam, compares the results with `expected-results.txt` and puts everything back. Four scenarios and two C# tests fail on purpose. `run.sh <out dir> --start-states` walks to each start state from the editor, test mode and free play, against `expected-start-states.txt` |
 | `Zeepkist.Tester.Tests.SampleMod` | A mod's assembly on net472, for the unit tests to build descriptors from |
 | `Zeepkist.Tester.Tests.SampleCore` | An assembly on net472 with a step as the tester ships them and a state for a mod's to nest in, for the same tests |
 

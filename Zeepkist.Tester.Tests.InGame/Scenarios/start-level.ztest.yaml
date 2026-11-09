@@ -1,0 +1,8 @@
+description: start editor with a level file opens that level, with its blocks, and leaves it with unsaved content for the next walk to quit
+start:
+  editor: { level: levels/three-blocks.zeeplevel }
+steps:
+  - sample.expect-editor
+  - expect-block-count: 3
+  - expect-block-count: { count: 1, type: 1 }
+  - place-block: 2448

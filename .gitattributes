@@ -5,3 +5,6 @@
 
 *.png binary
 *.dll binary
+
+# Levels stay as the game writes them, with a byte order mark and CRLF
+*.zeeplevel -text
