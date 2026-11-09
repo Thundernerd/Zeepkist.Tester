@@ -1,6 +1,5 @@
 using System.Collections;
 using TNRD.Zeepkist.Tester.Sdk;
-using UnityEngine;
 
 namespace TNRD.Zeepkist.Tester.Tests.InGame;
 
@@ -12,10 +11,9 @@ public sealed class HoldMouse : Step
     {
         var window = context.Get<InputWindow>();
         yield return context.Input.MoveMouse(window.SliderLeft);
-        var held = window.ImuiMouse;
-        if (Vector2.Distance(held, window.SliderLeftInImui) > 0.5f)
-            context.Fail("Imui doesn't find the mouse where it was moved", window.SliderLeftInImui.ToString(), held.ToString());
+        if (!window.ImuiMouseAtSliderLeft)
+            context.Fail("Imui doesn't find the mouse where it was moved", window.SliderLeftInImui.ToString(), window.ImuiMouse.ToString());
         else
-            context.Detail = $"The mouse is held at {held}";
+            context.Detail = $"The mouse is held at {window.ImuiMouse}";
     }
 }
