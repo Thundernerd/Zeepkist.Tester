@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs this plugin's scenarios in the real game through Steam, and compares the results with expected-results.txt. It
+# Runs this plugin's scenarios and C# tests in the real game through Steam, and compares the results with expected-results.txt. It
 # puts back what it deploys and what a run changes, until the runner (#22, #23) does this for every mod.
 # Usage: Zeepkist.Tester.Tests.InGame/run.sh <out dir> [--no-scenarios|--start-fails]
 # With --no-scenarios it checks a run with the right builds and no scenarios fails, saying so.
@@ -82,11 +82,11 @@ cp "$here/bin/Release/net472/$guid.dll" "$mod/"
 run_id="$(date +%Y%m%d-%H%M%S)"
 cp -a "$here/Scenarios" "$tester/scenarios"
 case "$mode" in
-    --no-scenarios) scenarios='[]' ;;
-    --start-fails) scenarios='["core-steps.ztest.yaml","start-fails.ztest.yaml","control-nodes.ztest.yaml"]' ;;
-    *) scenarios='["core-steps.ztest.yaml","a-step-fails.ztest.yaml","control-nodes.ztest.yaml","screenshots.ztest.yaml","exceptions.ztest.yaml","blocks.ztest.yaml","test-mode.ztest.yaml","test-mode-needs-a-start.ztest.yaml","a-setting-it-does-not-have.ztest.yaml","imui-input.ztest.yaml"]' ;;
+    --no-scenarios) scenarios='[]' tests='[]' ;;
+    --start-fails) tests='[]' scenarios='["core-steps.ztest.yaml","start-fails.ztest.yaml","control-nodes.ztest.yaml"]' ;;
+    *) tests='["CSharpTests"]' scenarios='["core-steps.ztest.yaml","a-step-fails.ztest.yaml","control-nodes.ztest.yaml","screenshots.ztest.yaml","exceptions.ztest.yaml","blocks.ztest.yaml","test-mode.ztest.yaml","test-mode-needs-a-start.ztest.yaml","a-setting-it-does-not-have.ztest.yaml","imui-input.ztest.yaml"]' ;;
 esac
-printf '{"runId":"%s","mods":[{"guid":"%s"}],"scenarios":%s}' "$run_id" "$guid" "$scenarios" >"$tester/run.json"
+printf '{"runId":"%s","mods":[{"guid":"%s"}],"scenarios":%s,"tests":%s}' "$run_id" "$guid" "$scenarios" "$tests" >"$tester/run.json"
 
 log "starting the game, run $run_id"
 steam -applaunch "$app_id" -ztest "$run_id" >/dev/null 2>&1 9>&- &
@@ -130,7 +130,7 @@ elif [[ "$mode" == --start-fails ]]; then
 else
     jq -r '.Steps[] | "\(.Name) | \(.Scenario) | \(if .Passed then "pass" else "FAIL" end)"' "$results" >"$out/actual-results.txt"
     diff "$here/expected-results.txt" "$out/actual-results.txt" || failed=1
-    jq -e '(.Screenshots | index("a-step-fails-failure.png")) and (.Screenshots | index("control-nodes-height-64.png")) and (.BlankScreenshots | keys == ["screenshots-covered.png"])' "$results" >/dev/null || { log "the screenshots aren't what they should be"; failed=1; }
+    jq -e '(.Screenshots | index("a-step-fails-failure.png")) and (.Screenshots | index("CSharpTests-AStepFails-failure.png")) and (.Screenshots | index("control-nodes-height-64.png")) and (.BlankScreenshots | keys == ["screenshots-covered.png"])' "$results" >/dev/null || { log "the screenshots aren't what they should be"; failed=1; }
 fi
 
 ((failed == 0)) || { log "not what this run should do"; exit 1; }
