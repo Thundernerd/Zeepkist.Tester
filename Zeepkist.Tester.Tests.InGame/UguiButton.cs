@@ -13,12 +13,10 @@ public sealed class UguiButton
 
     public int Clicks { get; private set; }
 
-    public bool Shown => _canvas != null;
-
     /// <summary>
     /// In screen pixels, counted from the bottom left.
     /// </summary>
-    public Vector2 Center => RectTransformUtility.WorldToScreenPoint(null, _button.TransformPoint(_button.rect.center));
+    public Vector2 Center => ScreenPoints.Center(_button);
 
     public int Width => Mathf.RoundToInt(_button.rect.width);
 

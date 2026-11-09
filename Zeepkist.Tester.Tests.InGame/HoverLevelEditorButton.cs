@@ -33,7 +33,7 @@ public sealed class HoverLevelEditorButton : Step
             yield break;
         }
 
-        yield return context.Input.MoveMouse(ScreenCenter(button));
+        yield return context.Input.MoveMouse(ScreenPoints.Center((RectTransform)button.transform));
         if (!button.isHover)
         {
             context.Fail("Moving the mouse onto the Level Editor button didn't hover it", "hovered", "not hovered");
@@ -61,13 +61,5 @@ public sealed class HoverLevelEditorButton : Step
         }
 
         return null;
-    }
-
-    private static Vector2 ScreenCenter(Component button)
-    {
-        var rect = (RectTransform)button.transform;
-        var canvas = button.GetComponentInParent<Canvas>().rootCanvas;
-        var camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
-        return RectTransformUtility.WorldToScreenPoint(camera, rect.TransformPoint(rect.rect.center));
     }
 }

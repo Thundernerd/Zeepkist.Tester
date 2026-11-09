@@ -25,8 +25,9 @@ public class UguiPointerTests
     {
         _scene.Hit(_onButton, "menu/button/label");
         _scene.Hit(_onOther, "menu/other");
-        _scene.Handlers["menu/button"] = [PointerEvent.Enter, PointerEvent.Exit, PointerEvent.Down, PointerEvent.Up, PointerEvent.Click];
-        _scene.Handlers["menu/other"] = [PointerEvent.Enter, PointerEvent.Exit, PointerEvent.Down, PointerEvent.Up, PointerEvent.Click];
+        PointerEvent[] all = [PointerEvent.Enter, PointerEvent.Exit, PointerEvent.Down, PointerEvent.Up, PointerEvent.Click];
+        _scene.Handlers["menu/button"] = all;
+        _scene.Handlers["menu/other"] = all;
         _pointer = new UguiPointer<string>(_scene);
     }
 

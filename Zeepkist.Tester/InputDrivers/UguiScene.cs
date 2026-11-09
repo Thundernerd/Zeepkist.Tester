@@ -14,7 +14,15 @@ namespace TNRD.Zeepkist.Tester.InputDrivers;
 internal sealed class UguiScene : IUguiScene<GameObject>
 {
     private readonly List<RaycastResult> _results = [];
-    private RaycastResult _hit;
+    /// <summary>
+    /// What the last <see cref="HitAt"/> found, which is what the pointer is over now.
+    /// </summary>
+    private RaycastResult _lastHit;
+
+    /// <summary>
+    /// What the pointer was over as its button last went down.
+    /// </summary>
+    private RaycastResult _pressHit;
 
     public bool Ready => EventSystem.current != null;
 
@@ -22,21 +30,21 @@ internal sealed class UguiScene : IUguiScene<GameObject>
     {
         _results.Clear();
         EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = screenPoint }, _results);
-        _hit = default;
+        _lastHit = default;
         foreach (var result in _results)
         {
             // Sorted topmost first, as the input module takes them
             if (result.gameObject != null)
             {
-                _hit = result;
+                _lastHit = result;
                 break;
             }
         }
 
-        if (_hit.gameObject != null && _hit.gameObject.GetComponent<ImuiUnityGUIBackend>() != null)
-            _hit = default;
+        if (_lastHit.gameObject != null && _lastHit.gameObject.GetComponent<ImuiUnityGUIBackend>() != null)
+            _lastHit = default;
 
-        return _hit.gameObject;
+        return _lastHit.gameObject;
     }
 
     public GameObject Parent(GameObject node)
@@ -49,7 +57,7 @@ internal sealed class UguiScene : IUguiScene<GameObject>
     }
 
     /// <summary>
-    /// Not for an object that's been destroyed, such as by the click before.
+    /// False for an object that's been destroyed, such as by the click before.
     /// </summary>
     public bool Handles(GameObject node, PointerEvent pointerEvent)
     {
@@ -72,16 +80,19 @@ internal sealed class UguiScene : IUguiScene<GameObject>
         if (node == null || EventSystem.current == null)
             return;
 
+        if (pointerEvent == PointerEvent.Down)
+            _pressHit = _lastHit;
+
         var data = new PointerEventData(EventSystem.current)
         {
             position = state.Position,
             button = (PointerEventData.InputButton)state.Button,
-            pointerCurrentRaycast = _hit,
+            pointerCurrentRaycast = _lastHit,
             pointerEnter = state.Hit,
             pointerPress = state.Pressed,
             rawPointerPress = state.Pressed,
             pressPosition = state.PressPosition,
-            pointerPressRaycast = _hit,
+            pointerPressRaycast = _pressHit,
             eligibleForClick = state.Pressed != null,
             clickCount = 1,
             clickTime = Time.unscaledTime,

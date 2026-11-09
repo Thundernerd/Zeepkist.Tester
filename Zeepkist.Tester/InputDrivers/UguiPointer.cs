@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using TNRD.Zeepkist.Tester.Sdk;
 using UnityEngine;
 
@@ -117,7 +118,7 @@ internal sealed class UguiPointer<TNode> : IInputDriver
     /// </summary>
     private TNode Handler(TNode node, PointerEvent pointerEvent)
     {
-        for (var current = node; current != null; current = _scene.Parent(current))
+        foreach (var current in SelfAndAbove(node))
         {
             if (_scene.Handles(current, pointerEvent))
                 return current;
@@ -127,13 +128,20 @@ internal sealed class UguiPointer<TNode> : IInputDriver
     }
 
     /// <summary>
+    /// The object, then each one above it up to the top. None for null.
+    /// </summary>
+    private IEnumerable<TNode> SelfAndAbove(TNode node)
+    {
+        for (var current = node; current != null; current = _scene.Parent(current))
+            yield return current;
+    }
+
+    /// <summary>
     /// Leaves what the hit isn't in and enters what it newly is, as Unity's input module does: only below what both share.
     /// </summary>
     private void EnterHit()
     {
-        var now = new List<TNode>();
-        for (var current = _state.Hit; current != null; current = _scene.Parent(current))
-            now.Add(current);
+        var now = SelfAndAbove(_state.Hit).ToList();
 
         foreach (var node in _entered)
         {
