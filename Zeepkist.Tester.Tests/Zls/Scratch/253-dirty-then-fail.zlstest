@@ -1,0 +1,13 @@
+# Changes everything a Scenario keeps into the next one, then fails before it could put any of it back.
+# The set-window-height 64 results show how much each warning raises the smallest window.
+open-window
+set-window-height 64
+startup-warning on
+set-window-height 64
+library-read-failed on
+set-window-height 64
+show-tab libraries
+screenshot dirty
+
+# Fails on purpose
+expect-blocks 99

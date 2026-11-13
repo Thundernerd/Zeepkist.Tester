@@ -1,0 +1,34 @@
+# The checks for what the window keeps from one Scenario to the next see each change, and the change put back. It
+# leaves the window shorter and off the middle of the screen, as window-size leaves it smaller and off the middle: run
+# both, in either order, and the second checks that the run put the window's size and position back: the ones the
+# first drew it at, which the run remembered then.
+open-window
+expect-window-size 1120 640
+expect-window-centered
+expect-window-start-rect
+expect-tab scripts
+expect-startup-warning off
+
+show-tab libraries
+expect-tab libraries
+expect-library-read-failed off
+library-read-failed on
+expect-library-read-failed on
+screenshot library-read-failed
+library-read-failed off
+expect-library-read-failed off
+
+startup-warning on
+expect-startup-warning on
+screenshot startup-warning
+startup-warning off
+expect-startup-warning off
+
+set-window-height 500
+expect-window-height 500
+expect-window-width 1120
+
+# And back again, leaving the window's size and position for the run to put back
+show-tab scripts
+expect-tab scripts
+expect-no-exceptions

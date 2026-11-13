@@ -1,0 +1,53 @@
+# #279: a function line without a name inside an unclosed ( isn't joined onto the line above,
+# and a Script with Functions still compiles
+open-window
+new-script Broken
+set-text
+x = logic(1,
+function (a))
+  end
+end
+expect-errors 2
+expect-error 1:10 '(' isn't closed
+expect-error 2:10 Expected the function's name, found '('
+screenshot broken
+
+new-script Working
+set-text
+function both(a, b) -> o
+    o = a & b
+  end
+power_display(both(1, 1))
+end
+expect-no-errors
+compile
+expect-result Placed 3 blocks
+expect-blocks 3
+screenshot working
+
+# The call help shows on the next line of an open call, and stops once that line starts with function
+new-script Typing
+set-text
+x = logic(1,
+end
+caret-at-end
+press enter
+press space
+expect-call-help logic(
+type function
+press space
+expect-no-call-help
+screenshot typing
+
+# Completion on the next line of an open call still lists the call's arguments
+new-script Completing
+set-text
+x = logic(1,
+end
+caret-at-end
+press enter
+complete
+expect-completion op:
+expect-completion b:
+screenshot completing
+expect-no-exceptions

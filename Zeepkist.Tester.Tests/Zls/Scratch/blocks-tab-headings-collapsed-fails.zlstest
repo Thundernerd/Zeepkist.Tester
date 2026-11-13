@@ -1,0 +1,5 @@
+# expect-reference-headings fails while the Blocks side is collapsed (meant to fail on its last step)
+open-window
+show-blocks-tab reference
+set-window-size 100 100
+expect-reference-headings Inputs Operators Outputs Movers

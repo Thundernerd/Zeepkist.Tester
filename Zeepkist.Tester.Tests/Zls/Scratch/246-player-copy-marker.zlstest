@@ -1,0 +1,13 @@
+# #246: run by 246-player-copy-marker.sh, once with --keep and again after a different copy of the mod is installed over
+# the kept build. The test plugin fails the run when the game loaded the mod from anywhere but this build, so the second
+# run passing means the player's copy was set aside rather than loaded or deleted; the script checks it's put back.
+open-window
+new-script Lights
+set-text
+power_display(1 & 1)
+end
+compile
+expect-result Placed 3 blocks
+expect-blocks 3
+screenshot compiled
+expect-no-exceptions

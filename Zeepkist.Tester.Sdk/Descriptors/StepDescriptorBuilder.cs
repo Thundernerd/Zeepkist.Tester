@@ -105,6 +105,11 @@ public sealed class StepDescriptorBuilder
         if (_controlNodes.Contains(name))
             throw new StepDefinitionException($"Step name '{name}' ({stepType.FullName}) is reserved for a scenario's control nodes: for, repeat and run.");
 
+        var arguments = BuildArguments(stepType, [stepType]);
+        var lineSyntax = ConstructorValue<string>(FindAttribute<LineSyntaxAttribute>(stepType));
+        if (lineSyntax != null)
+            RequireLineSyntax(lineSyntax, arguments, stepType);
+
         return new StepDescriptor
         {
             Name = name,
@@ -118,7 +123,8 @@ public sealed class StepDescriptorBuilder
             Leaves = StateNames(DeclaredStates<LeavesAttribute>(stepType).SelectMany(states => states)),
             Documentation = Summary('T', stepType),
             Examples = [.. FindAttributes(stepType, typeof(ExampleAttribute).FullName).Select(ConstructorValue<string>)],
-            Arguments = BuildArguments(stepType, [stepType]),
+            Arguments = arguments,
+            LineSyntax = lineSyntax,
         };
     }
 
@@ -360,6 +366,33 @@ public sealed class StepDescriptorBuilder
             throw new StepDefinitionException($"{owner.FullName} has more than one Primary argument: {string.Join(" and ", primaries)}.");
 
         return arguments;
+    }
+
+    /// <summary>
+    /// A line has only words, so each argument the pattern names takes a single value or a list of them.
+    /// </summary>
+    private static void RequireLineSyntax(string pattern, IReadOnlyList<ArgumentDescriptor> arguments, Type stepType)
+    {
+        var what = $"LineSyntax '{pattern}' ({stepType.FullName})";
+        LineSyntax syntax;
+        try
+        {
+            syntax = LineSyntax.Parse(pattern);
+        }
+        catch (FormatException exception)
+        {
+            throw new StepDefinitionException($"{what} {exception.Message}.");
+        }
+
+        foreach (var name in syntax.Names)
+        {
+            var argument = arguments.FirstOrDefault(each => each.Name == name)
+                ?? throw new StepDefinitionException($"{what} names '{name}', which isn't an argument of the step.");
+
+            var type = argument.Type.Kind == ArgumentKind.List ? argument.Type.ItemType : argument.Type;
+            if (type.Kind is ArgumentKind.Object or ArgumentKind.List)
+                throw new StepDefinitionException($"{what} names '{name}', which takes a map, and a line only has words.");
+        }
     }
 
     private static void RequireRegularExpression(string pattern, string argument, Type owner)

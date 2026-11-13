@@ -2,7 +2,7 @@
 
 An in-game test harness for [Zeepkist](https://store.steampowered.com/app/1440670/Zeepkist/) mods. It runs scenarios inside the real game: the game starts through Steam, walks into the level editor (or the main menu, or free play), runs each scenario's steps, and reports what passed, what failed and what it logged, with screenshots. Afterwards it puts the game install and your mods' data back as they were.
 
-- **Scenarios** are YAML files, with completion and checking in VS Code, Rider and Visual Studio from a generated schema.
+- **Scenarios** are YAML files, with completion and checking in VS Code, Rider and Visual Studio from a generated schema (see [Editor support](#editor-support)).
 - **C# tests** (`[InGameTest]`) are for tests that need real logic.
 - **Steps** come from the tester itself (wait, screenshot, press, click, test mode, …) and from your mod, which registers its own in C#.
 - **Input** can be in-process and repeatable, or real OS input, the way a player's keyboard and mouse reach the game.
@@ -40,6 +40,48 @@ ztest check Scenarios/window.ztest.yaml --plugin bin/Debug/net472/MyMod.InGameTe
 ztest check                # the "scenarios" folder and "testPlugin" of the nearest zeepkist-test.json
 ztest check --registry     # states no step enters, and other smells in the steps and states themselves
 ```
+
+## Editor support
+
+Scenarios get completion, checking and hover docs from a JSON Schema of the tester's steps and your test plugin's:
+
+```sh
+ztest schema    # writes .ztest/schema.json next to the nearest zeepkist-test.json
+ztest init      # has VS Code check **/*.ztest.yaml against it, in .vscode/settings.json
+```
+
+`ztest check` rewrites the schema each time it reads the steps under a `zeepkist-test.json`, so checking keeps it up with your steps. `ztest init` writes `.vscode/settings.json` next to `zeepkist-test.json`, and VS Code only reads it from the folder it has open, so keep `zeepkist-test.json` at the root of your repo, or move the entry to the root's settings with the path from there. It's generated, so add `.ztest/` to `.gitignore`. A scenario can also name the schema itself, relative to its own file:
+
+```yaml
+# yaml-language-server: $schema=../.ztest/schema.json
+```
+
+| Editor | How it finds the schema | What works |
+| --- | --- | --- |
+| VS Code, with Red Hat's [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) | The `yaml.schemas` entry `ztest init` writes, or the modeline above | Not checked by hand yet. The schema is checked against this repo's in-game scenarios with ajv and the `yaml` package that extension uses. |
+| Rider | A `# $schema: ../.ztest/schema.json` comment at the top, or a mapping under *Settings → Languages & Frameworks → Schemas and DTDs → JSON Schema Mappings* | Not checked by hand yet. |
+| Visual Studio 2022 | Unverified: schema-driven YAML support from 17.1 is reported, for `.yaml` files only | Not checked by hand yet. |
+
+The schema is lenient where an editor reads YAML differently from the tester: a text value may be a number or `null`, a number may be quoted, and a mod's step may be written without its prefix whether or not `use:` lists its namespace. `ztest check` catches what it lets through.
+
+## Step reference
+
+`ztest docs` writes every step and state, the tester's and your mod's, as Markdown: each step's summary, arguments, the states it needs and changes, and its examples, and for each state the steps that get into it and out of it. Link to the file rather than keeping a table of steps by hand.
+
+```sh
+ztest docs --plugin bin/Debug/net472/MyMod.InGameTests.dll   # writes steps.md
+ztest docs --output docs/steps.md                             # the "testPlugin" of the nearest zeepkist-test.json
+```
+
+## Converting `.zlstest` files
+
+`ztest convert` writes each of ZeepLogicScript's old `.zlstest` files as a `.ztest.yaml` next to it, and leaves the old file where it is. It won't write over a `.ztest.yaml` that's already there.
+
+```sh
+ztest convert Scenarios --plugin bin/Debug/net472/MyMod.InGameTests.dll
+```
+
+Each line becomes a step in its shortest YAML form, read by the step's `[LineSyntax("<function> [as <as>]")]`: `<name>` is one word of an argument, `<name...>` one or more, `[ … ]` can be left out, and other words are written as they are. A step without one takes the rest of the line as its primary argument. `set-text … end` becomes a `set-text: |-` block, `drag-window-edge … then …` a list of moves (`drag-window-edge-sideways` is `sideways: true`), `expect-error <line>:<column> <text>` a `{ line, column, message }` map, and `{uid:x}` in a `set-text` a `${x}`, as ZeepLogicScript only filled it in there. Comments stay where they were, and a mod's steps are listed under `use:`, or written with their namespace where the tester has a step of that name too.
 
 ## License
 

@@ -21,6 +21,11 @@ public sealed class StepDescriptor
     public IReadOnlyList<string> Examples { get; init; } = [];
 
     /// <summary>
+    /// From <see cref="LineSyntaxAttribute"/>, or null when the step has none.
+    /// </summary>
+    public string LineSyntax { get; init; }
+
+    /// <summary>
     /// What the step needs, by state <see cref="StateDescriptor.FullName"/>. Every entry has to hold, and an entry holds when any one of its states does.
     /// </summary>
     public IReadOnlyList<IReadOnlyList<string>> Requires { get; init; } = [];

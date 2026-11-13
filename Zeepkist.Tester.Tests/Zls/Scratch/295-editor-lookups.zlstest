@@ -1,0 +1,111 @@
+# #295: each lookup the editor bundles into EditorLookups, in each feature it reaches
+
+open-window
+place-block lamp as lamp
+place-block distance_sensor as sensor
+new-library timing295
+set-text
+    function edge(a, b) -> lo, hi
+        lo = a & b
+        hi = !a
+    end
+end
+
+# The level lookup, completion: a lamp has no outputs, so placed("UID"). offers none, and a sensor's offers its own
+new-script Lookups295
+set-text
+x = placed("{uid:lamp}").
+end
+caret-at-end
+complete
+expect-no-completion
+set-text
+x = placed("{uid:sensor}").
+end
+caret-at-end
+complete
+expect-completion distance output
+screenshot placed-dot
+
+# The level lookup, a named reference: completion offers the lamp's inputs, and the call help shows them
+set-text
+lamp = placed("{uid:lamp}")
+lamp(intens
+end
+caret-at-end
+complete
+expect-completion intensity: input
+expect-call-help intensity
+screenshot placed-inputs
+
+# The level lookup, hover: the named argument is the lamp's input, and the name its definition
+set-text
+lamp = placed("{uid:lamp}")
+lamp(intensity: 1)
+end
+caret-at-start
+hover intensity: 1
+expect-hover intensity input
+hover lamp(intensity
+expect-hover 1: lamp = placed(
+screenshot placed-hover
+
+# The Library lookup, completion: the Library's Functions after its name, the inputs a call doesn't give yet, and its
+# outputs after the call's dot
+set-text
+x = timing295.
+end
+caret-at-end
+complete
+expect-completion edge (a, b)
+set-text
+x = timing295.edge(1,
+end
+caret-at-end
+press space
+complete
+expect-completion b: input
+expect-completion-missing a:
+set-text
+x = timing295.edge(1, 2).
+end
+caret-at-end
+complete
+expect-completion lo output
+expect-completion hi output
+screenshot library-completion
+
+# The Library lookup, call help
+set-text
+x = timing295.edge(1,
+end
+caret-at-end
+expect-call-help edge(a, b)
+expect-call-help-active b
+screenshot library-call-help
+
+# The Library lookup, hover: a named argument is the Library Function's input, and a name defined by a call to it is
+# its definition, the same lookup a Ctrl+click takes
+set-text
+y = delay(v)
+v = timing295.edge(1, b: 2).lo
+end
+caret-at-start
+hover b: 2
+expect-hover b input
+hover v)
+expect-hover 2: v = timing295.edge(1, b: 2).lo
+screenshot library-hover
+
+# A Library's editor finds no placed blocks
+select-library timing295
+set-text
+    function f()
+        lamp = placed("{uid:lamp}")
+        lamp(
+    end
+end
+caret-at-end
+expect-no-call-help
+screenshot library-editor
+expect-no-exceptions

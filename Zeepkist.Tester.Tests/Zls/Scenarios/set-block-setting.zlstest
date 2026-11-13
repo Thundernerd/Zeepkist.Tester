@@ -1,0 +1,25 @@
+# Completion on a placed block follows the mode it's set to in the level, and undo puts the mode back
+
+place-block simple_telemetry as t
+open-window
+new-script Telemetry
+set-text
+t1 = placed("{uid:t}")
+x = t1.
+end
+caret-at-end
+complete
+expect-completion speed output
+press escape
+
+set-block-setting t mode global_velocity
+caret-at-end
+complete
+expect-completion heading output
+press escape
+
+undo
+caret-at-end
+complete
+expect-completion speed output
+expect-no-exceptions

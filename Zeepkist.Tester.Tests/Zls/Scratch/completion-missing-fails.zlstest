@@ -1,0 +1,13 @@
+# expect-completion-missing fails when the row is there: line 13 must FAIL
+
+open-window
+new-script MissingFails
+
+set-text
+v = logic(a,
+end
+caret-at-end
+press space
+complete
+expect-completion b: input
+expect-completion-missing b:

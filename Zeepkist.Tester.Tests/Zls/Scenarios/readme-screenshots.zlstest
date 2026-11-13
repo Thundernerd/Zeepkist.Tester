@@ -1,0 +1,103 @@
+# The README's screenshots: a countdown Script with its blocks in the level, the Reference tab, a hover, completion,
+# call help, an error and a Library. Run it again after a change to the window, and copy each shot to docs/images/<name>.webp with
+# `magick <shot>.png -quality 92 -define webp:method=6 <name>.webp`: hero is countdown-script-and-blocks, reference reference-tab, hover hover-definition,
+# completion completion-outputs, call-help call-help, error error-underline and library library-tab
+
+# Other mods' messages from starting the game, such as a sign-in, are gone before the first shot
+wait 5
+
+# A wide, short window along the top, so the blocks a Compile places show below it
+open-window
+set-window-size 1920 1080
+center-window
+set-window-size 1440 620
+
+place-block power_display as display
+
+new-library timing
+set-text
+    # On for one tick when x turns on
+    function edge(x) -> rising
+        prev = delay(x, ticks: 1)
+        rising = x & !prev
+    end
+
+    # The seconds since the level started
+    function seconds() -> s
+        s = ticker() / 50
+    end
+end
+expect-no-errors
+caret-at-start
+screenshot library
+
+new-script Countdown
+set-text
+    # Count down from 5 when the level starts
+    default hide: true
+
+    display_1 = placed("{uid:display}")
+    seconds = timing.seconds()
+    left = math(5 - seconds, 0, op: max)
+    display_1(left)
+end
+expect-no-errors
+compile
+expect-result Placed
+caret-at-start
+screenshot hero
+
+# The Reference tab, filtered to one Block Function
+show-blocks-tab reference
+set-reference-filter math
+expect-reference-headings Operators
+screenshot reference
+set-reference-filter
+show-blocks-tab placed
+
+# Resting the mouse on a name shows the line that defines it: the left in display_1(left)
+hover left)
+expect-hover 6: left = math(5 - seconds, 0, op: max)
+screenshot hover
+
+# Completion after a dot lists the block's outputs
+set-text
+    # Honk to start the countdown
+    p = player_input(player: 1)
+    start = p.
+end
+caret-at-end
+complete
+expect-completion horn
+screenshot completion
+
+# Call help, with the input being written highlighted
+set-text
+    # Count down from 5 when the level starts
+    default hide: true
+
+    display_1 = placed("{uid:display}")
+    seconds = timing.seconds()
+    left = math(5 - seconds,
+end
+caret-at-end
+expect-call-help-active b
+screenshot call-help
+
+# A typo is underlined, listed under the text, and its message shows under the mouse
+set-text
+    # Count down from 5 when the level starts
+    default hide: true
+
+    display_1 = placed("{uid:display}")
+    seconds = timing.seconds()
+    left = math(5 - secnds, 0, op: max)
+    display_1(left)
+end
+expect-error 6:17 'secnds' isn't defined
+caret-at-start
+hover secnds
+expect-hover 'secnds' isn't defined
+screenshot error
+
+expect-no-exceptions

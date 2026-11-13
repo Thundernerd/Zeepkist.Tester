@@ -12,6 +12,8 @@
     <PackageReference Include="BepInEx.BaseLib" Version="5.4.20" />
     <!-- Finding the tester's own steps reads the attributes of its Harmony patches -->
     <PackageReference Include="HarmonyX" Version="2.7.0" />
+    <!-- Checks scenarios against the generated schema, as an editor would -->
+    <PackageReference Include="JsonSchema.Net" Version="9.5.0" />
     <!-- The harness only compiles against this, as the game ships it; its results and run request need it at runtime here -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Zeepkist.GameLibs" Version="$(GameLibsVersion)" />
@@ -29,6 +31,7 @@
 
   <ItemGroup>
     <None Update="Scenarios\**\*.ztest.yaml;Scenarios\**\*.zeeplevel" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Zls\**\*.zlstest" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\Zeepkist.Tester\bin\$(Configuration)\net472\plugin\Zeepkist.Tester.dll" Link="MergedPlugin\Zeepkist.Tester.dll" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

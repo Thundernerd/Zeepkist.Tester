@@ -1,0 +1,6 @@
+# Expected to FAIL at its last step: expect-window-start-rect sees a window moved off the run's start rect
+open-window
+expect-window-start-rect
+set-window-height 500
+expect-window-height 500
+expect-window-start-rect

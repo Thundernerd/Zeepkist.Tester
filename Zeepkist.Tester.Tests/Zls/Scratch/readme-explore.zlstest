@@ -1,0 +1,27 @@
+# Exploring window placement and a lamp in test mode
+open-window
+set-window-size 1920 900
+center-window
+set-window-size 1000 900
+place-block lamp as lamp
+place-start
+new-script Blink
+set-text
+    lamp_1 = placed("{uid:lamp}")
+    t = ticker()
+    on = t % 50 < 25
+    lamp_1(intensity: 100, red: 255, green: on * 255, range: 100, angle: 60)
+    power_display(t / 50)
+end
+expect-no-errors
+compile
+caret-at-start
+screenshot compiled
+close-window
+screenshot closed
+test-mode
+wait 0.3
+screenshot test-a
+wait 0.5
+screenshot test-b
+back-to-editor

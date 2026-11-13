@@ -1,0 +1,142 @@
+# #255: no outputs and no inputs from a placed(...) the compiler rejects
+
+open-window
+place-block lamp as lamp
+place-block dynamic_rotator as rot
+new-script Rejected
+
+# Accepted: the rotator's outputs after its dot, named and inline, and the lamp's inputs in its call
+set-text
+    t = placed("{uid:rot}")
+    x = t
+end
+caret-at-end
+type .
+expect-completion arrived output
+expect-completion angle output
+screenshot accepted-named-dot
+set-text
+    x = placed("{uid:rot}")
+end
+caret-at-end
+type .
+expect-completion arrived output
+screenshot accepted-inline-dot
+set-text
+    x = placed(("{uid:rot}"))
+end
+caret-at-end
+type .
+expect-completion arrived output
+set-text
+    l = placed("{uid:lamp}")
+    l(
+end
+caret-at-end
+press space
+expect-call-help intensity
+complete
+expect-completion intensity:
+screenshot accepted-call
+
+# More than its one UID in quotes
+set-text
+    t = placed("{uid:rot}", 1)
+    x = t
+end
+caret-at-end
+type .
+expect-no-completion
+complete
+expect-no-completion
+screenshot extra-argument-named-dot
+set-text
+    x = placed("{uid:rot}", 1)
+end
+caret-at-end
+type .
+expect-no-completion
+complete
+expect-no-completion
+screenshot extra-argument-inline-dot
+set-text
+    l = placed("{uid:lamp}", 1)
+    l(
+end
+caret-at-end
+press space
+expect-no-call-help
+screenshot extra-argument-call
+
+# A block in a Block Group
+new-script Group
+set-text
+    power_display(simple_telemetry().speed)
+end
+compile
+expect-result Placed
+name-group-block Group simple_telemetry as gt
+name-group-block Group power_display as gp
+select-script Rejected
+set-text
+    t = placed("{uid:gt}")
+    x = t
+end
+expect-error 1:12 in a Block Group
+caret-at-end
+type .
+expect-no-completion
+complete
+expect-no-completion
+screenshot group-named-dot
+set-text
+    x = placed("{uid:gt}")
+end
+caret-at-end
+type .
+expect-no-completion
+complete
+expect-no-completion
+screenshot group-inline-dot
+set-text
+    p = placed("{uid:gp}")
+    p(
+end
+caret-at-end
+press space
+expect-no-call-help
+screenshot group-call
+
+# A style turned off for this game version
+turn-off-style dynamic_rotator
+turn-off-style lamp
+set-text
+    t = placed("{uid:rot}")
+    x = t
+end
+expect-error 1:5 turned off
+caret-at-end
+type .
+expect-no-completion
+complete
+expect-no-completion
+screenshot turned-off-named-dot
+set-text
+    x = placed("{uid:rot}")
+end
+caret-at-end
+type .
+expect-no-completion
+complete
+expect-no-completion
+screenshot turned-off-inline-dot
+set-text
+    l = placed("{uid:lamp}")
+    l(
+end
+caret-at-end
+press space
+expect-no-call-help
+screenshot turned-off-call
+
+expect-no-exceptions

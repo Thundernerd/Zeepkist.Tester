@@ -128,6 +128,21 @@ public class CoreStepsTests
         Assert.Equal("block", block.Type.ValueKind);
     }
 
+    [Theory]
+    [InlineData("place-block 2448", "type=2448")]
+    [InlineData("place-block 2448 as lamp", "type=2448", "as=lamp")]
+    [InlineData("set-block-setting lamp is 1", "block=lamp", "setting=is", "value=1")]
+    [InlineData("expect-block-count 3", "count=3")]
+    [InlineData("expect-block-count 1 2448", "count=1", "type=2448")]
+    [InlineData("screenshot running", "name=running")]
+    [InlineData("log The window is open", "message=The window is open")]
+    public void EachStepThatTakesArguments_ReadsItsOldLine(string line, params string[] arguments)
+    {
+        var step = Assert.Single(LineScenarioReader.Read("old.zlstest", new StringReader(line), _registry.Steps).Entries).Step;
+
+        Assert.Equal(arguments, step.Arguments.Values.Select(pair => $"{pair.Key}={((ScalarArgument)pair.Value).Text}"));
+    }
+
     private static StepDescriptor Step(string name)
     {
         return _registry.Steps.Single(step => step.FullName == name);

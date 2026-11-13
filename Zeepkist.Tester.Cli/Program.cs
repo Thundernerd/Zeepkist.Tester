@@ -19,7 +19,16 @@ internal static class Program
             return 0;
         }
 
-        var exitCode = args[0] == "check" ? CheckCommand.Run(args.Skip(1).ToList(), output, folder) : null;
+        var arguments = args.Skip(1).ToList();
+        var exitCode = args[0] switch
+        {
+            "check" => CheckCommand.Run(arguments, output, folder),
+            "schema" => SchemaCommand.Run(arguments, output, folder),
+            "init" => InitCommand.Run(arguments, output, folder),
+            "docs" => DocsCommand.Run(arguments, output, folder),
+            "convert" => ConvertCommand.Run(arguments, output, folder),
+            _ => null,
+        };
         if (exitCode != null)
             return exitCode.Value;
 
@@ -31,5 +40,9 @@ internal static class Program
     {
         output.WriteLine("Usage: ztest <command>");
         output.WriteLine(CheckCommand.Usage);
+        output.WriteLine(SchemaCommand.Usage);
+        output.WriteLine(InitCommand.Usage);
+        output.WriteLine(DocsCommand.Usage);
+        output.WriteLine(ConvertCommand.Usage);
     }
 }

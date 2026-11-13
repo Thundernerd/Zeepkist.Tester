@@ -149,6 +149,16 @@ public class StepDescriptorRuleTests
         AssertFails(typeof(InvalidSteps.NoStepAttribute), $"{InvalidStepsType}+NoStepAttribute has no [Step] attribute.");
     }
 
+    [Theory]
+    [InlineData(typeof(InvalidSteps.LineSyntaxUnknownArgument), "LineSyntax '<function> as <name>' ({0}+LineSyntaxUnknownArgument) names 'name', which isn't an argument of the step.")]
+    [InlineData(typeof(InvalidSteps.LineSyntaxUnclosed), "LineSyntax '<function> [as <function>' ({0}+LineSyntaxUnclosed) has a [ without its ].")]
+    [InlineData(typeof(InvalidSteps.LineSyntaxObject), "LineSyntax '<move>' ({0}+LineSyntaxObject) names 'move', which takes a map, and a line only has words.")]
+    [InlineData(typeof(InvalidSteps.LineSyntaxTwice), "LineSyntax '<function> <function>' ({0}+LineSyntaxTwice) names 'function' twice.")]
+    public void Build_ALineSyntaxThatCantBeRead_Fails(Type stepType, string message)
+    {
+        AssertFails(stepType, string.Format(System.Globalization.CultureInfo.InvariantCulture, message, InvalidStepsType));
+    }
+
     [Fact]
     public void Build_StepAttributeOnANonStep_Fails()
     {

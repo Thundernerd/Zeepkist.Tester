@@ -1,0 +1,3 @@
+# expect-startup-warning sees the warnings missing
+open-window
+expect-startup-warning on

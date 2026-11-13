@@ -1,0 +1,77 @@
+# #265: in a Library, completion and call help offer nothing from a placed(...), inline or named, though the open
+# level has a block with that UID. The same text in a Script still offers the block's outputs and inputs.
+# A lamp has inputs only, so a distance sensor stands in for the outputs.
+open-window
+place-block distance_sensor as sensor
+place-block lamp as lamp
+
+new-library placed_265
+set-text
+function f()
+    x = placed("{uid:sensor}").
+end
+caret-at-end
+complete
+expect-no-completion
+set-text
+function f()
+    t = placed("{uid:sensor}")
+    x = t.
+end
+caret-at-end
+complete
+expect-no-completion
+set-text
+function f()
+    x = placed("{uid:lamp}").
+end
+caret-at-end
+complete
+expect-no-completion
+set-text
+function f()
+    t = placed("{uid:lamp}")
+    t(
+end
+caret-at-end
+expect-no-call-help
+set-text
+function f()
+    t = placed("{uid:lamp}")
+    t(intens
+end
+caret-at-end
+complete
+expect-no-completion
+expect-no-call-help
+screenshot library
+
+new-script Placed
+set-text
+x = placed("{uid:sensor}").
+end
+caret-at-end
+complete
+expect-completion distance
+set-text
+t = placed("{uid:sensor}")
+x = t.
+end
+caret-at-end
+complete
+expect-completion distance
+set-text
+t = placed("{uid:lamp}")
+t(
+end
+caret-at-end
+expect-call-help intensity
+set-text
+t = placed("{uid:lamp}")
+t(intens
+end
+caret-at-end
+complete
+expect-completion intensity:
+screenshot script
+expect-no-exceptions

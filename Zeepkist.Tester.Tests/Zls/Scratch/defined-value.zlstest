@@ -1,0 +1,63 @@
+# What a defined name's value is, as completion and call help read it (#185)
+
+# A Block Function call with its written mode: the dot offers that mode's outputs
+open-window
+new-script Values
+set-text
+t = simple_telemetry(mode: global_velocity)
+t.
+end
+caret-at-end
+complete
+expect-completion heading
+screenshot mode-outputs
+
+# The name list shows the block a name stands for
+set-text
+t = logic(1, 2)
+x = 
+end
+caret-at-end
+complete
+expect-completion t logic
+screenshot name-detail
+
+# A call to the Script's own Function: the dot offers its outputs
+set-text
+    function f(a) -> lo, hi
+        lo = a
+        hi = a
+    end
+    v = f(1)
+    v.
+end
+caret-at-end
+complete
+expect-completion lo
+expect-completion hi
+screenshot function-outputs
+
+# A Function's input shows as an input in its body
+set-text
+function g(a) -> b
+    b = 
+end
+caret-at-end
+complete
+expect-completion a input
+screenshot input-detail
+
+# A Placed Block Reference to a lamp in the level: call help lists its inputs, the name list its type
+place-block lamp
+set-text
+lamp_1(
+end
+caret-at-start
+insert-selected
+expect-text lamp_1 = placed("
+caret-at-end
+expect-call-help lamp_1(intensity, red, green, blue, range, angle)
+screenshot placed-call-help
+complete
+expect-completion intensity: input
+screenshot placed-arguments

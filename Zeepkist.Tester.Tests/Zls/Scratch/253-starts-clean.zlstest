@@ -1,0 +1,11 @@
+# Runs after 253-dirty-then-fail: the window has the height, tab and warnings the run started with
+open-window
+screenshot start
+expect-window-height 640
+expect-tab scripts
+expect-startup-warning off
+
+# Shows the Libraries tab only after checking the Scripts tab was shown, as its warning is drawn there
+show-tab libraries
+expect-library-read-failed off
+expect-no-exceptions

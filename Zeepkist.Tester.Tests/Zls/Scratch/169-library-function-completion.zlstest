@@ -1,0 +1,88 @@
+# #169: a Library's Functions after its name and a dot, with their inputs; accepting one opens its qualified call.
+# When the Script also defines the name, its outputs come first, then the Library's Functions.
+open-window
+new-library timing169
+set-text
+    function edge(a) -> lo, hi
+        lo = a
+        hi = !a
+    end
+    function pulse(a, ticks) -> b
+        b = delay(a, ticks: ticks)
+    end
+end
+
+# Ctrl+Space after the dot lists the Functions with their inputs
+new-script Lib169
+set-text
+    x = timing169.
+end
+caret-at-end
+complete
+expect-completion edge (a)
+expect-completion pulse (a, ticks)
+screenshot functions
+
+# Accepting one writes its qualified call
+press enter
+expect-text x = timing169.edge(
+expect-no-completion
+screenshot accepted
+
+# Typing the dot opens the list too
+set-text
+    x = timing169
+end
+caret-at-end
+type .
+expect-completion edge (a)
+screenshot typed-dot
+press escape
+
+# The Script defines a name like the Library's: the name's outputs, then the Library's Functions
+set-text
+    timing169 = simple_telemetry()
+    x = timing169.
+end
+caret-at-end
+complete
+expect-completion speed output
+expect-completion edge (a)
+screenshot shared-name
+
+# Accepting the Library's Function still writes its qualified call, which the compiler takes for the Library's
+type ed
+press enter
+expect-text x = timing169.edge(
+screenshot shared-name-accepted
+
+# Accepting the name's output writes the output
+set-text
+    timing169 = simple_telemetry()
+    x = timing169.
+end
+caret-at-end
+complete
+type spe
+press enter
+expect-text x = timing169.speed
+screenshot shared-name-output
+
+# An error in the Library: every call into it is rejected, so the dot offers nothing
+select-library timing169
+set-text
+    function edge(a) -> lo, hi
+        lo = a
+        hi = !a
+    end
+    x = 1
+end
+select-script Lib169
+set-text
+    x = timing169.
+end
+caret-at-end
+complete
+expect-no-completion
+screenshot library-error
+expect-no-exceptions

@@ -1,0 +1,6 @@
+# expect-library-read-failed needs the Libraries tab drawn
+open-window
+show-tab libraries
+library-read-failed off
+show-tab scripts
+expect-library-read-failed off

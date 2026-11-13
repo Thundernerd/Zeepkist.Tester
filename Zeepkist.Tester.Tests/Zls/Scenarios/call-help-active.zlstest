@@ -1,0 +1,58 @@
+# The call help highlights the input or Setting the argument at the caret gives
+
+open-window
+new-script CallHelp
+
+# The second positional argument gives the second input
+set-text
+x = logic(a,
+end
+caret-at-end
+press space
+expect-call-help logic(
+expect-call-help-active b
+
+# Brackets and parentheses inside earlier arguments don't add arguments of their own
+set-text
+x = logic(logic(1, 2), [3, (4)],
+end
+caret-at-end
+press space
+expect-call-help-active op_in
+screenshot nested-arguments
+
+# Inside an unfinished inner call, the inner call's help shows
+set-text
+x = logic(logic(1,
+end
+caret-at-end
+press space
+expect-call-help-active b
+
+# A named argument highlights its Setting
+set-text
+x = logic(a, op:
+end
+caret-at-end
+press space
+expect-call-help-active op:
+screenshot setting
+
+# Past the last input, nothing is highlighted
+set-text
+x = logic(1, 2, 3,
+end
+caret-at-end
+press space
+expect-call-help logic(
+expect-call-help-no-active
+
+# After a named argument the call doesn't have, neither
+set-text
+x = logic(a, nope:
+end
+caret-at-end
+press space
+expect-call-help-no-active
+
+expect-no-exceptions

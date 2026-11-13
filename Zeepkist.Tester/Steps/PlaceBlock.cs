@@ -11,6 +11,7 @@ namespace TNRD.Zeepkist.Tester.Steps;
 [Step("place-block")]
 [Example("- place-block: 2448")]
 [Example("- place-block: { type: 2448, as: lamp }")]
+[LineSyntax("<type> [as <as>]")]
 [Requires(typeof(InEditor))]
 public sealed class PlaceBlock : Step
 {

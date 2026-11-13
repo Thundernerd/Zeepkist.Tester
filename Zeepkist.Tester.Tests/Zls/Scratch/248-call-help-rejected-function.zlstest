@@ -1,0 +1,76 @@
+# #248: no call help and no inputs in the completion row for a Function whose first line the compiler rejects
+
+open-window
+new-script Rejected
+
+# A Function the compiler accepts still has both
+set-text
+    function ok(b) -> y
+        y = b
+    end
+    x = ok(
+end
+caret-at-end
+press space
+expect-call-help ok(b)
+set-text
+    function ok(b) -> y
+        y = b
+    end
+    x = o
+end
+caret-at-end
+complete
+expect-completion ok (b)
+
+# Two outputs with the same name
+set-text
+    function f(a) -> hi, hi
+    end
+    x = f(
+end
+caret-at-end
+press space
+expect-no-call-help
+screenshot duplicate-output-call
+set-text
+    function f(a) -> hi, hi
+    end
+    x = f
+end
+caret-at-end
+complete
+expect-completion-no-detail f
+screenshot duplicate-output-completion
+
+# Two inputs with the same name
+set-text
+    function f(a, a)
+    end
+    x = f(
+end
+caret-at-end
+press space
+expect-no-call-help
+set-text
+    function f(a, a)
+    end
+    x = f
+end
+caret-at-end
+complete
+expect-completion-no-detail f
+screenshot duplicate-input-completion
+
+# Inside the rejected call, the call around it has the help
+set-text
+    function f(a, a)
+    end
+    x = logic(1, f(
+end
+caret-at-end
+press space
+expect-call-help logic(
+expect-call-help-active b
+
+expect-no-exceptions

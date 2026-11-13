@@ -1,0 +1,50 @@
+# A Library's text takes completion and call help, a Script calls its Function and compiles, an error is found by its
+# position, and a placed block is written inline by its UID
+open-window
+new-library timing
+set-text
+    function edge(x) -> rising
+        prev = del
+end
+caret-at-end
+complete
+expect-completion delay
+set-text
+    function edge(x) -> rising
+        prev = delay(x,
+end
+caret-at-end
+expect-call-help delay(
+set-text
+    function edge(x) -> rising
+        prev = delay(x, ticks: 1)
+        rising = x & !prev
+    end
+end
+expect-no-errors
+screenshot library
+
+new-script Lights
+set-text
+p = player_input()
+power_display(timing.edge(p.horn))
+power_display(timing.edgee(1))
+end
+expect-errors 1
+expect-error 3:15 'timing' has no function 'edgee'
+screenshot error
+
+place-block lamp as lamp
+set-text
+p = player_input()
+toggler(timing.edge(p.horn), targets: placed("{uid:lamp}"))
+end
+expect-no-errors
+expect-text placed("
+compile
+expect-result Placed 5 blocks
+screenshot compiled
+
+select-library timing
+expect-text rising = x & !prev
+expect-no-errors

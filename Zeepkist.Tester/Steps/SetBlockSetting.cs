@@ -11,6 +11,7 @@ namespace TNRD.Zeepkist.Tester.Steps;
 /// </summary>
 [Step("set-block-setting")]
 [Example("- set-block-setting: { block: telemetry, setting: xbs, value: 2 }")]
+[LineSyntax("<block> <setting> <value>")]
 [Requires(typeof(InEditor))]
 public sealed class SetBlockSetting : Step
 {

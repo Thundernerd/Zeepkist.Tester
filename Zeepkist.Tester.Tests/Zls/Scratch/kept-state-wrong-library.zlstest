@@ -1,0 +1,5 @@
+# expect-library-read-failed sees the warning showing
+open-window
+show-tab libraries
+library-read-failed on
+expect-library-read-failed off

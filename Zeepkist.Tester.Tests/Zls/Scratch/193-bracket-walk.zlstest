@@ -1,0 +1,74 @@
+# The editor's token readers still agree on nested calls and brackets (#193)
+
+open-window
+new-script Brackets
+
+# After a nested call closes, call help is the outer call's again
+set-text
+x = logic(logic(1, 2), [3, (4)],
+end
+caret-at-end
+expect-call-help logic(a, b, op_in, op:, hide:)
+expect-call-help-active op_in
+complete
+expect-completion op:
+screenshot outer-after-nested
+
+# Inside a nested call, call help is the inner call's
+set-text
+x = logic(1, [2], power_display(
+end
+caret-at-end
+expect-call-help power_display(x
+expect-call-help-active x
+screenshot inner-call
+
+# Inside a nested call that is still open, the inner call's own argument is highlighted
+set-text
+x = logic(logic(1, 
+end
+caret-at-end
+expect-call-help logic(a, b
+expect-call-help-active b
+screenshot inner-active
+
+# A named argument of a nested call isn't the outer call's
+set-text
+x = logic(a: logic(op: and),
+end
+caret-at-end
+expect-call-help-no-active
+complete
+expect-completion op:
+screenshot nested-named
+
+# A call left open carries on to the next line, past a closed bracket
+set-text
+x = logic(
+    [1, 2],
+
+end
+caret-at-end
+expect-call-help logic(a, b
+expect-call-help-active b
+screenshot next-line
+
+# The dot after a call with brackets inside offers its mode's outputs
+set-text
+x = simple_telemetry(player: [1], mode: global_velocity).
+end
+caret-at-end
+complete
+expect-completion heading
+screenshot dotted-call
+
+# A defined value with brackets inside keeps its written mode
+set-text
+t = simple_telemetry(player: (1), mode: global_velocity)
+t.
+end
+caret-at-end
+complete
+expect-completion heading
+screenshot defined-value
+expect-no-exceptions

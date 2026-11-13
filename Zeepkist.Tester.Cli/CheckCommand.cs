@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using TNRD.Zeepkist.Tester.Sdk;
 
 namespace TNRD.Zeepkist.Tester.Cli;
@@ -65,40 +63,14 @@ internal sealed class CheckCommand
 
     private int Run(string folder)
     {
-        TestConfig config;
-        try
-        {
-            config = TestConfig.Find(folder);
-        }
-        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
-        {
-            return Fail($"Can't read {TestConfig.FileName}: {exception.Message}");
-        }
+        var steps = ProjectSteps.Read(folder, _plugins, _output);
+        if (steps == null)
+            return 1;
 
-        if (_plugins.Count == 0 && config?.TestPlugin != null)
-        {
-            var plugin = config.FindTestPluginDll();
-            if (plugin == null)
-                return Fail($"Build {config.TestPlugin} first, or pass --plugin.");
+        if (steps.Config != null)
+            SchemaFile.WriteQuietly(steps.Config.Folder, steps.Registry, _output);
 
-            _plugins.Add(plugin);
-        }
-
-        StepRegistry registry;
-        try
-        {
-            registry = OfflineRegistry.Read(_plugins);
-        }
-        catch (Exception exception) when (exception is StepDefinitionException or UnreadableAssemblyException)
-        {
-            return Fail(exception.Message);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or BadImageFormatException or TypeLoadException)
-        {
-            return Fail($"Can't read the plugins: {exception.Message}");
-        }
-
-        return _checkRegistry ? CheckRegistry(registry) : CheckScenarios(registry, config);
+        return _checkRegistry ? CheckRegistry(steps.Registry) : CheckScenarios(steps.Registry, steps.Config);
     }
 
     private int CheckRegistry(StepRegistry registry)
@@ -107,7 +79,7 @@ internal sealed class CheckCommand
         foreach (var smell in smells)
             _output.WriteLine($"warning: {smell}");
 
-        _output.WriteLine($"Checked {Counted(registry.Steps.Count, "step")} and {Counted(registry.States.Count, "state")}: {Counted(smells.Count, "warning", "no")}.");
+        _output.WriteLine($"Checked {Counted.Of(registry.Steps.Count, "step")} and {Counted.Of(registry.States.Count, "state")}: {Counted.Of(smells.Count, "warning", "no")}.");
         return 0;
     }
 
@@ -143,7 +115,7 @@ internal sealed class CheckCommand
             _output.WriteLine(problem);
 
         var errors = problems.Count(problem => problem.Severity == CheckSeverity.Error);
-        _output.WriteLine($"Checked {Counted(files.Count, "file")}: {Counted(errors, "error", "no")}, {Counted(problems.Count - errors, "warning", "no")}.");
+        _output.WriteLine($"Checked {Counted.Of(files.Count, "file")}: {Counted.Of(errors, "error", "no")}, {Counted.Of(problems.Count - errors, "warning", "no")}.");
         return errors == 0 ? 0 : 1;
     }
 
@@ -151,11 +123,5 @@ internal sealed class CheckCommand
     {
         _output.WriteLine($"error: {problem}");
         return 1;
-    }
-
-    private static string Counted(int count, string what, string none = null)
-    {
-        var number = count == 0 && none != null ? none : count.ToString(CultureInfo.InvariantCulture);
-        return $"{number} {what}{(count == 1 ? string.Empty : "s")}";
     }
 }

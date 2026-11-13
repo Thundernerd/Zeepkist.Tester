@@ -1,0 +1,23 @@
+# A new call whose ( lands where a dismissed call's was shows its call help
+
+open-window
+new-script Help
+set-text
+v = logic(
+end
+caret-at-end
+expect-call-help logic(
+press escape
+expect-no-call-help
+set-text
+w = logic(
+end
+caret-at-end
+expect-call-help logic(
+screenshot new-call-help
+
+# Typing inside a dismissed call keeps it hidden
+press escape
+expect-no-call-help
+type 1,
+expect-no-call-help
