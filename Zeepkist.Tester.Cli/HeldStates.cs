@@ -27,8 +27,9 @@ internal sealed class HeldStates
     public IEnumerable<IReadOnlyList<StateDescriptor>> Unmet(StepDescriptor step)
     {
         return step.Requires
-            .Select(alternatives => NestedStates.Unmet(alternatives.Select(name => _states[name]).ToList(), Within, state => _held.Contains(state.FullName)))
-            .Where(unmet => unmet != null);
+            .Select(alternatives => NestedStates.Unmet(alternatives, OuterOf, _held.Contains))
+            .Where(unmet => unmet != null)
+            .Select(unmet => (IReadOnlyList<StateDescriptor>)unmet.Select(name => _states[name]).ToList());
     }
 
     /// <summary>
@@ -43,9 +44,13 @@ internal sealed class HeldStates
             _held.Add(state);
     }
 
-    private StateDescriptor Within(StateDescriptor state)
+    /// <summary>
+    /// The state the named one is within, or null. Only looked up once the rule gets to it, so an alternative after one
+    /// that holds needn't be a state the registry knows.
+    /// </summary>
+    private string OuterOf(string name)
     {
-        return state.Within == null ? null : _states[state.Within];
+        return _states[name].Within;
     }
 
     private void Leave(string name)
