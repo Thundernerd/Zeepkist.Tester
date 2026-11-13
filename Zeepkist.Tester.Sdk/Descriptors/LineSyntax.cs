@@ -22,7 +22,7 @@ internal sealed class LineSyntax
     public IReadOnlyList<string> Names => [.. Captures(_elements).Select(capture => capture.Name)];
 
     /// <summary>
-    /// A step's own <see cref="StepDescriptor.LineSyntax"/>, or else its primary argument as the rest of the line, or else nothing.
+    /// A step's own <see cref="StepDescriptor.LineSyntax"/>, or else its primary argument as the rest of the line when there's any, or else nothing.
     /// </summary>
     /// <exception cref="FormatException">The step's pattern can't be read, which the descriptor builder doesn't let happen.</exception>
     public static LineSyntax For(StepDescriptor step)
@@ -31,7 +31,7 @@ internal sealed class LineSyntax
             return Parse(step.LineSyntax);
 
         var primary = step.Arguments.FirstOrDefault(argument => argument.IsPrimary);
-        return new LineSyntax(primary == null ? [] : [new Capture(primary.Name, true)]);
+        return new LineSyntax(primary == null ? [] : [new Optional([new Capture(primary.Name, true)])]);
     }
 
     /// <exception cref="FormatException">The pattern can't be read. The message says why, to follow its pattern.</exception>
