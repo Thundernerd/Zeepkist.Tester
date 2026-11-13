@@ -123,14 +123,12 @@ internal static class LineScenarioConverter
     private static string Flow(ArgumentType type, ArgumentValue value)
     {
         var itemType = type.Kind == ArgumentKind.List ? type.ItemType : type;
-        return value switch
-        {
-            ListArgument list => type.Kind == ArgumentKind.List
+        return value.Match(
+            list => type.Kind == ArgumentKind.List
                 ? $"[{string.Join(", ", list.Items.Select(item => Flow(itemType, item)))}]"
                 : Flow(itemType, list.Items[0]),
-            ObjectArgument nested => FlowNested(type.Arguments, nested),
-            _ => Scalar(type, ((ScalarArgument)value).Text, true),
-        };
+            nested => FlowNested(type.Arguments, nested),
+            scalar => Scalar(type, scalar.Text, true));
     }
 
     /// <summary>

@@ -255,20 +255,14 @@ internal sealed class ScenarioCheck
 
     private void FollowValue(ArgumentType type, ArgumentValue value, Scope scope, List<Definition> defines)
     {
-        switch (value)
-        {
-            case ListArgument list:
+        value.Match(
+            list =>
+            {
                 foreach (var item in list.Items)
                     FollowValue(type.ItemType, item, scope, defines);
-
-                break;
-            case ObjectArgument nested:
-                FollowArguments(type.Arguments, nested, scope, defines);
-                break;
-            default:
-                FollowScalar(type, (ScalarArgument)value, scope, defines);
-                break;
-        }
+            },
+            nested => FollowArguments(type.Arguments, nested, scope, defines),
+            scalar => FollowScalar(type, scalar, scope, defines));
     }
 
     private void FollowScalar(ArgumentType type, ScalarArgument scalar, Scope scope, List<Definition> defines)

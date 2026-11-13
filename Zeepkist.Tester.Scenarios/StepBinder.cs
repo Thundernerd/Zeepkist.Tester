@@ -59,23 +59,23 @@ internal sealed class StepBinder
     private object Convert(Type type, ArgumentDescriptor argument, ArgumentType argumentType, ArgumentValue value, string what)
     {
         type = Nullable.GetUnderlyingType(type) ?? type;
-        switch (value)
-        {
-            case ListArgument list:
+        return value.Match(
+            list =>
+            {
                 var items = (IList)Activator.CreateInstance(type);
                 var itemType = type.GetGenericArguments()[0];
                 foreach (var item in list.Items)
                     items.Add(Convert(itemType, argument, argumentType.ItemType, item, what));
 
                 return items;
-            case ObjectArgument nested:
+            },
+            nested =>
+            {
                 var instance = Activator.CreateInstance(type);
                 Fill(instance, what, argumentType.Arguments, nested);
                 return instance;
-            default:
-                var scalar = (ScalarArgument)value;
-                return ConvertText(type, argument, argumentType, Substitute(scalar), scalar.Location, what);
-        }
+            },
+            scalar => ConvertText(type, argument, argumentType, Substitute(scalar), scalar.Location, what));
     }
 
     private string Substitute(ScalarArgument scalar)
