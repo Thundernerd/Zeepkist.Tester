@@ -16,7 +16,7 @@ internal static class ScenarioYaml
     /// How deep lists and maps may nest. YamlDotNet reads a nested node by recursing, so a file nested deep enough would
     /// overflow the stack and end the process, the game's included. A scenario is nowhere near this deep.
     /// </summary>
-    public const int MaxDepth = 100;
+    private const int MostDepth = 100;
 
     /// <exception cref="ScenarioException">The file isn't valid YAML, or nests too deep.</exception>
     public static YamlStream Load(string file, TextReader reader)
@@ -47,7 +47,7 @@ internal static class ScenarioYaml
     }
 
     /// <summary>
-    /// Stops at the first list or map that's nested deeper than <see cref="MaxDepth"/>, before anything recurses into it.
+    /// Stops at the first list or map that's nested deeper than <see cref="MostDepth"/>, before anything recurses into it.
     /// </summary>
     private sealed class DepthLimitedParser : IParser
     {
@@ -68,13 +68,13 @@ internal static class ScenarioYaml
             if (!_parser.MoveNext())
                 return false;
 
-            switch (_parser.Current)
+            var current = _parser.Current;
+            switch (current)
             {
                 case SequenceStart or MappingStart:
-                    if (++_depth > MaxDepth)
+                    if (++_depth > MostDepth)
                     {
-                        var start = _parser.Current.Start;
-                        throw new ScenarioException(new SourceLocation(_file, start.Line, start.Column), $"Lists and maps are nested more than {MaxDepth} deep here.");
+                        throw new ScenarioException(new SourceLocation(_file, current.Start.Line, current.Start.Column), $"Lists and maps are nested more than {MostDepth} deep here.");
                     }
 
                     break;
