@@ -76,6 +76,7 @@ public class ScenarioParserTests
         { "step-is-an-empty-map", 2, 5, "A step is a name or a map with its name as the key, but this map is empty." },
         { "no-arguments-map", 2, 11, "undo takes no arguments, so write it as a bare string." },
         { "unquoted-substitution-in-flow", 2, 31, "While parsing a flow mapping, did not find expected ',' or '}'. Inside { } or [ ], quote a value with ${ or a colon in it." },
+        { "nested-too-deep", 1, 107, "Lists and maps are nested more than 100 deep here." },
         { "with-bad-name", 3, 13, "'b c' can't be a name: it has to match ^[A-Za-z0-9_-]+$." },
     };
 
