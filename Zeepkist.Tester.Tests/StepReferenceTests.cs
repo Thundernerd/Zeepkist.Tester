@@ -82,6 +82,8 @@ public class StepReferenceTests
             { Argument(new ArgumentType { Kind = ArgumentKind.List, ItemType = Type(ArgumentKind.Seconds) }, minItems: 1), "list of seconds, at least 1" },
             { Argument(new ArgumentType { Kind = ArgumentKind.Name, ValueKind = "block" }), "a name for a new `block`" },
             { Argument(new ArgumentType { Kind = ArgumentKind.Ref, ValueKind = "block" }), "a `block`'s name" },
+            { Argument(new ArgumentType { Kind = ArgumentKind.Enum, EnumValues = ["a`b"] }), "one of ``a`b``" },
+            { Argument(new ArgumentType { Kind = ArgumentKind.List, ItemType = new ArgumentType { Kind = ArgumentKind.Enum, EnumValues = ["left", "right"] } }), "list, each one of `left`, `right`" },
             { Argument(new ArgumentType { Kind = ArgumentKind.Keys, Pattern = "^long$" }, pattern: "^long$"), "keys" },
             { Argument(Type(ArgumentKind.String), pattern: "^`+$"), "string matching ``^`+$``" },
         };
@@ -165,6 +167,24 @@ public class StepReferenceTests
             ]);
 
         Assert.Contains("`mod.inner`\n\n- Within [`mod.middle`](#state-mod.middle)\n- Left by [`mod.close`](#step-mod.close)\n", markdown);
+    }
+
+    [Fact]
+    public void ADefaultWithABacktick_StaysOneCodeSpan()
+    {
+        var markdown = Write([Step("step", arguments: [new ArgumentDescriptor { Name = "a", PropertyName = "A", Type = Type(ArgumentKind.String), Default = "`x", Documentation = "One\r\nand two." }])]);
+
+        Assert.Contains("| `a` | string | no | `` `x `` | One and two. |", markdown);
+    }
+
+    [Fact]
+    public void ListsOfListsOfObjects_ShowTheirArguments()
+    {
+        var item = new ArgumentType { Kind = ArgumentKind.Object, Arguments = [Argument(Type(ArgumentKind.Int))] };
+        var rows = new ArgumentType { Kind = ArgumentKind.List, ItemType = new ArgumentType { Kind = ArgumentKind.List, ItemType = item } };
+        var markdown = Write([Step("step", arguments: [new ArgumentDescriptor { Name = "grid", PropertyName = "Grid", Type = rows }])]);
+
+        Assert.Contains("| `grid` | list of lists of objects | no |  |  |\n| `grid[][].a` | int | no |  |  |\n", markdown);
     }
 
     private static string SourceFolder([CallerFilePath] string path = null)

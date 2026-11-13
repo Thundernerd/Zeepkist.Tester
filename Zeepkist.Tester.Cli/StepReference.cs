@@ -126,14 +126,25 @@ internal static class StepReference
         foreach (var argument in arguments)
         {
             var name = $"`{prefix}{argument.Name}`{(argument.IsPrimary ? " (primary)" : string.Empty)}";
-            var defaultValue = argument.Default == null ? string.Empty : $"`{WrittenValue.DefaultText(argument.Default)}`";
+            var defaultValue = argument.Default == null ? string.Empty : Code(WrittenValue.DefaultText(argument.Default));
             markdown.Append($"| {name} | {Cell(ArgumentText(argument))} | {(argument.IsRequired ? "yes" : "no")} | {Cell(defaultValue)} | {Cell(argument.Documentation ?? string.Empty)} |\n");
 
-            if (argument.Type.Kind == ArgumentKind.Object)
-                WriteArguments(markdown, argument.Type.Arguments, $"{prefix}{argument.Name}.");
-            else if (argument.Type.Kind == ArgumentKind.List && argument.Type.ItemType.Kind == ArgumentKind.Object)
-                WriteArguments(markdown, argument.Type.ItemType.Arguments, $"{prefix}{argument.Name}[].");
+            var (nested, depth) = ObjectInside(argument.Type);
+            if (nested != null)
+                WriteArguments(markdown, nested.Arguments, $"{prefix}{argument.Name}{string.Concat(Enumerable.Repeat("[]", depth))}.");
         }
+    }
+
+    /// <summary>
+    /// The object an argument holds, through however many lists, whose arguments a scenario writes under it.
+    /// </summary>
+    private static (ArgumentType Object, int ListDepth) ObjectInside(ArgumentType type)
+    {
+        var depth = 0;
+        for (; type.Kind == ArgumentKind.List; depth++)
+            type = type.ItemType;
+
+        return (type.Kind == ArgumentKind.Object ? type : null, depth);
     }
 
     private static string ArgumentText(ArgumentDescriptor argument)
@@ -162,11 +173,21 @@ internal static class StepReference
         {
             ArgumentKind.TextBlock => "text-block",
             ArgumentKind.FileName => "file-name",
-            ArgumentKind.Enum => $"one of {string.Join(", ", type.EnumValues.Select(value => $"`{value}`"))}",
+            ArgumentKind.Enum => $"one of {string.Join(", ", type.EnumValues.Select(Code))}",
             ArgumentKind.Name => $"a name for a new `{type.ValueKind}`",
             ArgumentKind.Ref => $"a `{type.ValueKind}`'s name",
-            ArgumentKind.List => $"list of {(type.ItemType.Kind == ArgumentKind.Object ? "objects" : TypeText(type.ItemType))}",
+            ArgumentKind.List => type.ItemType.Kind == ArgumentKind.Enum ? $"list, each {TypeText(type.ItemType)}" : $"list of {ItemsText(type.ItemType)}",
             _ => type.Kind.ToString().ToLowerInvariant(),
+        };
+    }
+
+    private static string ItemsText(ArgumentType itemType)
+    {
+        return itemType.Kind switch
+        {
+            ArgumentKind.Object => "objects",
+            ArgumentKind.List => $"lists of {ItemsText(itemType.ItemType)}",
+            _ => TypeText(itemType),
         };
     }
 
@@ -206,6 +227,6 @@ internal static class StepReference
     /// </summary>
     private static string Cell(string text)
     {
-        return text.Replace("|", "\\|").Replace("\n", " ");
+        return text.Replace("|", "\\|").Replace("\r\n", " ").Replace('\r', ' ').Replace('\n', ' ');
     }
 }
