@@ -251,14 +251,14 @@ internal static class StepSchema
             ["additionalProperties"] = new JsonObject { ["type"] = "array", ["minItems"] = 1, ["items"] = Literal() },
         };
 
-        var node = ControlNode("for", Documented(variable, "One variable and its values, such as `{ h: [64, 120] }`. The steps run once for each value, with `${h}` standing for it."));
+        var node = ControlNode(ControlNodes.For, Documented(variable, "One variable and its values, such as `{ h: [64, 120] }`. The steps run once for each value, with `${h}` standing for it."));
         return WithSteps(node);
     }
 
     private static JsonObject RepeatNode()
     {
         var count = AnyOf(new JsonObject { ["type"] = "integer", ["minimum"] = 1 }, Quoted("^[0-9]*[1-9][0-9]*$"));
-        return WithSteps(ControlNode("repeat", Documented(count, "How many times to run the steps.")));
+        return WithSteps(ControlNode(ControlNodes.Repeat, Documented(count, "How many times to run the steps.")));
     }
 
     private static JsonObject RunNode()
@@ -270,7 +270,7 @@ internal static class StepSchema
             ["additionalProperties"] = Text(),
         };
 
-        var node = ControlNode("run", Documented(Literal(), "A scenario file to run here, relative to this one."));
+        var node = ControlNode(ControlNodes.Run, Documented(Literal(), "A scenario file to run here, relative to this one."));
         node["properties"]["with"] = Documented(with, "Named values the file can use as `${name}`.");
         return node;
     }
