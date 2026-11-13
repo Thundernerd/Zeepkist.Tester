@@ -25,7 +25,7 @@ public class XmlDocsTests
         using var folder = new TemporaryFolder();
         var assembly = WriteDocs(folder, "Mod", $"<member name=\"T:Mod.Wait\"><summary>{summary}</summary></member>");
 
-        Assert.Equal(markdown, XmlDocs.Read([assembly])("T:Mod.Wait"));
+        Assert.Equal(markdown, XmlDocs.Read([assembly])("Mod", "T:Mod.Wait"));
     }
 
     [Fact]
@@ -36,8 +36,8 @@ public class XmlDocsTests
 
         var summaries = XmlDocs.Read([assembly]);
 
-        Assert.Null(summaries("T:Mod.Wait"));
-        Assert.Null(summaries("T:Mod.Other"));
+        Assert.Null(summaries("Mod", "T:Mod.Wait"));
+        Assert.Null(summaries("Mod", "T:Mod.Other"));
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public class XmlDocsTests
     {
         using var folder = new TemporaryFolder();
 
-        Assert.Null(XmlDocs.Read([Path.Combine(folder.Path, "Mod.dll")])("T:Mod.Wait"));
+        Assert.Null(XmlDocs.Read([Path.Combine(folder.Path, "Mod.dll")])("Mod", "T:Mod.Wait"));
     }
 
     [Fact]
@@ -57,13 +57,36 @@ public class XmlDocsTests
 
         var summaries = XmlDocs.Read([first, second]);
 
-        Assert.Equal("One.", summaries("T:First.Step"));
-        Assert.Equal("Two.", summaries("T:Second.Step"));
+        Assert.Equal("One.", summaries("First", "T:First.Step"));
+        Assert.Equal("Two.", summaries("Second", "T:Second.Step"));
     }
 
-    private static string WriteDocs(TemporaryFolder folder, string assemblyName, string members)
+    [Fact]
+    public void Read_OneTypeNameInTwoAssemblies_FindsEachOnesOwn()
     {
-        File.WriteAllText(Path.Combine(folder.Path, $"{assemblyName}.xml"), $"<doc><members>{members}</members></doc>");
-        return Path.Combine(folder.Path, $"{assemblyName}.dll");
+        using var folder = new TemporaryFolder();
+        var first = WriteDocs(folder, "First", "<member name=\"T:Mod.Step\"><summary>One.</summary></member>");
+        var second = WriteDocs(folder, "Second", "<member name=\"T:Mod.Step\"><summary>Two.</summary></member>");
+
+        var summaries = XmlDocs.Read([first, second]);
+
+        Assert.Equal("One.", summaries("First", "T:Mod.Step"));
+        Assert.Equal("Two.", summaries("Second", "T:Mod.Step"));
+    }
+
+    [Fact]
+    public void Read_DocFileNamedOtherThanItsAssembly_FindsItByTheAssemblyItNames()
+    {
+        using var folder = new TemporaryFolder();
+        var renamed = WriteDocs(folder, "Mod", "<member name=\"T:Mod.Step\"><summary>One.</summary></member>", "Mod.Renamed");
+
+        Assert.Equal("One.", XmlDocs.Read([renamed])("Mod", "T:Mod.Step"));
+    }
+
+    private static string WriteDocs(TemporaryFolder folder, string assemblyName, string members, string fileName = null)
+    {
+        fileName ??= assemblyName;
+        File.WriteAllText(Path.Combine(folder.Path, $"{fileName}.xml"), $"<doc><assembly><name>{assemblyName}</name></assembly><members>{members}</members></doc>");
+        return Path.Combine(folder.Path, $"{fileName}.dll");
     }
 }

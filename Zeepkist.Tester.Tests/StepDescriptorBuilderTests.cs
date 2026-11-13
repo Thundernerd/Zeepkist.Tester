@@ -358,13 +358,13 @@ public class StepDescriptorBuilderTests
 
     private static StepDescriptor Build(Type stepType)
     {
-        return AsTester(_ => null).Build(stepType);
+        return AsTester((_, _) => null).Build(stepType);
     }
 
     /// <summary>
     /// The builder as if this assembly were the tester's, so its steps may use the reserved empty namespace.
     /// </summary>
-    private static StepDescriptorBuilder AsTester(Func<string, string> summaries)
+    private static StepDescriptorBuilder AsTester(Func<string, string, string> summaries)
     {
         return new StepDescriptorBuilder { TesterAssemblyName = typeof(TestSteps).Assembly.GetName().Name, Summaries = summaries };
     }

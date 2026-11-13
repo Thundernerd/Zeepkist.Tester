@@ -86,7 +86,7 @@ public class RegistryCheckTests
         var builder = new StepDescriptorBuilder
         {
             TesterAssemblyName = typeof(RegistryCheckTests).Assembly.GetName().Name,
-            Summaries = documented ? _ => "Documented." : _ => null,
+            Summaries = documented ? (_, _) => "Documented." : (_, _) => null,
         };
 
         return RegistryCheck.Smells(builder.BuildRegistry(steps, states));

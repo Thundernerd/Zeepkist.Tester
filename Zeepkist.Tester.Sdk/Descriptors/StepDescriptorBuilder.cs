@@ -46,9 +46,10 @@ public sealed class StepDescriptorBuilder
     internal string TesterAssemblyName { get; init; } = "Zeepkist.Tester";
 
     /// <summary>
-    /// Finds a member's <c>&lt;summary&gt;</c> by its XML doc id, such as <c>T:Mod.Compile</c>. There are no docs without it.
+    /// Finds a member's <c>&lt;summary&gt;</c> by the name of its assembly and its XML doc id, such as <c>Mod</c> and <c>T:Mod.Compile</c>.
+    /// There are no docs without it.
     /// </summary>
-    public Func<string, string> Summaries { get; init; } = _ => null;
+    public Func<string, string, string> Summaries { get; init; } = (_, _) => null;
 
     /// <summary>
     /// The types in an assembly with <see cref="StepAttribute"/>.
@@ -122,7 +123,7 @@ public sealed class StepDescriptorBuilder
             ],
             Enters = StateNames(DeclaredStates<EntersAttribute>(stepType).SelectMany(states => states)),
             Leaves = StateNames(DeclaredStates<LeavesAttribute>(stepType).SelectMany(states => states)),
-            Documentation = Summaries($"T:{DocName(stepType)}"),
+            Documentation = Summary(stepType, $"T:{DocName(stepType)}"),
             Examples = [.. FindAttributes(stepType, typeof(ExampleAttribute).FullName).Select(ConstructorValue<string>)],
             Arguments = BuildArguments(stepType, [stepType]),
         };
@@ -170,7 +171,7 @@ public sealed class StepDescriptorBuilder
             MethodName = method.Name,
             TypeName = owner.FullName,
             Start = start.Count == 0 ? ToKebabCase(nameof(Start.Editor)) : ToKebabCase(EnumMemberName(start[0])),
-            Documentation = Summaries($"M:{DocName(owner)}.{method.Name}({typeof(IStepContext).FullName})"),
+            Documentation = Summary(owner, $"M:{DocName(owner)}.{method.Name}({typeof(IStepContext).FullName})"),
         };
     }
 
@@ -260,7 +261,7 @@ public sealed class StepDescriptorBuilder
             Namespace = stateNamespace,
             Within = within == null ? null : BuildState(within, [.. inner, stateType]).FullName,
             Hint = NamedValue<string>(stateAttribute, nameof(StateAttribute.Hint)),
-            Documentation = Summaries($"T:{DocName(stateType)}"),
+            Documentation = Summary(stateType, $"T:{DocName(stateType)}"),
         };
     }
 
@@ -350,7 +351,7 @@ public sealed class StepDescriptorBuilder
                 Name = name,
                 PropertyName = property.Name,
                 Type = type,
-                Documentation = Summaries($"P:{DocName(property.DeclaringType)}.{property.Name}"),
+                Documentation = Summary(property.DeclaringType, $"P:{DocName(property.DeclaringType)}.{property.Name}"),
                 IsPrimary = NamedValue<bool>(argAttribute, nameof(ArgAttribute.Primary)),
                 IsRequired = FindAttribute(property, RequiredMemberAttributeName) != null,
                 Default = WrittenDefault(argAttribute),
@@ -409,7 +410,7 @@ public sealed class StepDescriptorBuilder
         return new ArgumentType
         {
             Kind = ArgumentKind.Object,
-            Documentation = Summaries($"T:{DocName(type)}"),
+            Documentation = Summary(type, $"T:{DocName(type)}"),
             Arguments = BuildArguments(type, [.. enclosing, type]),
         };
     }
@@ -520,6 +521,13 @@ public sealed class StepDescriptorBuilder
     {
         var member = EnumMembers(value.ArgumentType).FirstOrDefault(field => Equals(field.GetRawConstantValue(), value.Value));
         return member?.Name ?? value.Value.ToString();
+    }
+
+    /// <param name="owner">The type that declares the member, which says whose docs to look in.</param>
+    /// <param name="id">The member's XML doc id, such as <c>T:Mod.Compile</c>.</param>
+    private string Summary(Type owner, string id)
+    {
+        return Summaries(owner.Assembly.GetName().Name, id);
     }
 
     private static string DocName(Type type)
