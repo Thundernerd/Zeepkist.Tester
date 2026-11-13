@@ -40,11 +40,14 @@ public class OfflineRegistryTests
 
         var offline = OfflineRegistry.Read([_modPath], _sampleTesterPath).Tests;
 
-        Assert.Equal(["WindowTests.MinimumHeight", "WindowTests.FromTheMenu"], offline.Select(test => test.Name));
+        Assert.Equal(["WindowTests.MinimumHeight", "WindowTests.FromTheMenu", "WindowTests.FromALevel", "WindowTests.InFreePlay"], offline.Select(test => test.Name));
         Assert.Equal("WindowTests", offline[0].ClassName);
         Assert.Equal(typeof(WindowTests).FullName, offline[0].TypeName);
         Assert.Equal("editor", offline[0].Start);
         Assert.Equal("main-menu", offline[1].Start);
+        Assert.Null(offline[0].Level);
+        Assert.Equal(("editor", "levels/window.zeeplevel", null), (offline[2].Start, offline[2].Level, offline[2].FreePlayUid));
+        Assert.Equal(("free-play", null, "EZ01"), (offline[3].Start, offline[3].Level, offline[3].FreePlayUid));
         Assert.Equal("The window keeps its footer at the smallest height.", offline[0].Documentation);
         Assert.Equal(JsonSerializer.Serialize(atRuntime), JsonSerializer.Serialize(offline));
     }

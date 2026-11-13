@@ -170,15 +170,41 @@ public sealed class StepDescriptorBuilder
         if (owner.IsAbstract || owner.ContainsGenericParameters || owner.GetConstructor(Type.EmptyTypes) == null)
             throw new StepDefinitionException($"{what} is in a class that can't be made: it has to be a concrete, non-generic class with a public constructor that takes nothing.");
 
-        var start = testAttribute.NamedArguments.Where(argument => argument.MemberName == nameof(InGameTestAttribute.Start)).Select(argument => argument.TypedValue).ToList();
+        var startArgument = testAttribute.NamedArguments.Where(argument => argument.MemberName == nameof(InGameTestAttribute.Start)).Select(argument => argument.TypedValue).ToList();
+        var start = startArgument.Count == 0 ? ToKebabCase(nameof(Start.Editor)) : ToKebabCase(EnumMemberName(startArgument[0]));
+        var level = NamedValue<string>(testAttribute, nameof(InGameTestAttribute.Level));
+        var freePlayUid = NamedValue<string>(testAttribute, nameof(InGameTestAttribute.FreePlayUid));
+        CheckStartArguments(what, start, level, freePlayUid);
         return new TestDescriptor
         {
             ClassName = owner.Name,
             MethodName = method.Name,
             TypeName = owner.FullName,
-            Start = start.Count == 0 ? ToKebabCase(nameof(Start.Editor)) : ToKebabCase(EnumMemberName(start[0])),
+            Start = start,
+            Level = level,
+            FreePlayUid = freePlayUid,
             Documentation = Summary('M', owner, $".{method.Name}({typeof(IStepContext).FullName})"),
         };
+    }
+
+    /// <summary>
+    /// Each start takes only its own argument, as a scenario's <c>start:</c> does: free play needs its UID, and only the editor opens a level.
+    /// </summary>
+    private static void CheckStartArguments(string what, string start, string level, string freePlayUid)
+    {
+        var editor = ToKebabCase(nameof(Start.Editor));
+        var freePlay = ToKebabCase(nameof(Start.FreePlay));
+        if (level != null && start != editor)
+            throw new StepDefinitionException($"{what} has a {nameof(InGameTestAttribute.Level)}, which only {nameof(Start)}.{nameof(Start.Editor)} opens.");
+
+        if (level != null && string.IsNullOrWhiteSpace(level))
+            throw new StepDefinitionException($"{what} has an empty {nameof(InGameTestAttribute.Level)}: leave it out for a new level.");
+
+        if (freePlayUid != null && start != freePlay)
+            throw new StepDefinitionException($"{what} has a {nameof(InGameTestAttribute.FreePlayUid)}, which only {nameof(Start)}.{nameof(Start.FreePlay)} plays.");
+
+        if (start == freePlay && string.IsNullOrWhiteSpace(freePlayUid))
+            throw new StepDefinitionException($"{what} starts in {freePlay}, which needs {nameof(InGameTestAttribute.FreePlayUid)}.");
     }
 
     /// <summary>
