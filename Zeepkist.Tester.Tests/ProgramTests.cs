@@ -160,6 +160,16 @@ public sealed class ProgramTests : IDisposable
     }
 
     [Fact]
+    public void Check_APluginThatIsntAnAssembly_NamesIt()
+    {
+        var file = Write("a.ztest.yaml", "steps:\n  - undo\n");
+        var plugin = Write("native.dll", "not an assembly");
+
+        Assert.Equal(1, Run("check", file, "--plugin", plugin));
+        Assert.Equal([$"error: {plugin} isn't a .NET assembly."], Lines());
+    }
+
+    [Fact]
     public void Check_AnEmptyPath_IsAnErrorAndNotAStackTrace()
     {
         Assert.Equal(1, Run("check", string.Empty));

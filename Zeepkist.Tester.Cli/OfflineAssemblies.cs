@@ -20,9 +20,17 @@ internal sealed class OfflineAssemblies : IDisposable
         _context = new MetadataLoadContext(new FolderResolver(folders.ToList()), coreAssembly);
     }
 
+    /// <exception cref="UnreadableAssemblyException">The file isn't a .NET assembly.</exception>
     public Assembly Load(string path)
     {
-        return _context.LoadFromAssemblyPath(Path.GetFullPath(path));
+        try
+        {
+            return _context.LoadFromAssemblyPath(Path.GetFullPath(path));
+        }
+        catch (BadImageFormatException exception)
+        {
+            throw new UnreadableAssemblyException($"{path} isn't a .NET assembly.", exception);
+        }
     }
 
     public void Dispose()

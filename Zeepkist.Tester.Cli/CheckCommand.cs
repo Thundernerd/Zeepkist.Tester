@@ -89,7 +89,7 @@ internal sealed class CheckCommand
         {
             registry = OfflineRegistry.Read(_plugins);
         }
-        catch (StepDefinitionException exception)
+        catch (Exception exception) when (exception is StepDefinitionException or UnreadableAssemblyException)
         {
             return Fail(exception.Message);
         }
