@@ -20,7 +20,7 @@ internal sealed class LineScenarioReader
     private const string DragWindowEdgeSideways = "drag-window-edge-sideways";
     private const string ExpectError = "expect-error";
 
-    private static readonly Regex _oldValues = new Regex(@"\{uid:(?<name>[^}]*)\}|\$\{");
+    private static readonly Regex _setTextValues =new Regex(@"\{uid:(?<name>[^}]*)\}|\$\{");
 
     private readonly string _file;
     private readonly IReadOnlyList<StepDescriptor> _steps;
@@ -128,7 +128,7 @@ internal sealed class LineScenarioReader
         var text = string.Join("\n", body.Select(line => line.Length == 0 ? line : line.Substring(indent)));
 
         var step = Resolve(SetText, location);
-        return Checked(step, location, new Dictionary<string, ArgumentValue> { [Primary(step, location).Name] = Scalar(location, text) });
+        return Checked(step, location, new Dictionary<string, ArgumentValue> { [Primary(step, location).Name] = SetTextScalar(location, text) });
     }
 
     /// <summary>
@@ -217,11 +217,19 @@ internal sealed class LineScenarioReader
     }
 
     /// <summary>
-    /// A <c>{uid:x}</c> was a placed block's UID, which <c>${x}</c> is now, and a <c>${</c> written as it is becomes <c>$${</c>.
+    /// A <c>${</c> written as it is becomes <c>$${</c>, so it stays that text.
     /// </summary>
     private static ScalarArgument Scalar(SourceLocation location, string text)
     {
-        return new ScalarArgument(location, _oldValues.Replace(text, match => match.Groups["name"].Success ? $"${{{match.Groups["name"].Value}}}" : "$${"));
+        return new ScalarArgument(location, text.Replace("${", "$${"));
+    }
+
+    /// <summary>
+    /// As <see cref="Scalar"/>, and a <c>{uid:x}</c>, which ZeepLogicScript filled in with a placed block's UID only in <c>set-text</c>, becomes <c>${x}</c>.
+    /// </summary>
+    private static ScalarArgument SetTextScalar(SourceLocation location, string text)
+    {
+        return new ScalarArgument(location, _setTextValues.Replace(text, match => match.Groups["name"].Success ? $"${{{match.Groups["name"].Value}}}" : "$${"));
     }
 
     private static string Describe(StepDescriptor step)

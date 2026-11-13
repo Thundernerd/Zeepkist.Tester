@@ -70,11 +70,19 @@ public class LineScenarioReaderTests
     }
 
     [Fact]
-    public void AUidPlaceholder_BecomesASubstitution_AndALiteralDollarBraceIsEscaped()
+    public void AUidPlaceholderInSetText_BecomesASubstitution_AndALiteralDollarBraceIsEscaped()
+    {
+        var step = Assert.Single(Steps("set-text\nplaced(\"{uid:lamp}\") costs ${5}\nend\n"));
+
+        Assert.Equal("placed(\"${lamp}\") costs $${5}", Text(step.Arguments, "value"));
+    }
+
+    [Fact]
+    public void AUidPlaceholderOutsideSetText_StaysTheTextItWas_AsZlsOnlyFilledItInThere()
     {
         var step = Assert.Single(Steps("expect-text placed(\"{uid:lamp}\") costs ${5}"));
 
-        Assert.Equal("placed(\"${lamp}\") costs $${5}", Text(step.Arguments, "text"));
+        Assert.Equal("placed(\"{uid:lamp}\") costs $${5}", Text(step.Arguments, "text"));
     }
 
     [Theory]
