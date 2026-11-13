@@ -8,6 +8,7 @@ namespace TNRD.Zeepkist.Tester.Tests.SampleMod;
 /// Its constructors are there to compile on net472: <c>required</c> with <see cref="SetsRequiredMembersAttribute"/>.
 /// </summary>
 [Step("compile")]
+[Example("- sample.compile: lamp")]
 public sealed class Compile : Step
 {
     public Compile()
