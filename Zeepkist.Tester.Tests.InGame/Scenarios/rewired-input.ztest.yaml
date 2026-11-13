@@ -4,8 +4,12 @@ steps:
   - place-start
   - place-block: 2448
   - expect-block-count: 2
+
+  # Placing a block selects it, which is an undo step of its own
+  - press-action: EditorUndo
   - press-action: EditorUndo
   - expect-block-count: 1
+
   - test-mode
   - wait: 1
   - sample.watch-steering

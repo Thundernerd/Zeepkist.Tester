@@ -138,6 +138,7 @@ place-start | rewired-input | pass
 place-block | rewired-input | pass
 expect-block-count | rewired-input | pass
 press-action | rewired-input | pass
+press-action | rewired-input | pass
 expect-block-count | rewired-input | pass
 test-mode | rewired-input | pass
 wait | rewired-input | pass
