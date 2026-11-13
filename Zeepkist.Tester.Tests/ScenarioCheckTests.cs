@@ -267,6 +267,96 @@ public class ScenarioCheckTests
         Assert.Equal($"{file}:{problem}", reported.ToString());
     }
 
+    [Fact]
+    public void AFileWithBadValuesInSeveralSteps_ReportsEach_InOneCheck()
+    {
+        using var folder = new TemporaryFolder();
+        var file = Write(folder, "a.ztest.yaml", "steps:\n  - wait: soon\n  - place-block: LAMP\n  - wait: later\n");
+
+        var problems = ScenarioCheck.Run([file], CheckSteps.Registry).Select(problem => problem.ToString());
+
+        Assert.Equal(
+            [
+                $"{file}:2:11: error: 'seconds' of wait takes a length of time such as 2, 0.5 or 500ms, not 'soon'.",
+                $"{file}:3:18: error: 'function' of place-block has to match ^[a-z_]+$, not 'LAMP'.",
+                $"{file}:4:11: error: 'seconds' of wait takes a length of time such as 2, 0.5 or 500ms, not 'later'.",
+            ],
+            problems);
+    }
+
+    [Fact]
+    public void AStepWithSeveralBadValues_ReportsEach()
+    {
+        using var folder = new TemporaryFolder();
+        var file = Write(folder, "a.ztest.yaml", "steps:\n  - place-block: { function: LAMP, how-many: 9 }\n");
+
+        var problems = ScenarioCheck.Run([file], CheckSteps.Registry).Select(problem => problem.ToString());
+
+        Assert.Equal(
+            [
+                $"{file}:2:30: error: 'function' of place-block has to match ^[a-z_]+$, not 'LAMP'.",
+                $"{file}:2:46: error: 'how-many' of place-block has to be between 1 and 8, not '9'.",
+            ],
+            problems);
+    }
+
+    [Fact]
+    public void AnUnknownArgument_DoesntHideABadValueNextToIt()
+    {
+        using var folder = new TemporaryFolder();
+        var file = Write(folder, "a.ztest.yaml", "steps:\n  - place-block: { colour: red, function: LAMP }\n");
+
+        var problems = ScenarioCheck.Run([file], CheckSteps.Registry).Select(problem => problem.ToString());
+
+        Assert.Equal(
+            [
+                $"{file}:2:20: error: place-block has no argument 'colour'. It takes: function, as, how-many, offset.",
+                $"{file}:2:43: error: 'function' of place-block has to match ^[a-z_]+$, not 'LAMP'.",
+            ],
+            problems);
+    }
+
+    [Fact]
+    public void AProblemInTheHeader_DoesntHideTheSteps()
+    {
+        using var folder = new TemporaryFolder();
+        var file = Write(folder, "a.ztest.yaml", "input: keyboard\nstart: nowhere\nsteps:\n  - wait: soon\n");
+
+        var problems = ScenarioCheck.Run([file], CheckSteps.Registry).Select(problem => problem.ToString());
+
+        Assert.Equal(
+            [
+                $"{file}:1:8: error: input: takes in-process or os, not 'keyboard'.",
+                $"{file}:2:8: error: start: takes main-menu, editor or free-play, not 'nowhere'.",
+                $"{file}:4:11: error: 'seconds' of wait takes a length of time such as 2, 0.5 or 500ms, not 'soon'.",
+            ],
+            problems);
+    }
+
+    [Fact]
+    public void AForThatCantBeRead_DoesntLendItsVariableToTheStepsAfterIt()
+    {
+        using var folder = new TemporaryFolder();
+        var file = Write(folder, "a.ztest.yaml", "steps:\n  - for: { s: [abc] }\n    steps: []\n  - wait: ${s}\n");
+
+        var problem = Assert.Single(ScenarioCheck.Run([file], CheckSteps.Registry));
+
+        Assert.Equal($"{file}:3:12: error: steps: has no steps in it.", problem.ToString());
+    }
+
+    [Theory]
+    [InlineData("steps:\n  - place-block: { functoin: lamp }\n", "2:20: error: place-block has no argument 'functoin'. It takes: function, as, how-many, offset.")]
+    [InlineData("stepz:\n  - undo\n", "1:1: error: A scenario has no key 'stepz'. It takes: description, use, start, input, steps.")]
+    public void AMisspelledKey_IsntAlsoReportedAsMissing(string yaml, string problem)
+    {
+        using var folder = new TemporaryFolder();
+        var file = Write(folder, "a.ztest.yaml", yaml);
+
+        var reported = Assert.Single(ScenarioCheck.Run([file], CheckSteps.Registry));
+
+        Assert.Equal($"{file}:{problem}", reported.ToString());
+    }
+
     private static string Write(TemporaryFolder folder, string name, string yaml)
     {
         var file = Path.Combine(folder.Path, name);

@@ -81,12 +81,13 @@ internal sealed class ScenarioCheck
         try
         {
             text = File.ReadAllText(file);
-            scenario = ScenarioParser.Parse(file, new StringReader(text), _steps);
-        }
-        catch (ScenarioException exception)
-        {
-            _brokenFiles.Add(text);
-            Add(new CheckProblem(exception.Location, CheckSeverity.Error, exception.Problem));
+            var reading = ScenarioParser.ParseAll(file, new StringReader(text), _steps);
+            scenario = reading.Scenario;
+            if (scenario == null)
+                _brokenFiles.Add(text);
+
+            foreach (var problem in reading.Problems)
+                Add(new CheckProblem(problem.Location, CheckSeverity.Error, problem.Problem));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
