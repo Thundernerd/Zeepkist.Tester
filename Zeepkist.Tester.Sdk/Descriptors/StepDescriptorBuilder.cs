@@ -20,6 +20,8 @@ public sealed class StepDescriptorBuilder
     // Also a different type on each runtime: the BCL's on .NET, the SDK's polyfill on net472
     private const string RequiredMemberAttributeName = "System.Runtime.CompilerServices.RequiredMemberAttribute";
 
+    private static readonly Regex _quoted = new Regex("'([^']+)'");
+
     private static readonly Regex _kebabCase = new Regex("^[a-z0-9]+(-[a-z0-9]+)*$");
 
     // A scenario reads these as control nodes, so a step with one of these names would be hidden when it's written unprefixed
@@ -86,6 +88,18 @@ public sealed class StepDescriptorBuilder
     }
 
     public StepDescriptor Build(Type stepType)
+    {
+        try
+        {
+            return BuildStep(stepType);
+        }
+        catch (FileNotFoundException exception)
+        {
+            throw new StepDefinitionException($"{stepType.FullName} uses a type from {MissingAssembly(exception)}, which can't be found.");
+        }
+    }
+
+    private StepDescriptor BuildStep(Type stepType)
     {
         var stepAttribute = FindAttribute<StepAttribute>(stepType)
             ?? throw new StepDefinitionException($"{stepType.FullName} has no [Step] attribute.");
@@ -556,6 +570,25 @@ public sealed class StepDescriptorBuilder
         catch (Exception exception) when (exception is FileNotFoundException or TypeLoadException)
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// The name of the assembly a <see cref="FileNotFoundException"/> is about, such as <c>UnityEngine</c>.
+    /// </summary>
+    /// <remarks>
+    /// A MetadataLoadContext doesn't set <see cref="FileNotFoundException.FileName"/>, only quotes the assembly's full name in the message.
+    /// </remarks>
+    private static string MissingAssembly(FileNotFoundException exception)
+    {
+        var fullName = exception.FileName ?? _quoted.Match(exception.Message).Groups[1].Value;
+        try
+        {
+            return new AssemblyName(fullName).Name;
+        }
+        catch (Exception nameException) when (nameException is ArgumentException or FileLoadException)
+        {
+            return "an assembly";
         }
     }
 

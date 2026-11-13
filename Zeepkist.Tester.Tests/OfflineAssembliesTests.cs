@@ -49,6 +49,29 @@ public class OfflineAssembliesTests
         Assert.Equal(JsonSerializer.Serialize(atRuntime), JsonSerializer.Serialize(offline));
     }
 
+    [Theory]
+    [InlineData(typeof(UnfoundSteps.BaseElsewhere))]
+    [InlineData(typeof(UnfoundSteps.ArgumentElsewhere))]
+    public void Build_StepWithATypeThatCantBeFound_NamesTheStepAndWhatsMissing(Type stepType)
+    {
+        using var folder = new TemporaryFolder();
+        using var assemblies = new OfflineAssemblies([CopyWithoutSampleCore(folder), RuntimeEnvironment.GetRuntimeDirectory()], "System.Runtime");
+        var step = assemblies.Load(Path.Combine(folder.Path, Path.GetFileName(stepType.Assembly.Location))).GetType(stepType.FullName);
+
+        var exception = Assert.Throws<StepDefinitionException>(() => new StepDescriptorBuilder().Build(step));
+
+        Assert.Equal($"{stepType.FullName} uses a type from Zeepkist.Tester.Tests.SampleCore, which can't be found.", exception.Message);
+    }
+
+    /// <returns>A folder with this assembly and the SDK, but not Zeepkist.Tester.Tests.SampleCore, which it references.</returns>
+    private static string CopyWithoutSampleCore(TemporaryFolder folder)
+    {
+        foreach (var assembly in new[] { typeof(UnfoundSteps).Assembly, typeof(Step).Assembly })
+            File.Copy(assembly.Location, Path.Combine(folder.Path, Path.GetFileName(assembly.Location)));
+
+        return folder.Path;
+    }
+
     private static IEnumerable<Type> StepsIn(IEnumerable<Type> types)
     {
         return types.Where(type => type.GetCustomAttributesData().Any(data => data.AttributeType.FullName == typeof(StepAttribute).FullName));
