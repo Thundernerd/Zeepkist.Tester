@@ -109,28 +109,11 @@ internal sealed class ScenarioCheck
 
     private void CollectRuns(Scenario scenario, HashSet<string> files)
     {
-        CollectRuns(scenario.File, scenario.Steps, files);
-    }
-
-    private void CollectRuns(string file, IReadOnlyList<ScenarioNode> nodes, HashSet<string> files)
-    {
-        foreach (var node in nodes)
+        foreach (var run in ScenarioNode.RunsIn(scenario.Steps))
         {
-            switch (node)
-            {
-                case ForNode loop:
-                    CollectRuns(file, loop.Steps, files);
-                    break;
-                case RepeatNode repeat:
-                    CollectRuns(file, repeat.Steps, files);
-                    break;
-                case RunNode run:
-                    var target = RunTarget(file, run);
-                    if (files.Add(FullPathOf(target)) && File.Exists(target) && Load(target) is { } scenario)
-                        CollectRuns(scenario, files);
-
-                    break;
-            }
+            var target = RunTarget(scenario.File, run);
+            if (files.Add(FullPathOf(target)) && File.Exists(target) && Load(target) is { } ran)
+                CollectRuns(ran, files);
         }
     }
 
