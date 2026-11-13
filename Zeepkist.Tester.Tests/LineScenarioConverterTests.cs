@@ -49,6 +49,8 @@ public class LineScenarioConverterTests
     [InlineData("set-window-size 800 600", "  - set-window-size: { width: 800, height: 600 }")]
     [InlineData("place-block lamp", "  - zls.place-block: lamp")]
     [InlineData("place-block lamp as lamp", "  - zls.place-block: { function: lamp, as: lamp }")]
+    [InlineData("set-block-setting t mode global_velocity", "  - zls.set-block-setting: { block: t, setting: mode, value: global_velocity }")]
+    [InlineData("expect-blocks 2", "  - expect-blocks: 2")]
     [InlineData("expect-error 2:15 'nope' isn't defined", "  - expect-error: { line: 2, column: 15, message: '''nope'' isn''t defined' }")]
     [InlineData("expect-reference-headings Inputs Libraries:closed", "  - expect-reference-headings: [Inputs, 'Libraries:closed']")]
     [InlineData("expect-reference-headings none", "  - expect-reference-headings: none")]

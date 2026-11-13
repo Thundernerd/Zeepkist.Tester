@@ -95,7 +95,7 @@ case "$mode" in
         "start-main-menu.ztest.yaml","start-editor-to-test-mode.ztest.yaml","start-free-play.ztest.yaml",
         "start-free-play.ztest.yaml","start-level.ztest.yaml","start-free-play.ztest.yaml","start-editor.ztest.yaml",
         "start-main-menu.ztest.yaml","start-free-play.ztest.yaml","start-main-menu.ztest.yaml"]' ;;
-    *) tests='["CSharpTests"]' scenarios='["core-steps.ztest.yaml","a-step-fails.ztest.yaml","control-nodes.ztest.yaml","screenshots.ztest.yaml","exceptions.ztest.yaml","blocks.ztest.yaml","test-mode.ztest.yaml","test-mode-needs-a-start.ztest.yaml","a-setting-it-does-not-have.ztest.yaml","imui-input.ztest.yaml","legacy-input.ztest.yaml","rewired-input.ztest.yaml","ugui-input.ztest.yaml","mouse-held.ztest.yaml","mouse-given-back.ztest.yaml"]' ;;
+    *) tests='["CSharpTests"]' scenarios='["core-steps.ztest.yaml","a-step-fails.ztest.yaml","control-nodes.ztest.yaml","screenshots.ztest.yaml","exceptions.ztest.yaml","blocks.ztest.yaml","named-blocks.ztest.yaml","test-mode.ztest.yaml","test-mode-needs-a-start.ztest.yaml","a-setting-it-does-not-have.ztest.yaml","imui-input.ztest.yaml","legacy-input.ztest.yaml","rewired-input.ztest.yaml","ugui-input.ztest.yaml","mouse-held.ztest.yaml","mouse-given-back.ztest.yaml"]' ;;
 esac
 printf '{"runId":"%s","mods":[{"guid":"%s"}],"scenarios":%s,"tests":%s}' "$run_id" "$guid" "$scenarios" "$tests" >"$tester/run.json"
 

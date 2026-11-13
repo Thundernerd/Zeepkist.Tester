@@ -168,6 +168,39 @@ public sealed class ScenarioRunnerTests : IDisposable
     }
 
     [Fact]
+    public void PlacingABlock_OutsideTheEditor_FailsTheStep_AndNamesNothing()
+    {
+        Run(Write("a", "steps:\n  - t.place-lamp: lamp\n"));
+
+        var step = Assert.Single(_steps);
+        Assert.False(step.Passed);
+        Assert.Equal("This step needs the level editor, and the game isn't in it.", step.Detail);
+        Assert.DoesNotContain("placed without the editor", Events);
+    }
+
+    [Fact]
+    public void SettingABlocksSetting_OutsideTheEditor_FailsTheStep()
+    {
+        Run(Write("a", "steps:\n  - t.name-block: lamp\n  - t.set-mode: lamp\n"));
+
+        var step = _steps.Last();
+        Assert.False(step.Passed);
+        Assert.Equal("This step needs the level editor, and the game isn't in it.", step.Detail);
+        Assert.DoesNotContain("set without the editor", Events);
+    }
+
+    [Fact]
+    public void ABlocksType_OutsideTheEditor_FailsTheStep()
+    {
+        Run(Write("a", "steps:\n  - t.name-block: lamp\n  - t.type-of: lamp\n"));
+
+        var step = _steps.Last();
+        Assert.False(step.Passed);
+        Assert.Equal("This step needs the level editor, and the game isn't in it.", step.Detail);
+        Assert.DoesNotContain("typed without the editor", Events);
+    }
+
+    [Fact]
     public void AForLoop_RunsItsBodyPerValue_WithTheVariableInAnyTypeOfValue()
     {
         Run(Write("a", "steps:\n  - for: { h: [64, 120] }\n    steps:\n      - t.number: ${h}\n      - t.note: h is ${h}\n"));
@@ -1049,7 +1082,7 @@ public sealed class ScenarioRunnerTests : IDisposable
     /// </summary>
     private sealed class RecordingInput : IInput
     {
-        private readonly IInput _input = new TesterInput(new InProcessDrivers(), new NoActions(), () => 0);
+        private readonly IInput _input = new TesterInput(new InProcessDrivers(_ => { }), new NoActions(), () => 0, _ => { });
         private readonly Recorder _recorder;
 
         public RecordingInput(Recorder recorder)

@@ -33,6 +33,11 @@ public interface IStepContext : IScenarioContext
     public IExceptionLog Exceptions { get; }
 
     /// <summary>
+    /// Places blocks and changes their settings as the core block steps do.
+    /// </summary>
+    public IEditorBlocks Blocks { get; }
+
+    /// <summary>
     /// The color of every pixel of the last screenshot of the run when they were all the same, or null, so a step can fail on
     /// a capture that shows nothing.
     /// </summary>

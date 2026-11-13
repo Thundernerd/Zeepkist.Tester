@@ -21,7 +21,7 @@ public sealed class PlaceStart : Step
         if (central == null)
             yield break;
 
-        var startId = central.manager.loader.globalBlockList.blocks.FindIndex(block => block != null && block.isStart);
+        var startId = central.BlockTypes().FindIndex(block => block != null && block.isStart);
         if (startId < 0)
         {
             context.Fail("The game has no start block.");

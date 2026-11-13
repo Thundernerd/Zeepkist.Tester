@@ -1,0 +1,63 @@
+using System;
+using System.Collections;
+using TNRD.Zeepkist.Tester.Sdk;
+
+namespace TNRD.Zeepkist.Tester;
+
+/// <summary>
+/// The level editor's blocks for one step, with <see cref="BlockPlacing"/> and <see cref="BlockEditing"/> doing the game's part.
+/// </summary>
+internal sealed class EditorBlocks : IEditorBlocks
+{
+    private readonly IStepContext _context;
+    private readonly Func<LEV_LevelEditorCentral> _editor;
+
+    /// <param name="context">The step it changes blocks for, whose named values and detail it uses.</param>
+    /// <param name="editor">The level editor, or null outside it.</param>
+    public EditorBlocks(IStepContext context, Func<LEV_LevelEditorCentral> editor)
+    {
+        _context = context;
+        _editor = editor;
+    }
+
+    public BlockValue Place(int type, Name<BlockValue>? name = null)
+    {
+        var central = RequireEditor();
+        var types = central.BlockTypes();
+        if (type < 0 || type >= types.Count || types[type] == null)
+            throw new StepFailedException($"The game has no block type {type}.");
+
+        // Before placing, so a name that's already taken places nothing
+        var placed = new BlockValue(BlockPlacing.NewUid(type));
+        name?.Set(_context, placed);
+
+        var block = BlockPlacing.Place(central, type, placed.Uid, yaw: 0, cellsToTheSide: 1, "Test: place block");
+        BlockPlacing.Select(central, block);
+        _context.Detail = $"Block type {type}, UID \"{placed.Uid}\" at {block.transform.position}";
+        return placed;
+    }
+
+    public int TypeOf(Ref<BlockValue> block)
+    {
+        return RequireEditor().GetBlock(_context, block).blockID;
+    }
+
+    public IEnumerator SetSetting(Ref<BlockValue> block, string key, string value)
+    {
+        var central = RequireEditor();
+        var properties = central.GetBlock(_context, block);
+        var written = BlockEditing.ChangeSetting(central, properties, block.ToString(), key, value, out var historyBefore);
+        yield return null;
+
+        var kept = BlockSettings.Of(properties).Read(key);
+        if (kept != written)
+            _context.Fail($"The block didn't keep {key} {value}.", written, kept);
+        else
+            _context.Detail = $"{block}: {key} = {kept}, history position {historyBefore} → {central.undoRedo.currentHistoryPosition}";
+    }
+
+    private LEV_LevelEditorCentral RequireEditor()
+    {
+        return _editor() ?? throw new StepFailedException(StepContext.NotInEditor);
+    }
+}

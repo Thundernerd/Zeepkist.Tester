@@ -50,7 +50,7 @@ internal static class BlockPlacing
         BlockProperties block = null;
         try
         {
-            AddDefaultPaint(central.manager.loader.globalBlockList.blocks[blockId], json);
+            AddDefaultPaint(central.BlockTypes()[blockId], json);
 
             // Private: callable because AllowUnsafeBlocks makes Mono skip its access checks for this assembly
             block = central.undoRedo.GenerateNewBlock(json, json.u);

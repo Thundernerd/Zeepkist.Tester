@@ -11,6 +11,8 @@ namespace TNRD.Zeepkist.Tester;
 /// </summary>
 internal sealed class StepContext : ScenarioContext, IStepContext
 {
+    public const string NotInEditor = "This step needs the level editor, and the game isn't in it.";
+
     private readonly IRunHost _host;
     private readonly Func<Step, IEnumerator> _run;
     private string _detail = string.Empty;
@@ -28,6 +30,7 @@ internal sealed class StepContext : ScenarioContext, IStepContext
         _run = run;
         Exceptions = exceptions;
         Values = values;
+        Blocks = new EditorBlocks(this, () => _host.Editor);
     }
 
     public string Detail
@@ -53,6 +56,8 @@ internal sealed class StepContext : ScenarioContext, IStepContext
     public IGameEvents Game => _host.Game;
 
     public IExceptionLog Exceptions { get; }
+
+    public IEditorBlocks Blocks { get; }
 
     public string LastScreenshotBlankColor => _host.LastBlankColor;
 
@@ -105,7 +110,7 @@ internal sealed class StepContext : ScenarioContext, IStepContext
     {
         var editor = _host.Editor;
         if (editor is null)
-            Fail("This step needs the level editor, and the game isn't in it.");
+            Fail(NotInEditor);
 
         return editor;
     }

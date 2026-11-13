@@ -12,6 +12,7 @@ namespace TNRD.Zeepkist.Tester.Tests.InGame;
 public sealed class InputWindow : IZeepGUIDrawer
 {
     private string _text = string.Empty;
+    private ImTextEditState _fieldState;
     private ImRect _fieldRect;
     private ImRect _sliderRect;
 
@@ -23,9 +24,29 @@ public sealed class InputWindow : IZeepGUIDrawer
 
     public bool FieldFocused { get; private set; }
 
+    /// <summary>
+    /// What's selected in the field, nothing when its caret selects nothing.
+    /// </summary>
+    public string SelectedText
+    {
+        get
+        {
+            var caret = Mathf.Clamp(_fieldState.Caret, 0, _text.Length);
+            var other = Mathf.Clamp(_fieldState.Caret + _fieldState.Selection, 0, _text.Length);
+            var start = Mathf.Min(caret, other);
+            var end = Mathf.Max(caret, other);
+            return _text.Substring(start, end - start);
+        }
+    }
+
     public float Slider { get; private set; }
 
     public Vector2 FieldCenter => ToScreen(_fieldRect.Center);
+
+    /// <summary>
+    /// Just inside the field's left end, on the first word of its text.
+    /// </summary>
+    public Vector2 FieldStart => ToScreen(new Vector2(_fieldRect.X + 8, _fieldRect.Center.y));
 
     public Vector2 SliderLeft => ToScreen(SliderLeftInImui);
 
@@ -74,6 +95,7 @@ public sealed class InputWindow : IZeepGUIDrawer
         ref var state = ref gui.Storage.Get<ImTextEditState>(id);
         gui.TextEdit(id, ref _text, ref state, _fieldRect, false);
         FieldFocused = gui.IsControlActive(id);
+        _fieldState = state;
 
         _sliderRect = gui.AddSingleRowRect(default);
         var slider = Slider;

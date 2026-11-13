@@ -1,0 +1,15 @@
+description: A mod's steps place a block and change its setting by names of their own, through context.Blocks
+start: editor
+steps:
+  - sample.place-named-block: { function: lamp, as: lamp }
+  - sample.expect-selected: lamp
+  - expect-block-count: { count: 1, type: 2448 }
+  - sample.set-named-setting: { block: lamp, setting: spotlight, value: "true" }
+  - sample.expect-block-setting: { block: lamp, setting: is, value: "1" }
+
+  - sample.place-named-block: { function: telemetry, as: telemetry }
+  - sample.set-named-setting: { block: telemetry, setting: mode, value: 2 }
+  - sample.expect-block-setting: { block: telemetry, setting: xbs, value: "2" }
+  - undo
+  - sample.expect-block-setting: { block: telemetry, setting: xbs, value: "0" }
+  - expect-no-exceptions

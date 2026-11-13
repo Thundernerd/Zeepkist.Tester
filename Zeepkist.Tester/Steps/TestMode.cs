@@ -21,7 +21,7 @@ public sealed class TestMode : Step
         if (central == null)
             yield break;
 
-        if (!central.undoRedo.allBlocksDictionary.Values.Any(block => block != null && block.isStart))
+        if (!central.Blocks().Any(block => block.isStart))
         {
             context.Fail("The level has no start block. Add place-start first.");
             yield break;
