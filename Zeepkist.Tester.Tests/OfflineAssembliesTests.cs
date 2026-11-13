@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using TNRD.Zeepkist.Tester.Cli;
@@ -116,6 +117,34 @@ public class OfflineAssembliesTests
         var exception = Assert.Throws<StepDefinitionException>(() => new StepDescriptorBuilder().BuildRegistry([step], []));
 
         Assert.Equal($"{typeof(UnfoundSteps.StateBaseElsewhere).FullName} uses a type from Zeepkist.Tester.Tests.SampleCore, which can't be found.", exception.Message);
+    }
+
+    [Theory]
+    [InlineData(typeof(UnfoundSteps.TestConstructorElsewhere))]
+    [InlineData(typeof(UnfoundSteps.TestParameterElsewhere))]
+    public void BuildTest_TestWithATypeThatCantBeFound_NamesTheTestAndWhatsMissing(Type testClass)
+    {
+        using var folder = new TemporaryFolder();
+        using var assemblies = WithoutSampleCore(folder);
+        var test = LoadCopy(assemblies, folder, testClass).GetMethod(nameof(UnfoundSteps.TestParameterElsewhere.Test), BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+
+        var exception = Assert.Throws<StepDefinitionException>(() => new StepDescriptorBuilder().BuildTest(test));
+
+        Assert.Equal($"{testClass.FullName}.{nameof(UnfoundSteps.TestParameterElsewhere.Test)} uses a type from Zeepkist.Tester.Tests.SampleCore, which can't be found.", exception.Message);
+    }
+
+    [Fact]
+    public void FindStepsStatesAndTests_PluginWithoutOneOfItsReferences_FindsThemWithoutReadingWhatsMissing()
+    {
+        // Only building one reads what it uses, and that names the step, state or test
+        using var folder = new TemporaryFolder();
+        using var assemblies = WithoutSampleCore(folder);
+        var plugin = assemblies.Load(Path.Combine(folder.Path, Path.GetFileName(typeof(UnfoundSteps).Assembly.Location)));
+
+        Assert.False(StepDescriptorBuilder.IsTestPlugin(plugin));
+        Assert.Contains(typeof(UnfoundSteps.BaseElsewhere).FullName, StepDescriptorBuilder.FindSteps(plugin).Select(type => type.FullName));
+        Assert.Contains(typeof(UnfoundSteps.StateBaseElsewhere).FullName, StepDescriptorBuilder.FindStates(plugin).Select(type => type.FullName));
+        Assert.Contains(typeof(UnfoundSteps.TestParameterElsewhere).FullName, StepDescriptorBuilder.FindTests(plugin).Select(method => method.DeclaringType.FullName));
     }
 
     /// <summary>
