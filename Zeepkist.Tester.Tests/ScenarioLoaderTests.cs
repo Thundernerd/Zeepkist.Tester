@@ -19,7 +19,7 @@ public sealed class ScenarioLoaderTests : IDisposable
     }
 
     [Fact]
-    public void AnOldFile_LoadsAsItsConvertedYamlWould_FromTheEditor_WithItsModsNamespacesInUse()
+    public void AnOldFile_LoadsAsItsConvertedYaml_InTheEditorWithItsModsInUse()
     {
         var old = Write("a.zlstest", "# Opens the window\nopen-window\nplace-block lamp as lamp\nset-text\n    a = placed(\"{uid:lamp}\")\nend\nwait 2\n");
         var converted = Write("a.ztest.yaml", LineScenarioConverter.Write(LineScenarioReader.Read(old, new StringReader(File.ReadAllText(old)), ZlsSteps.Registry), ZlsSteps.Registry));
