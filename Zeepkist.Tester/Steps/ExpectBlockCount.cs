@@ -32,9 +32,6 @@ public sealed class ExpectBlockCount : Step
         var what = (count == 1 ? "block" : "blocks") + (Type == null ? string.Empty : $" of type {Type}");
         var expected = Count.ToString(CultureInfo.InvariantCulture);
         var actual = count.ToString(CultureInfo.InvariantCulture);
-        if (count == Count)
-            context.Pass($"{count} {what}", expected, actual);
-        else
-            context.Fail($"{count} {what}", expected, actual);
+        context.Check(count == Count, $"{count} {what}", expected, actual);
     }
 }

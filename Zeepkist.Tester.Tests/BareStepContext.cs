@@ -40,12 +40,12 @@ public abstract class BareStepContext : IStepContext
         throw new NotSupportedException();
     }
 
-    public void Pass(string detail, string expected, string actual)
+    public virtual void Pass(string detail, string expected, string actual)
     {
         throw new NotSupportedException();
     }
 
-    public void Fail(string detail, string expected = null, string actual = null)
+    public virtual void Fail(string detail, string expected = null, string actual = null)
     {
         throw new NotSupportedException();
     }

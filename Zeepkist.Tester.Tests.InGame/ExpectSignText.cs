@@ -26,9 +26,6 @@ public sealed class ExpectSignText : Step
 
         var block = central.undoRedo.allBlocksDictionary[Block.Get(context).Uid];
         var actual = block.GetAllBlockEditV18sFromThisBlock().OfType<BlockEdit_v18_WriteableSign>().Single().writeableText;
-        if (actual == Text)
-            context.Pass($"{Block} shows {actual}", Text, actual);
-        else
-            context.Fail($"{Block} shows {actual}", Text, actual);
+        context.Check(actual == Text, $"{Block} shows {actual}", Text, actual);
     }
 }

@@ -22,9 +22,7 @@ public sealed class ExpectSelected : Step
 
         var expected = Block.Get(context).Uid;
         var selected = string.Join(", ", central.selection.list.Select(block => block.UID));
-        if (selected == expected)
-            context.Pass($"{Block} is selected", expected, selected);
-        else
-            context.Fail($"{Block} isn't the only one selected", expected, selected);
+        var held = selected == expected;
+        context.Check(held, held ? $"{Block} is selected" : $"{Block} isn't the only one selected", expected, selected);
     }
 }
