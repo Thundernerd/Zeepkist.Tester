@@ -1,5 +1,6 @@
 using System.Collections;
 using TNRD.Zeepkist.Tester.Sdk;
+using TNRD.Zeepkist.Tester.States;
 
 namespace TNRD.Zeepkist.Tester.Tests.InGame;
 
@@ -9,6 +10,7 @@ namespace TNRD.Zeepkist.Tester.Tests.InGame;
 /// <see cref="ClickLevelEditorButton"/>'s.
 /// </summary>
 [Step("hover-level-editor-button")]
+[Requires(typeof(InMainMenu))]
 public sealed class HoverLevelEditorButton : Step
 {
     public override IEnumerator Run(IStepContext context)
