@@ -197,9 +197,9 @@ public class StepReferenceTests
         return StepReference.Write(new StepRegistry { Steps = steps, States = states ?? [] });
     }
 
-    private static StepDescriptor Step(string name, string ns = "", string documentation = null, IReadOnlyList<ArgumentDescriptor> arguments = null)
+    private static StepDescriptor Step(string name, string @namespace = "", string documentation = null, IReadOnlyList<ArgumentDescriptor> arguments = null)
     {
-        return new StepDescriptor { Name = name, Namespace = ns, Documentation = documentation, Arguments = arguments ?? [] };
+        return new StepDescriptor { Name = name, Namespace = @namespace, Documentation = documentation, Arguments = arguments ?? [] };
     }
 
     private static ArgumentDescriptor Argument(ArgumentType type, double? minimum = null, double? maximum = null, string pattern = null, int? minItems = null)

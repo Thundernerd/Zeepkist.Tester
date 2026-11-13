@@ -32,9 +32,9 @@ internal static class StepReference
     /// <summary>
     /// The tester's own first, then each mod's by name.
     /// </summary>
-    private static void WriteByNamespace<T>(StringBuilder markdown, IEnumerable<T> items, Func<T, string> ns, Func<T, string> name, Action<T> write)
+    private static void WriteByNamespace<T>(StringBuilder markdown, IEnumerable<T> items, Func<T, string> namespaceOf, Func<T, string> name, Action<T> write)
     {
-        foreach (var group in items.GroupBy(ns).OrderBy(group => group.Key, StringComparer.Ordinal))
+        foreach (var group in items.GroupBy(namespaceOf).OrderBy(group => group.Key, StringComparer.Ordinal))
         {
             markdown.Append($"### {(group.Key.Length == 0 ? "Tester" : $"`{group.Key}`")}\n\n");
             foreach (var item in group.OrderBy(name, StringComparer.Ordinal))
@@ -46,21 +46,26 @@ internal static class StepReference
     {
         var steps = registry.Steps;
         var outerStates = OuterStates(state, registry.States);
-        markdown.Append($"#### <a id=\"state-{state.FullName}\"></a>`{state.FullName}`\n\n");
-        if (state.Documentation != null)
-            markdown.Append($"{state.Documentation}\n\n");
+        WriteHeading(markdown, "state", state.FullName, state.Documentation);
 
         var enteredBy = StepLinks(steps.Where(step => step.Enters.Contains(state.FullName)));
         var leftBy = StepLinks(steps.Where(step => step.Leaves.Any(outerStates.Contains)));
-        var lines = new[]
-        {
+        WriteList(markdown, [
             state.Within == null ? null : $"Within {StateLink(state.Within)}",
             state.Hint == null ? null : $"Hint: {state.Hint}",
             enteredBy.Length == 0 ? null : $"Entered by {enteredBy}",
             leftBy.Length == 0 ? null : $"Left by {leftBy}",
-        };
+        ]);
+    }
 
-        WriteList(markdown, lines);
+    /// <summary>
+    /// The entry's heading, with an anchor that links elsewhere in the reference point at, and its summary.
+    /// </summary>
+    private static void WriteHeading(StringBuilder markdown, string kind, string fullName, string documentation)
+    {
+        markdown.Append($"#### <a id=\"{kind}-{fullName}\"></a>`{fullName}`\n\n");
+        if (documentation != null)
+            markdown.Append($"{documentation}\n\n");
     }
 
     /// <summary>
@@ -94,9 +99,7 @@ internal static class StepReference
 
     private static void WriteStep(StringBuilder markdown, StepDescriptor step)
     {
-        markdown.Append($"#### <a id=\"step-{step.FullName}\"></a>`{step.FullName}`\n\n");
-        if (step.Documentation != null)
-            markdown.Append($"{step.Documentation}\n\n");
+        WriteHeading(markdown, "step", step.FullName, step.Documentation);
 
         if (step.Arguments.Count > 0)
         {
@@ -108,12 +111,17 @@ internal static class StepReference
 
         WriteList(markdown, [
             step.Requires.Count == 0 ? null : $"Needs {string.Join(", and ", step.Requires.Select(alternatives => string.Join(" or ", alternatives.Select(StateLink))))}",
-            step.Enters.Count == 0 ? null : $"Enters {string.Join(", ", step.Enters.Select(StateLink))}",
-            step.Leaves.Count == 0 ? null : $"Leaves {string.Join(", ", step.Leaves.Select(StateLink))}",
+            step.Enters.Count == 0 ? null : $"Enters {StateLinks(step.Enters)}",
+            step.Leaves.Count == 0 ? null : $"Leaves {StateLinks(step.Leaves)}",
         ]);
 
         if (step.Examples.Count > 0)
             markdown.Append($"```yaml\n{string.Join("\n", step.Examples)}\n```\n\n");
+    }
+
+    private static string StateLinks(IEnumerable<string> states)
+    {
+        return string.Join(", ", states.Select(StateLink));
     }
 
     private static string StateLink(string state)

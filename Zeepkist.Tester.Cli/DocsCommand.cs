@@ -32,27 +32,27 @@ internal static class DocsCommand
                 return null;
         }
 
-        var problem = RegistryLoader.Load(plugins, folder, out _, out var registry);
-        if (problem == null)
+        var loaded = RegistryLoader.Load(plugins, folder);
+        if (loaded.Problem != null)
+            return Fail(output, loaded.Problem);
+
+        var path = Path.Combine(folder, file ?? DefaultOutput);
+        try
         {
-            file = Path.Combine(folder, file ?? DefaultOutput);
-            try
-            {
-                File.WriteAllText(file, StepReference.Write(registry));
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
-            {
-                problem = $"Can't write {file}: {exception.Message}";
-            }
+            File.WriteAllText(path, StepReference.Write(loaded.Registry));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return Fail(output, $"Can't write {path}: {exception.Message}");
         }
 
-        if (problem != null)
-        {
-            output.WriteLine($"error: {problem}");
-            return 1;
-        }
-
-        output.WriteLine(string.Create(CultureInfo.InvariantCulture, $"Wrote {registry.Steps.Count} steps and {registry.States.Count} states to {file}."));
+        output.WriteLine(string.Create(CultureInfo.InvariantCulture, $"Wrote {loaded.Registry.Steps.Count} steps and {loaded.Registry.States.Count} states to {path}."));
         return 0;
+    }
+
+    private static int Fail(TextWriter output, string problem)
+    {
+        output.WriteLine($"error: {problem}");
+        return 1;
     }
 }
