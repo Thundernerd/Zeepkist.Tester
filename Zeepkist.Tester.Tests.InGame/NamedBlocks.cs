@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -15,12 +16,13 @@ internal static class NamedBlocks
         ["telemetry"] = (2440, new Dictionary<string, string> { ["mode"] = "xbs" }),
     };
 
-    public static string Names => string.Join(", ", _blocks.Keys.OrderBy(name => name, System.StringComparer.Ordinal));
+    public static string Names => string.Join(", ", _blocks.Keys.OrderBy(name => name, StringComparer.Ordinal));
 
     public static bool TryGetType(string name, out int type)
     {
-        type = _blocks.TryGetValue(name, out var block) ? block.Type : 0;
-        return _blocks.ContainsKey(name);
+        var found = _blocks.TryGetValue(name, out var block);
+        type = found ? block.Type : 0;
+        return found;
     }
 
     /// <summary>
