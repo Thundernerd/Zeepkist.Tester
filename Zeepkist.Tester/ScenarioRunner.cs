@@ -259,32 +259,16 @@ internal sealed class ScenarioRunner
     {
         var values = new ScenarioValues();
         var stepsRun = 0;
-        var context = scenario.Context.ForStep(_host, _exceptions, values, step => RunTestStep(scenario, values, step, () => stepsRun++));
-        var startedAt = _host.Now;
-        Exception error = null;
-        yield return GuardedRoutine.Run(Called(() => test.Run(context)), exception => error = exception);
-        var stopped = error is TestStoppedException;
-        if (error != null && !stopped)
-        {
-            if (error is not StepFailedException)
-                LogError(error);
-
-            context.Fail(Describe(error));
-        }
-
+        var stopped = false;
+        var context = scenario.Context.ForStep(_host, _exceptions, values, step => RunTestStep(scenario, values, step, () => stepsRun++, () => stopped = true));
+        RunStep recorded = null;
+        yield return RunRecorded(context, Called(() => test.Run(context)), step => recorded = step, error => error is TestStoppedException);
         if (!context.Failed && stepsRun > 0 && context.Detail.Length == 0 && context.Expected == null)
             yield break;
 
-        _report(new RunStep
-        {
-            Name = "test",
-            Passed = !context.Failed,
-            Detail = context.Detail,
-            Expected = context.Expected,
-            Actual = context.Actual,
-            Scenario = scenario.Name,
-            Seconds = Seconds(startedAt),
-        });
+        recorded.Name = "test";
+        recorded.Scenario = scenario.Name;
+        _report(recorded);
 
         // The step that stopped it took one already
         if (context.Failed && !stopped)
@@ -292,36 +276,20 @@ internal sealed class ScenarioRunner
     }
 
     /// <exception cref="TestStoppedException">The step failed, which stops the test that ran it.</exception>
-    private IEnumerator RunTestStep(RunningScenario scenario, ScenarioValues values, Step step, Action ran)
+    private IEnumerator RunTestStep(RunningScenario scenario, ScenarioValues values, Step step, Action ran, Action stopping)
     {
         var context = scenario.Context.ForStep(_host, _exceptions, values);
-        var startedAt = _host.Now;
-        Exception error = null;
-        yield return GuardedRoutine.Run(StepPreconditions.Run(step, context), exception => error = exception);
-        if (error != null)
-        {
-            if (error is not StepFailedException)
-                LogError(error);
-
-            context.Fail(Describe(error));
-        }
-
+        RunStep recorded = null;
+        yield return RunRecorded(context, StepPreconditions.Run(step, context), result => recorded = result);
         ran();
-        _report(new RunStep
-        {
-            Name = step == null ? "null" : _steps.NameOf(step.GetType()),
-            Passed = !context.Failed,
-            Detail = context.Detail,
-            Expected = context.Expected,
-            Actual = context.Actual,
-            Scenario = scenario.Name,
-            Seconds = Seconds(startedAt),
-        });
-
+        recorded.Name = step == null ? "null" : _steps.NameOf(step.GetType());
+        recorded.Scenario = scenario.Name;
+        _report(recorded);
         if (!context.Failed)
             yield break;
 
         yield return FailureScreenshot(scenario);
+        stopping();
         throw new TestStoppedException();
     }
 
@@ -434,10 +402,34 @@ internal sealed class ScenarioRunner
     private IEnumerator RunStepNode(RunningScenario scenario, StepNode node, Frame frame)
     {
         var context = scenario.Context.ForStep(_host, _exceptions, frame.Values);
+        RunStep recorded = null;
+        yield return RunRecorded(context, BindAndRun(node, context, frame), step => recorded = step);
+        recorded.Name = node.Step.FullName;
+        recorded.Scenario = scenario.Name;
+        recorded.File = frame.File;
+        recorded.Line = (int)node.Location.Line;
+        recorded.RanFrom = frame.RanFrom;
+        recorded.Passes = frame.Passes;
+        _report(recorded);
+
+        if (context.Failed)
+        {
+            scenario.Stopped = true;
+            yield return FailureScreenshot(scenario);
+        }
+    }
+
+    /// <summary>
+    /// Runs <paramref name="routine"/> for <paramref name="context"/>'s step, failing the step with what it throws, then gives
+    /// <paramref name="recorded"/> the step's result, for the caller to say which step it was. An exception
+    /// <paramref name="stops"/> holds for only stops the routine, which fails nothing.
+    /// </summary>
+    private IEnumerator RunRecorded(StepContext context, IEnumerator routine, Action<RunStep> recorded, Func<Exception, bool> stops = null)
+    {
         var startedAt = _host.Now;
         Exception error = null;
-        yield return GuardedRoutine.Run(BindAndRun(node, context, frame), exception => error = exception);
-        if (error != null)
+        yield return GuardedRoutine.Run(routine, exception => error = exception);
+        if (error != null && stops?.Invoke(error) != true)
         {
             if (error is not StepFailedException)
                 LogError(error);
@@ -445,26 +437,14 @@ internal sealed class ScenarioRunner
             context.Fail(Describe(error));
         }
 
-        _report(new RunStep
+        recorded(new RunStep
         {
-            Name = node.Step.FullName,
             Passed = !context.Failed,
             Detail = context.Detail,
             Expected = context.Expected,
             Actual = context.Actual,
-            Scenario = scenario.Name,
-            File = frame.File,
-            Line = (int)node.Location.Line,
-            RanFrom = frame.RanFrom,
-            Passes = frame.Passes,
             Seconds = Seconds(startedAt),
         });
-
-        if (context.Failed)
-        {
-            scenario.Stopped = true;
-            yield return FailureScreenshot(scenario);
-        }
     }
 
     /// <summary>
