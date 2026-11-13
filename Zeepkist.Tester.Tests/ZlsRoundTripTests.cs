@@ -1,5 +1,7 @@
 using System.IO;
 using System.Linq;
+using TNRD.Zeepkist.Tester.Cli;
+using TNRD.Zeepkist.Tester.Scenarios;
 using TNRD.Zeepkist.Tester.Tests.Zls;
 using Xunit;
 
@@ -23,10 +25,17 @@ public class ZlsRoundTripTests
 
     [Theory]
     [MemberData(nameof(Files))]
-    public void EveryZlsScenario_LoadsAsItIs_ThroughTheHarnessLoader(string file)
+    public void EveryZlsScenario_LoadsThroughTheHarnessLoader_AsItsConvertedYamlDoes(string file)
     {
-        var scenario = new ScenarioLoader(ZlsSteps.Registry).Load(file);
+        using var folder = new TemporaryFolder();
+        var converted = Path.Combine(folder.Path, "converted.ztest.yaml");
+        using (var reader = File.OpenText(file))
+            File.WriteAllText(converted, LineScenarioConverter.Write(LineScenarioReader.Read(file, reader, ZlsSteps.Registry), ZlsSteps.Registry));
 
-        Assert.NotEmpty(scenario.Steps);
+        var scenario = new ScenarioLoader(ZlsSteps.Registry).Load(file);
+        var yaml = new ScenarioLoader(ZlsSteps.Registry).Load(converted);
+
+        LineScenarioConverterTests.AssertSameSteps(yaml.Steps.Cast<StepNode>().ToList(), scenario.Steps.Cast<StepNode>().ToList(), File.ReadAllText(converted));
+        Assert.Equal(yaml.Use, scenario.Use);
     }
 }

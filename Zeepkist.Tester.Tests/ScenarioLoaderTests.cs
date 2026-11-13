@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using TNRD.Zeepkist.Tester.Cli;
@@ -8,7 +9,7 @@ using Xunit;
 
 namespace TNRD.Zeepkist.Tester.Tests;
 
-public sealed class ScenarioLoaderTests : System.IDisposable
+public sealed class ScenarioLoaderTests : IDisposable
 {
     private readonly TemporaryFolder _folder = new TemporaryFolder();
 
