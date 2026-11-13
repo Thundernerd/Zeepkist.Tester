@@ -118,7 +118,7 @@ internal static class Input_Legacy
     private static void GetAxisRaw(string axisName, ref float __result)
     {
         if (Driver != null)
-            __result = Driver.Axis(axisName, __result);
+            __result = Driver.AxisRaw(axisName, __result);
     }
 
     /// <summary>
