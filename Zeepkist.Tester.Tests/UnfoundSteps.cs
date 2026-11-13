@@ -4,7 +4,7 @@ using TNRD.Zeepkist.Tester.Tests.SampleCore;
 namespace TNRD.Zeepkist.Tester.Tests;
 
 /// <summary>
-/// Steps and a state that use a type from Zeepkist.Tester.Tests.SampleCore, for reading them offline where it can't be found.
+/// Steps and states that use a type from Zeepkist.Tester.Tests.SampleCore, for reading them offline where it can't be found.
 /// </summary>
 public static class UnfoundSteps
 {
@@ -61,6 +61,7 @@ public static class UnfoundSteps
     [State("constructor-elsewhere", Namespace = "zls")]
     public sealed class ConstructorElsewhere : IState
     {
+        // The constructor the harness makes it with, so the overload below is the only problem
         public ConstructorElsewhere()
         {
         }
