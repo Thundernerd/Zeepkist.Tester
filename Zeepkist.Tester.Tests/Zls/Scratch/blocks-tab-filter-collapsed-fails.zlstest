@@ -1,0 +1,7 @@
+# set-reference-filter fails while the Blocks side is collapsed, as the smallest window draws it (meant to fail on its last step)
+open-window
+show-blocks-tab reference
+set-window-size 100 100
+expect-blocks-tab reference
+screenshot collapsed
+set-reference-filter edge

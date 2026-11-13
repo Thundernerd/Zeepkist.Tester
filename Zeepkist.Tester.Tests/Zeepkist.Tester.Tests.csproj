@@ -31,6 +31,7 @@
 
   <ItemGroup>
     <None Update="Scenarios\**\*.ztest.yaml;Scenarios\**\*.zeeplevel" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Zls\**\*.zlstest" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\Zeepkist.Tester\bin\$(Configuration)\net472\plugin\Zeepkist.Tester.dll" Link="MergedPlugin\Zeepkist.Tester.dll" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

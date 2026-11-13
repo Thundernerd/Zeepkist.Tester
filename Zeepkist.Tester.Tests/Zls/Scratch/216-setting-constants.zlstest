@@ -1,0 +1,50 @@
+# A constant passed to a Setting input is forwarded through two Functions and compiles, and a Setting input used as a
+# Signal, called as a placed block, or given a Wire is still reported where it was before
+open-window
+new-script Settings
+set-text
+    function pulse_after(x, ticks) -> out
+        out = pulser(delay(x, ticks: ticks))
+    end
+    function slower(x, wait) -> y
+        y = pulse_after(x, wait)
+    end
+    p = player_input()
+    power_display(slower(p.horn, wait: 7))
+end
+expect-no-errors
+compile
+expect-result Placed 4 blocks
+expect-blocks 4
+screenshot forwarded
+
+set-text
+    function f(x, n) -> y
+        y = delay(x, ticks: n) + n
+    end
+    power_display(f(1, 2))
+end
+expect-errors 1
+expect-error 2:30 'n' is used as a Setting on line 2, so it can't also be used as a Signal
+
+set-text
+    function f(x, n)
+        n(x)
+        passthrough(x, style: n)
+    end
+    f(1, normal)
+end
+expect-errors 1
+expect-error 2:5 'n' is used as a Setting on line 3, so it isn't a placed block to call
+
+set-text
+    function pulse_after(x, ticks) -> out
+        out = pulser(delay(x, ticks: ticks))
+    end
+    t = 20
+    power_display(pulse_after(1, ticks: t))
+end
+expect-errors 1
+expect-error 5:37 'ticks' is used as a Setting in 'pulse_after'. Pass a number, true or false, or a word, not a Wire
+screenshot errors
+expect-no-exceptions

@@ -1,0 +1,19 @@
+# A placed(...) to a lamp still finds it after test mode (fails today: "No block in this level has UID ...")
+open-window
+new-script Lights
+place-block lamp as lamp
+set-text
+    toggler(1, targets: placed("{uid:lamp}"))
+end
+expect-no-errors
+compile
+expect-result Placed
+place-start
+test-mode
+wait 2
+back-to-editor
+open-window
+select-script Lights
+wait 2
+screenshot back-in-editor
+expect-no-errors

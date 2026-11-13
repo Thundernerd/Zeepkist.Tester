@@ -1,0 +1,46 @@
+# Named inputs in a Function's body, and none from a qualified call (#129)
+
+# Inside another Function's body, f(x, offers b:
+open-window
+new-script Body
+set-text
+    function f(a, b) -> c
+        c = a & b
+    end
+    function g(x) -> y
+        y = f(x,
+    end
+end
+caret-at-start
+press down down down down end
+press space
+complete
+expect-completion b: input
+screenshot body-named-input
+
+# A Library's f, called qualified, lists none of the Script's f's inputs by name
+set-text
+    function f(a, b) -> c
+        c = a & b
+    end
+    z = timing.f(
+end
+caret-at-end
+complete
+expect-completion logic
+expect-completion-missing a:
+expect-completion-missing b:
+screenshot qualified-no-inputs
+
+# A qualified logic( lists expressions after op:, not logic's op values
+set-text
+z = timing.logic(a, op:
+end
+caret-at-end
+press space
+complete
+expect-completion logic
+expect-completion-missing and
+expect-completion-missing or
+screenshot qualified-no-values
+expect-no-exceptions

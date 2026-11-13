@@ -1,0 +1,7 @@
+open-window
+new-script C
+set-text
+x = logic(1, 2)
+end
+hover logic
+expect-no-hover

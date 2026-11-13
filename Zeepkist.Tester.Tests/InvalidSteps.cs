@@ -209,4 +209,36 @@ public static class InvalidSteps
     public sealed class NotAStep
     {
     }
+
+    [Step("line-syntax-unknown-argument")]
+    [LineSyntax("<function> as <name>")]
+    public sealed class LineSyntaxUnknownArgument : Base
+    {
+        [Arg(Primary = true)]
+        public string Function { get; set; }
+    }
+
+    [Step("line-syntax-unclosed")]
+    [LineSyntax("<function> [as <function>")]
+    public sealed class LineSyntaxUnclosed : Base
+    {
+        [Arg(Primary = true)]
+        public string Function { get; set; }
+    }
+
+    [Step("line-syntax-object")]
+    [LineSyntax("<move>")]
+    public sealed class LineSyntaxObject : Base
+    {
+        [Arg(Primary = true)]
+        public TestSteps.DragMove Move { get; set; }
+    }
+
+    [Step("line-syntax-twice")]
+    [LineSyntax("<function> <function>")]
+    public sealed class LineSyntaxTwice : Base
+    {
+        [Arg(Primary = true)]
+        public string Function { get; set; }
+    }
 }

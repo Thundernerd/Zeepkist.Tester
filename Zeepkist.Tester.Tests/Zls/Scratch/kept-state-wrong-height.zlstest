@@ -1,0 +1,3 @@
+# expect-window-height sees a wrong height
+open-window
+expect-window-height 600

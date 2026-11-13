@@ -1,0 +1,9 @@
+# Expected to FAIL: logic's row has a detail, so expect-completion-no-detail must fail and list the rows
+
+open-window
+new-script NoDetailFails
+set-text
+end
+caret-at-end
+complete
+expect-completion-no-detail logic

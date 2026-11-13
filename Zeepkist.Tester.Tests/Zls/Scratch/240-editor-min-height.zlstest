@@ -1,0 +1,7 @@
+# #240: at the smallest height with the startup warning showing, the editor keeps three rows and the error header
+open-window
+new-script Lights
+set-window-height 100
+startup-warning on
+screenshot smallest
+expect-editor-in-view

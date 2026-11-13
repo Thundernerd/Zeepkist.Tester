@@ -26,6 +26,7 @@ internal static class Program
             "schema" => SchemaCommand.Run(arguments, output, folder),
             "init" => InitCommand.Run(arguments, output, folder),
             "docs" => DocsCommand.Run(arguments, output, folder),
+            "convert" => ConvertCommand.Run(arguments, output, folder),
             _ => null,
         };
         if (exitCode != null)
@@ -42,5 +43,6 @@ internal static class Program
         output.WriteLine(SchemaCommand.Usage);
         output.WriteLine(InitCommand.Usage);
         output.WriteLine(DocsCommand.Usage);
+        output.WriteLine(ConvertCommand.Usage);
     }
 }

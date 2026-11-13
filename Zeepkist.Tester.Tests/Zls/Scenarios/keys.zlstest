@@ -1,0 +1,50 @@
+# Keys typed into the Script editor work as a player's do
+
+# Typing part of a name, Ctrl+Space and Enter complete it
+open-window
+new-script Keys
+set-text
+zork = 1
+x =
+end
+caret-at-end
+press space
+type zo
+press ctrl+space
+expect-completion zork
+screenshot completion
+press enter
+expect-no-completion
+expect-text x = zork
+
+# Ctrl+/ comments out the caret's line
+press ctrl+/
+expect-text # x = zork
+
+# Escape closes the completion list first, then hides the call help
+set-text
+v = logic(
+end
+caret-at-end
+expect-call-help logic(
+press ctrl+space
+expect-completion a: input
+press escape
+expect-no-completion
+expect-call-help logic(
+press escape
+expect-no-call-help
+
+# Two Escapes in one press do both
+set-text
+wide = logic(
+end
+caret-at-end
+expect-call-help logic(
+press ctrl+space
+expect-completion a: input
+press escape escape
+expect-no-completion
+expect-no-call-help
+type 1, 2)
+expect-text wide = logic(1, 2)

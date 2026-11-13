@@ -1,0 +1,4 @@
+# set-reference-filter fails while the Placed blocks tab shows (this Scenario is meant to fail on its last step)
+open-window
+expect-blocks-tab placed
+set-reference-filter edge

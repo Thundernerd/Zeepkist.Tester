@@ -1,0 +1,6 @@
+open-window
+new-script A
+set-text
+x = 1
+end
+hover nothing

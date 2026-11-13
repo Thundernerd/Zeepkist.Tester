@@ -1,0 +1,51 @@
+# A bigger window, for screenshots: set-window-size makes it wider and taller, keeping its top left corner, and
+# center-window brings it back onto the screen at that size. set-window-height then keeps the width. It leaves the
+# window off the middle of the screen, as kept-state leaves it: run both, in either order, and the second checks that
+# the run put the window's size and position back: the ones the first drew it at, which the run remembered then.
+open-window
+expect-window-size 1120 640
+expect-window-centered
+expect-window-start-rect
+new-script Lights
+set-text
+power_display(1 & 1)
+end
+
+set-window-size 1400 800
+expect-window-size 1400 800
+center-window
+expect-window-size 1400 800
+expect-window-centered
+expect-editor-in-view
+screenshot bigger
+
+set-window-height 700
+expect-window-size 1400 700
+
+# Dragging the edge left, far past the minimum width, holds the window at it, with the editor in view each frame
+drag-window-edge-sideways -2000 over 10
+expect-window-size 360 700
+screenshot dragged-narrowest
+drag-window-edge-sideways 300 over 3
+expect-window-size 660 700
+
+# In one press, coming back from past the minimum grows the window again by however far the mouse comes back
+drag-window-edge-sideways -2000 over 10 then 500 over 5
+expect-window-size 860 700
+
+# The width stays between the window's minimum, which fits the editor with both sides collapsed, and the screen's width
+set-window-size 1 700
+expect-window-size 360 700
+expect-editor-in-view
+screenshot narrowest
+set-window-size 100000 700
+expect-window-width screen
+center-window
+expect-window-centered
+screenshot widest
+
+# Below the minimum height gives the shortest window, which still fits the editor
+set-window-size 900 1
+expect-editor-in-view
+screenshot shortest
+expect-no-exceptions

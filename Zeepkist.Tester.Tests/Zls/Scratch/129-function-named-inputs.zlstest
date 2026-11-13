@@ -1,0 +1,59 @@
+# Named inputs in a call to the Script's own Function (#129)
+
+# f(1, offers b: (a is given by position), and accepting it writes "b: "
+open-window
+new-script Named
+set-text
+    function f(a, b) -> c
+        c = a & b
+    end
+    x = f(1,
+end
+caret-at-end
+press space
+complete
+expect-completion b: input
+screenshot named-inputs
+press enter
+expect-text x = f(1, b: 
+expect-no-completion
+screenshot accepted
+
+# The call help lists f's inputs and highlights b
+expect-call-help f(a, b)
+expect-call-help-active b
+screenshot call-help
+
+# After a named b:, nothing named is left; a is still given by position
+set-text
+    function f(a, b) -> c
+        c = a & b
+    end
+    x = f(b: 1,
+end
+caret-at-end
+press space
+complete
+expect-completion a: input
+screenshot named-after-named
+
+# A Library's f, called qualified, gets none of the Script's f's call help
+show-tab libraries
+new-library timing
+set-text
+    function f(x) -> y
+        y = x
+    end
+end
+show-tab scripts
+select-script Named
+set-text
+    function f(a, b) -> c
+        c = a & b
+    end
+    z = timing.f(
+end
+caret-at-end
+expect-no-call-help
+screenshot qualified-no-help
+expect-no-exceptions

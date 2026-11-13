@@ -1,0 +1,9 @@
+# A run that ends on a screenshot still has its end in the copied log, so Exceptions at quit is read (#227)
+open-window
+new-script CutOff
+set-text
+power_display(1 & 1)
+end
+compile
+expect-result Placed 3 blocks
+screenshot last-step

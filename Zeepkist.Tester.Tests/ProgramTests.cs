@@ -185,6 +185,68 @@ public sealed class ProgramTests : IDisposable
     }
 
     [Fact]
+    public void Convert_WritesTheYamlNextToTheOldFile()
+    {
+        var file = Write("a.zlstest", "# Compiles\ncompile lamp\nwait 2\n");
+
+        Assert.Equal(0, Run("convert", file, "--plugin", _modPath));
+        var converted = Path.Combine(_folder.Path, "a.ztest.yaml");
+        Assert.Equal("use: [sample]\nsteps:\n  # Compiles\n  - compile: lamp\n  - wait: 2\n", File.ReadAllText(converted));
+        Assert.Equal([$"Wrote {converted}", "Converted 1 file: no errors."], Lines());
+    }
+
+    [Fact]
+    public void Convert_ALineThatCantBeRead_PrintsWhereAndWritesNothing()
+    {
+        var file = Write("a.zlstest", "compile lamp\nnope\n");
+
+        Assert.Equal(1, Run("convert", file, "--plugin", _modPath));
+        Assert.Equal([$"{file}:2:1: error: There's no step 'nope'.", "Converted no files: 1 error."], Lines());
+        Assert.False(File.Exists(Path.Combine(_folder.Path, "a.ztest.yaml")));
+    }
+
+    [Fact]
+    public void Convert_DoesntWriteOverAScenarioThatsThere()
+    {
+        var file = Write("a.zlstest", "wait 2\n");
+        var converted = Write("a.ztest.yaml", "steps:\n  - undo\n");
+
+        Assert.Equal(1, Run("convert", file));
+        Assert.Equal($"error: {converted} is already there. Move it out of the way to convert {file}.", Lines()[0]);
+        Assert.Equal("steps:\n  - undo\n", File.ReadAllText(converted));
+    }
+
+    [Fact]
+    public void Convert_AFolder_ConvertsEachOldFileInIt()
+    {
+        Write("a.zlstest", "wait 2\n");
+        Write(Path.Combine("more", "b.zlstest"), "undo\n");
+
+        Assert.Equal(0, Run("convert", _folder.Path));
+        Assert.True(File.Exists(Path.Combine(_folder.Path, "a.ztest.yaml")));
+        Assert.True(File.Exists(Path.Combine(_folder.Path, "more", "b.ztest.yaml")));
+        Assert.Equal("Converted 2 files: no errors.", Lines()[^1]);
+    }
+
+    [Fact]
+    public void Convert_AFolderWithoutOldFiles_Fails()
+    {
+        Write("a.ztest.yaml", "steps:\n  - undo\n");
+
+        Assert.Equal(1, Run("convert", _folder.Path));
+        Assert.Equal($"error: No .zlstest files in {_folder.Path}.", Lines()[0]);
+    }
+
+    [Theory]
+    [InlineData]
+    [InlineData("--nope")]
+    public void Convert_NoFilesOrABadOption_PrintsUsageAndFails(params string[] arguments)
+    {
+        Assert.Equal(1, Run(["convert", .. arguments]));
+        Assert.Contains("Usage: ztest", _output.ToString());
+    }
+
+    [Fact]
     public void Docs_WritesTheReference_OfTheTestersStepsAndThePlugins()
     {
         var output = Path.Combine(_folder.Path, "reference.md");

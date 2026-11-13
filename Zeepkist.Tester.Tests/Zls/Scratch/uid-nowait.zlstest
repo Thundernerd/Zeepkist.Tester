@@ -1,0 +1,20 @@
+# #272: a placed(...) to a lamp finds it straight away after test mode, with no wait for the window's next check
+open-window
+new-script Lights
+place-block lamp as lamp
+set-text
+    toggler(1, targets: placed("{uid:lamp}"))
+end
+expect-no-errors
+compile
+expect-result Placed
+place-start
+test-mode
+wait 0.1
+back-to-editor
+open-window
+select-script Lights
+expect-no-errors
+wait 0.1
+screenshot back-in-editor
+expect-no-errors

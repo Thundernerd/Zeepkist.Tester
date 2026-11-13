@@ -1,0 +1,22 @@
+# The startup check's warnings show above the editor, with the editor and the error panel's header in view
+open-window
+new-script Lights
+set-text
+power_display(1 & 1)
+end
+expect-editor-in-view
+
+startup-warning on
+expect-editor-in-view
+screenshot warning
+
+# Compile still works with it showing
+compile
+expect-result Placed 3 blocks
+expect-blocks 3
+
+# And without it again
+startup-warning off
+expect-editor-in-view
+screenshot no-warning
+expect-no-exceptions

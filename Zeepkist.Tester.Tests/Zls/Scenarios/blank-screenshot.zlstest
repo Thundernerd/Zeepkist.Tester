@@ -1,0 +1,3 @@
+# A screenshot of a frame covered in one color is found blank, and the next one isn't
+expect-blank-screenshot covered
+screenshot after

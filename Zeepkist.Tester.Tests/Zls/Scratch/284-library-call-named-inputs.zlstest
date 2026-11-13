@@ -1,0 +1,88 @@
+# Named inputs and call help in a call to a Library's Function (#284)
+open-window
+new-library timing284
+set-text
+    function edge(a, b) -> lo
+        lo = a & b
+    end
+end
+
+# timing284.edge(1, offers b: (a is given by position), and accepting it writes "b: "
+new-script LibCall284
+set-text
+    function edge(x) -> y
+        y = x
+    end
+    z = timing284.edge(1,
+end
+caret-at-end
+press space
+complete
+expect-completion b: input
+expect-completion-missing a:
+expect-completion-missing x:
+screenshot named-inputs
+
+# The call help shows the Library's edge, not the Script's, with b active
+expect-call-help edge(a, b)
+expect-call-help-active b
+screenshot call-help
+press enter
+expect-text z = timing284.edge(1, b:
+expect-no-completion
+screenshot accepted
+
+# After a named b:, a is still offered
+set-text
+    z = timing284.edge(b: 1,
+end
+caret-at-end
+press space
+complete
+expect-completion a: input
+expect-completion-missing b:
+screenshot named-after-named
+
+# Hovering a named argument names the Library Function's input, not the Script's edge's
+set-text
+    function edge(x) -> y
+        y = x
+    end
+    z = timing284.edge(1, b: 2)
+end
+hover b: 2
+expect-hover b input
+screenshot hover
+
+# Escape hides the call help, and it stays hidden while the call's arguments are typed
+set-text
+    z = timing284.edge(
+end
+caret-at-end
+expect-call-help edge(a, b)
+press escape
+expect-no-call-help
+type 1,
+expect-no-call-help
+screenshot dismissed
+
+# An error in the Library: every call into it is rejected, so it offers no inputs and no call help
+select-library timing284
+set-text
+    function edge(a, b) -> lo
+        lo = a & b
+    end
+    x = 1
+end
+select-script LibCall284
+set-text
+    z = timing284.edge(1,
+end
+caret-at-end
+expect-no-call-help
+press space
+complete
+expect-completion logic
+expect-completion-missing b:
+screenshot library-error
+expect-no-exceptions

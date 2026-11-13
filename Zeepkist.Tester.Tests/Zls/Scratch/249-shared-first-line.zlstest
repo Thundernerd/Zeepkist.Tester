@@ -1,0 +1,117 @@
+# #249: completion and call help read a Function's first line the way the parser and compiler do
+
+open-window
+new-script FirstLine
+
+# A well-formed Function: outputs on the dot, its input by name, call help and the completion row
+set-text
+    function f(zq) -> hi, lo
+        hi = zq
+        lo = !zq
+    end
+    r = f(1)
+end
+expect-no-errors
+caret-at-end
+press enter
+type r.
+expect-completion hi output
+expect-completion lo output
+press escape
+press enter
+type f(zq
+expect-call-help f(zq)
+complete
+expect-completion zq: input
+screenshot well-formed
+press escape
+set-text
+    function f(zq) -> hi, lo
+        hi = zq
+        lo = !zq
+    end
+    x = f
+end
+caret-at-end
+complete
+expect-completion f (zq)
+
+# Two outputs with the same name: no outputs, no named arguments, no call help
+set-text
+    function f(zq) -> hi, hi
+        hi = zq
+    end
+    r = f(1)
+end
+expect-error 1:23 'hi' is already an output
+caret-at-end
+press enter
+type r.
+expect-no-completion
+press enter
+type f(zq
+complete
+expect-no-completion
+expect-no-call-help
+screenshot duplicate-output
+set-text
+    function f(zq) -> hi, hi
+        hi = zq
+    end
+    x = f
+end
+caret-at-end
+complete
+expect-completion-no-detail f
+
+# Two inputs with the same name
+set-text
+    function f(zq, zq) -> hi
+        hi = zq
+    end
+    r = f(1)
+end
+expect-error 1:16 'zq' is already an input
+caret-at-end
+press enter
+type r.
+expect-no-completion
+press enter
+type f(zq
+complete
+expect-no-completion
+expect-no-call-help
+screenshot duplicate-input
+set-text
+    function f(zq, zq)
+    end
+    x = f
+end
+caret-at-end
+complete
+expect-completion-no-detail f
+
+# An arrow with no outputs after it: a syntax error
+set-text
+    function f(zq) ->
+    end
+    x = f(
+end
+expect-error 1:18 Expected an output name
+caret-at-end
+press space
+expect-no-call-help
+type zq
+complete
+expect-no-completion
+screenshot no-outputs
+set-text
+    function f(zq) ->
+    end
+    x = f
+end
+caret-at-end
+complete
+expect-completion-no-detail f
+
+expect-no-exceptions

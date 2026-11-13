@@ -1,0 +1,5 @@
+# The run starts without the player's Libraries: a player with a Library called "a" would make New Library fail
+open-window
+new-library a
+new-library shared
+screenshot libraries

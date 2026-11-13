@@ -1,0 +1,16 @@
+# Two Escapes in one frame close the completion list, then hide the call help
+
+open-window
+new-script DoubleEscape
+set-text
+v = logic(
+end
+caret-at-end
+expect-call-help logic(
+press ctrl+space
+expect-completion a: input
+screenshot before-escapes
+press escape escape
+expect-no-completion
+expect-no-call-help
+screenshot after-escapes

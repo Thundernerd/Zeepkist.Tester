@@ -1,0 +1,16 @@
+# expect-completion-no-detail finds a row whose detail is empty
+
+open-window
+new-script NoDetail
+
+# At a statement start, the function keyword and true are offered with no detail, beside logic, which has one
+set-text
+end
+caret-at-end
+complete
+expect-completion-no-detail function
+expect-completion-no-detail true
+expect-completion logic (a, b, op_in, op:)
+screenshot statement-start
+
+expect-no-exceptions

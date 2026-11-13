@@ -1,0 +1,14 @@
+# #240, with today's steps: the storage warning at the window's smallest height, for a look at the screenshots
+open-window
+new-script Horn booster
+set-text
+power_display(1 & 1)
+end
+set-window-height 64
+expect-footer-in-view
+screenshot storage-warning-smallest
+compile
+expect-result Placed
+screenshot stored-smallest
+set-window-height 640
+expect-no-exceptions
