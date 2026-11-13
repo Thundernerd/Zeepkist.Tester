@@ -7,7 +7,8 @@
       "type": [
         "string",
         "number",
-        "boolean"
+        "boolean",
+        "null"
       ],
       "description": "What the scenario checks, for the results.",
       "markdownDescription": "What the scenario checks, for the results."
@@ -55,7 +56,8 @@
                   "type": [
                     "string",
                     "number",
-                    "boolean"
+                    "boolean",
+                    "null"
                   ],
                   "not": {
                     "type": "string",
@@ -81,7 +83,8 @@
                   "type": [
                     "string",
                     "number",
-                    "boolean"
+                    "boolean",
+                    "null"
                   ],
                   "not": {
                     "type": "string",
@@ -140,7 +143,8 @@
                     "type": [
                       "string",
                       "number",
-                      "boolean"
+                      "boolean",
+                      "null"
                     ],
                     "pattern": "^[A-Za-z0-9_-]+$"
                   },
@@ -157,7 +161,8 @@
                             "type": [
                               "string",
                               "number",
-                              "boolean"
+                              "boolean",
+                              "null"
                             ],
                             "pattern": "^[A-Za-z0-9_-]+$"
                           },
@@ -197,6 +202,10 @@
                   },
                   {
                     "type": "string",
+                    "pattern": "^[-+]?[0-9]+$"
+                  },
+                  {
+                    "type": "string",
                     "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
                   },
                   {
@@ -206,6 +215,10 @@
                         "anyOf": [
                           {
                             "type": "integer"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "^[-+]?[0-9]+$"
                           },
                           {
                             "type": "string",
@@ -219,6 +232,10 @@
                         "anyOf": [
                           {
                             "type": "integer"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "^[-+]?[0-9]+$"
                           },
                           {
                             "type": "string",
@@ -260,7 +277,8 @@
                     "type": [
                       "string",
                       "number",
-                      "boolean"
+                      "boolean",
+                      "null"
                     ]
                   },
                   {
@@ -270,7 +288,8 @@
                         "type": [
                           "string",
                           "number",
-                          "boolean"
+                          "boolean",
+                          "null"
                         ],
                         "description": "The line to write.",
                         "markdownDescription": "The line to write."
@@ -303,6 +322,10 @@
                   },
                   {
                     "type": "string",
+                    "pattern": "^[-+]?[0-9]+$"
+                  },
+                  {
+                    "type": "string",
                     "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
                   },
                   {
@@ -312,6 +335,10 @@
                         "anyOf": [
                           {
                             "type": "integer"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "^[-+]?[0-9]+$"
                           },
                           {
                             "type": "string",
@@ -327,7 +354,8 @@
                             "type": [
                               "string",
                               "number",
-                              "boolean"
+                              "boolean",
+                              "null"
                             ],
                             "pattern": "^[A-Za-z0-9_-]+$"
                           },
@@ -376,7 +404,8 @@
                     "type": [
                       "string",
                       "number",
-                      "boolean"
+                      "boolean",
+                      "null"
                     ],
                     "pattern": "^[A-Za-z0-9_-]+$"
                   },
@@ -393,7 +422,8 @@
                             "type": [
                               "string",
                               "number",
-                              "boolean"
+                              "boolean",
+                              "null"
                             ],
                             "pattern": "^[A-Za-z0-9_-]+$"
                           },
@@ -435,7 +465,8 @@
                         "type": [
                           "string",
                           "number",
-                          "boolean"
+                          "boolean",
+                          "null"
                         ],
                         "pattern": "^[A-Za-z0-9_-]+$"
                       },
@@ -451,7 +482,8 @@
                     "type": [
                       "string",
                       "number",
-                      "boolean"
+                      "boolean",
+                      "null"
                     ],
                     "description": "The setting's key, as a level file stores it. A failure lists the keys the block has.",
                     "markdownDescription": "The setting's key, as a level file stores it. A failure lists the keys the block has."
@@ -460,7 +492,8 @@
                     "type": [
                       "string",
                       "number",
-                      "boolean"
+                      "boolean",
+                      "null"
                     ],
                     "description": "The value, which has to fit the setting: a whole number, `true` or `false`, a decimal, or text.",
                     "markdownDescription": "The value, which has to fit the setting: a whole number, `true` or `false`, a decimal, or text."
@@ -558,7 +591,8 @@
                     "type": [
                       "string",
                       "number",
-                      "boolean"
+                      "boolean",
+                      "null"
                     ]
                   },
                   {
@@ -568,7 +602,8 @@
                         "type": [
                           "string",
                           "number",
-                          "boolean"
+                          "boolean",
+                          "null"
                         ],
                         "description": "The function to compile.",
                         "markdownDescription": "The function to compile."
@@ -611,6 +646,10 @@
                       },
                       {
                         "type": "string",
+                        "pattern": "^[-+]?[0-9]+$"
+                      },
+                      {
+                        "type": "string",
                         "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
                       }
                     ]
@@ -619,7 +658,8 @@
                     "type": [
                       "string",
                       "number",
-                      "boolean"
+                      "boolean",
+                      "null"
                     ]
                   },
                   "word": {
@@ -628,7 +668,8 @@
                         "type": [
                           "string",
                           "number",
-                          "boolean"
+                          "boolean",
+                          "null"
                         ],
                         "pattern": "^[a-z]+$"
                       },
@@ -664,7 +705,8 @@
                         "type": [
                           "string",
                           "number",
-                          "boolean"
+                          "boolean",
+                          "null"
                         ],
                         "pattern": "^(?:(?:shift|ctrl|alt|cmd)\\+)*(?:space|enter|tab|escape|backspace|delete|up|down|left|right|home|end|pageup|pagedown|[a-z0-9/\\\\.,;'\\[\\]=`-])(?: (?:(?:shift|ctrl|alt|cmd)\\+)*(?:space|enter|tab|escape|backspace|delete|up|down|left|right|home|end|pageup|pagedown|[a-z0-9/\\\\.,;'\\[\\]=`-])){0,7}$"
                       },
@@ -681,6 +723,10 @@
                       },
                       {
                         "type": "string",
+                        "pattern": "^[-+]?[0-9]+$"
+                      },
+                      {
+                        "type": "string",
                         "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
                       }
                     ]
@@ -691,7 +737,8 @@
                         "type": [
                           "string",
                           "number",
-                          "boolean"
+                          "boolean",
+                          "null"
                         ],
                         "pattern": "^[A-Za-z0-9_-]+$"
                       },
@@ -731,7 +778,8 @@
                         "type": [
                           "string",
                           "number",
-                          "boolean"
+                          "boolean",
+                          "null"
                         ],
                         "pattern": "^[A-Za-z0-9_-]+$"
                       },
@@ -749,7 +797,8 @@
                         "type": [
                           "string",
                           "number",
-                          "boolean"
+                          "boolean",
+                          "null"
                         ],
                         "pattern": "^[A-Za-z0-9_-]+$"
                       },
@@ -791,7 +840,8 @@
                     "type": [
                       "string",
                       "number",
-                      "boolean"
+                      "boolean",
+                      "null"
                     ]
                   },
                   {
@@ -801,7 +851,8 @@
                         "type": [
                           "string",
                           "number",
-                          "boolean"
+                          "boolean",
+                          "null"
                         ],
                         "description": "The function to compile.",
                         "markdownDescription": "The function to compile."
@@ -844,6 +895,10 @@
                       },
                       {
                         "type": "string",
+                        "pattern": "^[-+]?[0-9]+$"
+                      },
+                      {
+                        "type": "string",
                         "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
                       }
                     ]
@@ -852,7 +907,8 @@
                     "type": [
                       "string",
                       "number",
-                      "boolean"
+                      "boolean",
+                      "null"
                     ]
                   },
                   "word": {
@@ -861,7 +917,8 @@
                         "type": [
                           "string",
                           "number",
-                          "boolean"
+                          "boolean",
+                          "null"
                         ],
                         "pattern": "^[a-z]+$"
                       },
@@ -897,7 +954,8 @@
                         "type": [
                           "string",
                           "number",
-                          "boolean"
+                          "boolean",
+                          "null"
                         ],
                         "pattern": "^(?:(?:shift|ctrl|alt|cmd)\\+)*(?:space|enter|tab|escape|backspace|delete|up|down|left|right|home|end|pageup|pagedown|[a-z0-9/\\\\.,;'\\[\\]=`-])(?: (?:(?:shift|ctrl|alt|cmd)\\+)*(?:space|enter|tab|escape|backspace|delete|up|down|left|right|home|end|pageup|pagedown|[a-z0-9/\\\\.,;'\\[\\]=`-])){0,7}$"
                       },
@@ -914,6 +972,10 @@
                       },
                       {
                         "type": "string",
+                        "pattern": "^[-+]?[0-9]+$"
+                      },
+                      {
+                        "type": "string",
                         "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
                       }
                     ]
@@ -924,7 +986,8 @@
                         "type": [
                           "string",
                           "number",
-                          "boolean"
+                          "boolean",
+                          "null"
                         ],
                         "pattern": "^[A-Za-z0-9_-]+$"
                       },
@@ -964,7 +1027,8 @@
                         "type": [
                           "string",
                           "number",
-                          "boolean"
+                          "boolean",
+                          "null"
                         ],
                         "pattern": "^[A-Za-z0-9_-]+$"
                       },
@@ -982,7 +1046,8 @@
                         "type": [
                           "string",
                           "number",
-                          "boolean"
+                          "boolean",
+                          "null"
                         ],
                         "pattern": "^[A-Za-z0-9_-]+$"
                       },
@@ -1032,7 +1097,8 @@
                     "type": [
                       "string",
                       "number",
-                      "boolean"
+                      "boolean",
+                      "null"
                     ],
                     "not": {
                       "type": "string",
@@ -1057,8 +1123,16 @@
             "type": "object",
             "properties": {
               "repeat": {
-                "type": "integer",
-                "minimum": 1,
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9]*[1-9][0-9]*$"
+                  }
+                ],
                 "description": "How many times to run the steps.",
                 "markdownDescription": "How many times to run the steps."
               },
@@ -1079,7 +1153,8 @@
                 "type": [
                   "string",
                   "number",
-                  "boolean"
+                  "boolean",
+                  "null"
                 ],
                 "not": {
                   "type": "string",
@@ -1097,7 +1172,8 @@
                   "type": [
                     "string",
                     "number",
-                    "boolean"
+                    "boolean",
+                    "null"
                   ]
                 },
                 "description": "Named values the file can use as `${name}`.",

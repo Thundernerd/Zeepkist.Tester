@@ -15,12 +15,22 @@ namespace TNRD.Zeepkist.Tester.Cli;
 /// </summary>
 internal static class StepSchema
 {
-    private const string Steps = "#/definitions/steps";
+    private const string StepsRef = "#/definitions/steps";
 
     /// <summary>
     /// What <see cref="Seconds"/> takes as text, as the parser reads it: a number, with or without a unit.
     /// </summary>
     private const string SecondsText = "^[0-9]+(\\.[0-9]+)?(ms|s)?$";
+
+    /// <summary>
+    /// What the parser reads as a whole number.
+    /// </summary>
+    private const string WholeNumberText = "^[-+]?[0-9]+$";
+
+    /// <summary>
+    /// What the parser reads as a number.
+    /// </summary>
+    private const string NumberText = "^[-+]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][-+]?[0-9]+)?$";
 
     private static readonly JsonSerializerOptions _indented = new JsonSerializerOptions
     {
@@ -30,12 +40,12 @@ internal static class StepSchema
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    private static readonly string _namePattern = Name<object>.Pattern;
+    private const string NamePattern = Name<object>.Pattern;
 
     /// <summary>
     /// A <c>${name}</c> anywhere in the text.
     /// </summary>
-    private static readonly string _substitution = "\\$\\{" + _namePattern.TrimStart('^').TrimEnd('$') + "\\}";
+    private const string Substituted = "\\$\\{" + Substitution.NameCharacters + "\\}";
 
     public static string Write(IEnumerable<StepDescriptor> steps)
     {
@@ -55,7 +65,7 @@ internal static class StepSchema
                 ["use"] = Use(all),
                 ["start"] = Start(),
                 ["input"] = Documented(new JsonObject { ["enum"] = Array("in-process", "os") }, "How input reaches the game: `in-process`, the default, or `os`, as a player's keyboard and mouse do."),
-                ["steps"] = new JsonObject { ["$ref"] = Steps },
+                ["steps"] = new JsonObject { ["$ref"] = StepsRef },
             },
             ["required"] = Array("steps"),
             ["additionalProperties"] = false,
@@ -162,14 +172,14 @@ internal static class StepSchema
                 return Documented(ObjectValue(type.Arguments), type.Documentation);
             case ArgumentKind.Int:
             case ArgumentKind.Pixels:
-                return OrSubstituted(Ranged(argument, new JsonObject { ["type"] = "integer" }));
+                return OrSubstituted(AnyOf(Ranged(argument, new JsonObject { ["type"] = "integer" }), Quoted(WholeNumberText)));
             case ArgumentKind.Float:
-                return OrSubstituted(Ranged(argument, new JsonObject { ["type"] = "number" }));
+                return OrSubstituted(AnyOf(Ranged(argument, new JsonObject { ["type"] = "number" }), Quoted(NumberText)));
             case ArgumentKind.Seconds:
                 var number = Ranged(argument, new JsonObject { ["type"] = "number", ["minimum"] = 0 });
-                return OrSubstituted(AnyOf(number, new JsonObject { ["type"] = "string", ["pattern"] = SecondsText }));
+                return OrSubstituted(AnyOf(number, Quoted(SecondsText)));
             case ArgumentKind.Bool:
-                return OrSubstituted(new JsonObject { ["type"] = "boolean" });
+                return OrSubstituted(AnyOf(new JsonObject { ["type"] = "boolean" }, Quoted("^(true|false)$")));
             case ArgumentKind.Enum:
                 return OrSubstituted(new JsonObject { ["enum"] = Array([.. type.EnumValues]) });
             default:
@@ -199,7 +209,7 @@ internal static class StepSchema
     /// </summary>
     private static JsonObject OrSubstituted(JsonObject value)
     {
-        return AnyOf(value, new JsonObject { ["type"] = "string", ["pattern"] = _substitution });
+        return AnyOf(value, new JsonObject { ["type"] = "string", ["pattern"] = Substituted });
     }
 
     private static JsonObject Use(List<StepDescriptor> steps)
@@ -236,19 +246,18 @@ internal static class StepSchema
             ["type"] = "object",
             ["minProperties"] = 1,
             ["maxProperties"] = 1,
-            ["propertyNames"] = new JsonObject { ["pattern"] = _namePattern },
+            ["propertyNames"] = new JsonObject { ["pattern"] = NamePattern },
             ["additionalProperties"] = new JsonObject { ["type"] = "array", ["minItems"] = 1, ["items"] = Literal() },
         };
 
-        return ControlNode(
-            "for",
-            Documented(variable, "One variable and its values, such as `{ h: [64, 120] }`. The steps run once for each value, with `${h}` standing for it."),
-            ["steps"]);
+        var node = ControlNode("for", Documented(variable, "One variable and its values, such as `{ h: [64, 120] }`. The steps run once for each value, with `${h}` standing for it."));
+        return WithSteps(node);
     }
 
     private static JsonObject RepeatNode()
     {
-        return ControlNode("repeat", Documented(new JsonObject { ["type"] = "integer", ["minimum"] = 1 }, "How many times to run the steps."), ["steps"]);
+        var count = AnyOf(new JsonObject { ["type"] = "integer", ["minimum"] = 1 }, Quoted("^[0-9]*[1-9][0-9]*$"));
+        return WithSteps(ControlNode("repeat", Documented(count, "How many times to run the steps.")));
     }
 
     private static JsonObject RunNode()
@@ -256,33 +265,37 @@ internal static class StepSchema
         var with = new JsonObject
         {
             ["type"] = "object",
-            ["propertyNames"] = new JsonObject { ["pattern"] = _namePattern },
+            ["propertyNames"] = new JsonObject { ["pattern"] = NamePattern },
             ["additionalProperties"] = Text(),
         };
 
-        return ControlNode("run", Documented(Literal(), "A scenario file to run here, relative to this one."), [], ("with", Documented(with, "Named values the file can use as `${name}`.")));
+        var node = ControlNode("run", Documented(Literal(), "A scenario file to run here, relative to this one."));
+        node["properties"]["with"] = Documented(with, "Named values the file can use as `${name}`.");
+        return node;
     }
 
-    private static JsonObject ControlNode(string name, JsonObject value, string[] withSteps, params (string Name, JsonObject Value)[] others)
+    /// <summary>
+    /// A node that the runner handles itself, which its key names.
+    /// </summary>
+    private static JsonObject ControlNode(string name, JsonObject value)
     {
-        var properties = new JsonObject { [name] = value };
-        foreach (var other in others)
-            properties[other.Name] = other.Value;
-
-        var required = new List<string> { name };
-        foreach (var steps in withSteps)
-        {
-            properties[steps] = new JsonObject { ["$ref"] = Steps };
-            required.Add(steps);
-        }
-
         return new JsonObject
         {
             ["type"] = "object",
-            ["properties"] = properties,
-            ["required"] = Array([.. required]),
+            ["properties"] = new JsonObject { [name] = value },
+            ["required"] = Array(name),
             ["additionalProperties"] = false,
         };
+    }
+
+    /// <summary>
+    /// Has a control node take a body of steps.
+    /// </summary>
+    private static JsonObject WithSteps(JsonObject node)
+    {
+        node["properties"]["steps"] = new JsonObject { ["$ref"] = StepsRef };
+        node["required"].AsArray().Add("steps");
+        return node;
     }
 
     private static JsonObject SingleKey(string key, JsonNode value)
@@ -297,11 +310,11 @@ internal static class StepSchema
     }
 
     /// <summary>
-    /// A single value as the parser reads it, which is always text, though an editor reads <c>2</c> as a number.
+    /// A single value as the parser reads it, which is always text, though an editor reads <c>2</c> as a number and <c>~</c> as null.
     /// </summary>
     private static JsonObject Text()
     {
-        return new JsonObject { ["type"] = Array("string", "number", "boolean") };
+        return new JsonObject { ["type"] = Array("string", "number", "boolean", "null") };
     }
 
     /// <summary>
@@ -317,6 +330,14 @@ internal static class StepSchema
     /// <summary>
     /// Either value, with an <c>anyOf</c> that has nothing else beside it opened up into this one.
     /// </summary>
+    /// <summary>
+    /// A value written as text, in quotes, which the parser reads as it reads the same value without them.
+    /// </summary>
+    private static JsonObject Quoted(string pattern)
+    {
+        return new JsonObject { ["type"] = "string", ["pattern"] = pattern };
+    }
+
     private static JsonObject AnyOf(JsonObject first, JsonObject second)
     {
         var either = new JsonArray();

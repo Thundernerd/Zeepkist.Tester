@@ -30,6 +30,11 @@ public class StepSchemaTests
     [InlineData("use: [zls]\nsteps:\n  - compile\n")]
     [InlineData("start: { editor: { level: a.zeeplevel } }\nsteps:\n  - undo\n")]
     [InlineData("start: { free-play: { uid: abc } }\nsteps:\n  - undo\n")]
+    [InlineData("steps:\n  - place-block: { function: lamp, how-many: \"3\", offset: \"-5\" }\n")]
+    [InlineData("steps:\n  - every-type: { bool: \"true\", float: \"1.5\", axis: \"horizontal\" }\n")]
+    [InlineData("steps:\n  - wait: \"2\"\n")]
+    [InlineData("steps:\n  - repeat: \"2\"\n    steps:\n      - undo\n")]
+    [InlineData("description: ~\nsteps:\n  - written: { string: null }\n  - for: { h: [null] }\n    steps:\n      - undo\n")]
     public void Valid_AsTheParserReadsIt(string yaml)
     {
         Assert.True(IsValid(yaml));
@@ -55,6 +60,9 @@ public class StepSchemaTests
     [InlineData("start: { editor: { level: \"${x}\" } }\nsteps:\n  - undo\n")]
     [InlineData("steps:\n  - compile: 1\n")]
     [InlineData("use: [clashing]\nsteps:\n  - wait: true\n")]
+    [InlineData("steps:\n  - place-block: { function: lamp, how-many: \"3x\" }\n")]
+    [InlineData("steps:\n  - every-type: { bool: \"yes\", float: \"1.5.2\" }\n")]
+    [InlineData("steps:\n  - repeat: \"-2\"\n    steps:\n      - undo\n")]
     public void Invalid_AsTheParserReadsIt(string yaml)
     {
         Assert.False(IsValid(yaml));
