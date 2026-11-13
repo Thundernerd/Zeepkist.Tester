@@ -85,6 +85,8 @@ ztest docs --output docs/steps.md                             # the "testPlugin"
 
 `ztest convert` writes each of ZeepLogicScript's old `.zlstest` files as a `.ztest.yaml` next to it, and leaves the old file where it is. It won't write over a `.ztest.yaml` that's already there.
 
+For this release the tester also runs a `.zlstest` as it is, read line by line into the same steps its converted file would have, so failures point at its own lines. It has no header, so it starts in the editor with input in process. `ztest check` checks it the same way, finds it in folders next to `.ztest.yaml` files, and warns on each one with `file:1:1: warning: .zlstest is the old format. Run ztest convert <file>.` A later release reads only YAML.
+
 ```sh
 ztest convert Scenarios --plugin bin/Debug/net472/MyMod.InGameTests.dll
 ```
