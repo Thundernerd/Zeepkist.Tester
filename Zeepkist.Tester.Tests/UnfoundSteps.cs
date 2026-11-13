@@ -5,7 +5,7 @@ using TNRD.Zeepkist.Tester.Tests.SampleCore;
 namespace TNRD.Zeepkist.Tester.Tests;
 
 /// <summary>
-/// Steps and states that use a type from Zeepkist.Tester.Tests.SampleCore, for reading them offline where it can't be found.
+/// Steps, states and C# tests that use a type from Zeepkist.Tester.Tests.SampleCore, for reading them offline where it can't be found.
 /// </summary>
 public static class UnfoundSteps
 {

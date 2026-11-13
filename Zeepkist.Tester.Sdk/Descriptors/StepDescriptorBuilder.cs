@@ -157,16 +157,16 @@ public sealed class StepDescriptorBuilder
 
     public TestDescriptor BuildTest(MethodInfo method)
     {
-        return NamingWhatCantBeFound($"{method.DeclaringType.FullName}.{method.Name}", () => BuildTestMethod(method));
+        return NamingWhatCantBeFound(TestName(method), () => BuildTestMethod(method));
     }
 
     private TestDescriptor BuildTestMethod(MethodInfo method)
     {
         var testAttribute = FindAttribute<InGameTestAttribute>(method)
-            ?? throw new StepDefinitionException($"{method.DeclaringType.FullName}.{method.Name} has no [InGameTest] attribute.");
+            ?? throw new StepDefinitionException($"{TestName(method)} has no [InGameTest] attribute.");
 
         var owner = method.DeclaringType;
-        var what = $"[InGameTest] {owner.FullName}.{method.Name}";
+        var what = $"[InGameTest] {TestName(method)}";
         var parameters = method.GetParameters();
         var takesAContext = parameters.Length == 1 && parameters[0].ParameterType.FullName == typeof(IStepContext).FullName;
         if (!method.IsPublic || method.IsStatic || method.IsGenericMethodDefinition || method.ReturnType.FullName != typeof(System.Collections.IEnumerator).FullName || !takesAContext)
@@ -190,6 +190,14 @@ public sealed class StepDescriptorBuilder
             FreePlayUid = freePlayUid,
             Documentation = Summary('M', owner, $".{method.Name}({typeof(IStepContext).FullName})"),
         };
+    }
+
+    /// <summary>
+    /// How errors name a C# test: its class's full name and its method, such as <c>Mod.WindowTests.Opens</c>.
+    /// </summary>
+    private static string TestName(MethodInfo method)
+    {
+        return $"{method.DeclaringType.FullName}.{method.Name}";
     }
 
     /// <summary>

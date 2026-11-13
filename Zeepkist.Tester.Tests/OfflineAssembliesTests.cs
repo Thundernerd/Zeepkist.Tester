@@ -126,11 +126,11 @@ public class OfflineAssembliesTests
     {
         using var folder = new TemporaryFolder();
         using var assemblies = WithoutSampleCore(folder);
-        var test = LoadCopy(assemblies, folder, testClass).GetMethod("Test", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+        var test = LoadCopy(assemblies, folder, testClass).GetMethod(nameof(UnfoundSteps.TestParameterElsewhere.Test), BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
 
         var exception = Assert.Throws<StepDefinitionException>(() => new StepDescriptorBuilder().BuildTest(test));
 
-        Assert.Equal($"{testClass.FullName}.Test uses a type from Zeepkist.Tester.Tests.SampleCore, which can't be found.", exception.Message);
+        Assert.Equal($"{testClass.FullName}.{nameof(UnfoundSteps.TestParameterElsewhere.Test)} uses a type from Zeepkist.Tester.Tests.SampleCore, which can't be found.", exception.Message);
     }
 
     [Fact]
