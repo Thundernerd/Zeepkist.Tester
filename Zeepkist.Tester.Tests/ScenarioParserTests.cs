@@ -220,12 +220,11 @@ public class ScenarioParserTests
     [InlineData("{ editor: { level: levels/a.zeeplevel } }", "levels/a.zeeplevel")]
     [InlineData("editor", null)]
     [InlineData("{ free-play: { uid: levels/a.zeeplevel } }", null)]
-    public void ALevelFile_IsFoundFromTheScenario(string written, string expected)
+    public void ALevelFile_IsFoundInTheFolderItsWrittenRelativeTo(string written, string expected)
     {
-        var scenario = Path.Combine("scenarios", "start.ztest.yaml");
-        var start = ScenarioParser.Parse(scenario, new StringReader($"start: {written}\nsteps:\n  - undo\n"), ScenarioSteps.Descriptors).Start;
+        var start = ScenarioParser.Parse(Path.Combine("scenarios", "start.ztest.yaml"), new StringReader($"start: {written}\nsteps:\n  - undo\n"), ScenarioSteps.Descriptors).Start;
 
-        Assert.Equal(expected == null ? null : Path.Combine("scenarios", expected.Replace('/', Path.DirectorySeparatorChar)), start.LevelPath(scenario));
+        Assert.Equal(expected == null ? null : Path.Combine("scenarios", expected.Replace('/', Path.DirectorySeparatorChar)), start.LevelPath("scenarios"));
     }
 
     [Fact]
