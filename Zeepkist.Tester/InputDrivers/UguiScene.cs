@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Imui.IO.UGUI;
+using TNRD.Zeepkist.Tester.Sdk;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -22,9 +23,9 @@ internal sealed class UguiScene : IUguiScene<GameObject>
     private RaycastResult _lastHit;
 
     /// <summary>
-    /// What the pointer was over as its button last went down.
+    /// What the pointer was over as each button last went down.
     /// </summary>
-    private RaycastResult _pressHit;
+    private readonly Dictionary<MouseButton, RaycastResult> _pressHits = [];
 
     public bool Ready => EventSystem.current != null;
 
@@ -36,6 +37,23 @@ internal sealed class UguiScene : IUguiScene<GameObject>
         && EventSystem.current.currentInputModule is StandaloneInputModule module
         && module.input != null
         && module.input.GetType() == typeof(BaseInput);
+
+    public GameObject Selected => EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+
+    public bool CanSelect(GameObject node)
+    {
+        return node != null && ExecuteEvents.CanHandleEvent<ISelectHandler>(node);
+    }
+
+    /// <summary>
+    /// Passes the press's pointer data, as the input module does, for what reads the pointer as it's deselected. The
+    /// press goes down where the pointer is now, so that's its raycast.
+    /// </summary>
+    public void Deselect(PointerState<GameObject> state)
+    {
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null, Data(state, _lastHit));
+    }
 
     public GameObject HitAt(Vector2 screenPoint)
     {
@@ -96,24 +114,10 @@ internal sealed class UguiScene : IUguiScene<GameObject>
             return;
 
         if (pointerEvent == PointerEvent.Down)
-            _pressHit = _lastHit;
+            _pressHits[state.Button] = _lastHit;
 
-        var data = new PointerEventData(EventSystem.current)
-        {
-            position = state.Position,
-            button = (PointerEventData.InputButton)state.Button,
-            pointerCurrentRaycast = _lastHit,
-            pointerEnter = state.Hit,
-            pointerPress = state.Pressed,
-            rawPointerPress = state.Pressed,
-            pressPosition = state.PressPosition,
-            pointerPressRaycast = _pressHit,
-            eligibleForClick = state.Pressed != null,
-            clickCount = 1,
-            clickTime = Time.unscaledTime,
-            useDragThreshold = true,
-        };
-
+        _pressHits.TryGetValue(state.Button, out var pressHit);
+        var data = Data(state, pressHit);
         switch (pointerEvent)
         {
             case PointerEvent.Enter:
@@ -154,5 +158,24 @@ internal sealed class UguiScene : IUguiScene<GameObject>
     private static bool IsImui(GameObject node)
     {
         return node != null && node.GetComponent<ImuiUnityGUIBackend>() != null;
+    }
+
+    private PointerEventData Data(PointerState<GameObject> state, RaycastResult pressHit)
+    {
+        return new PointerEventData(EventSystem.current)
+        {
+            position = state.Position,
+            button = (PointerEventData.InputButton)state.Button,
+            pointerCurrentRaycast = _lastHit,
+            pointerEnter = state.Hit,
+            pointerPress = state.Pressed,
+            rawPointerPress = state.Pressed,
+            pressPosition = state.PressPosition,
+            pointerPressRaycast = pressHit,
+            eligibleForClick = state.Pressed != null,
+            clickCount = 1,
+            clickTime = Time.unscaledTime,
+            useDragThreshold = true,
+        };
     }
 }
