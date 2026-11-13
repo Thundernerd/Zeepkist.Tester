@@ -1,4 +1,5 @@
 description: "Run from control-nodes, with what its with: passes in"
+with: [amount, said]
 use: [sample]
 steps:
   - add: ${amount}

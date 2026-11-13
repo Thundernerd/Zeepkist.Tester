@@ -1,3 +1,5 @@
+using System;
+
 namespace TNRD.Zeepkist.Tester.Scenarios;
 
 /// <summary>
@@ -12,4 +14,9 @@ internal sealed class ScalarArgument : ArgumentValue
     }
 
     public string Text { get; }
+
+    public override TResult Match<TResult>(Func<ListArgument, TResult> list, Func<ObjectArgument, TResult> nested, Func<ScalarArgument, TResult> scalar)
+    {
+        return scalar(this);
+    }
 }

@@ -322,6 +322,30 @@ public sealed class ScenarioRunnerTests : IDisposable
     }
 
     [Fact]
+    public void AWithThatDoesntPassWhatTheFileTakes_FailsAtLoadWithTheCallersLine()
+    {
+        Write("shared", "with: [given]\nsteps:\n  - t.note: ${given}\n");
+
+        Run(Write("caller", "steps:\n  - t.note: x\n  - run: shared.ztest.yaml\n"));
+
+        var step = Assert.Single(_steps);
+        Assert.Equal("load", step.Name);
+        Assert.Equal(3, step.Line);
+        Assert.Contains("run: 'shared.ztest.yaml' takes 'given', but with: doesn't pass it.", step.Detail);
+        Assert.Empty(Events);
+    }
+
+    [Fact]
+    public void AFileWithAWithHeader_RunsWithWhatItsCallerPasses()
+    {
+        Write("shared", "with: [given]\nsteps:\n  - t.note: ${given}\n");
+
+        Run(Write("caller", "steps:\n  - run: shared.ztest.yaml\n    with: { given: hi }\n"));
+
+        Assert.Equal(["enter editor", "hi"], Events);
+    }
+
+    [Fact]
     public void ARunCycle_FailsAtLoad()
     {
         Write("b", "steps:\n  - run: a.ztest.yaml\n");

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace TNRD.Zeepkist.Tester.Scenarios;
@@ -14,4 +15,9 @@ internal sealed class ObjectArgument : ArgumentValue
     }
 
     public IReadOnlyDictionary<string, ArgumentValue> Values { get; }
+
+    public override TResult Match<TResult>(Func<ListArgument, TResult> list, Func<ObjectArgument, TResult> nested, Func<ScalarArgument, TResult> scalar)
+    {
+        return nested(this);
+    }
 }

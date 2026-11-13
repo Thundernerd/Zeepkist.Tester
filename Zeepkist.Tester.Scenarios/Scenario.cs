@@ -8,13 +8,14 @@ namespace TNRD.Zeepkist.Tester.Scenarios;
 /// </summary>
 internal sealed class Scenario
 {
-    public Scenario(string file, string description, IReadOnlyList<string> use, ScenarioStart start, InputRoute input, IReadOnlyList<ScenarioNode> steps)
+    public Scenario(string file, string description, IReadOnlyList<string> use, ScenarioStart start, InputRoute input, IReadOnlyList<string> takes, IReadOnlyList<ScenarioNode> steps)
     {
         File = file;
         Description = description;
         Use = use;
         Start = start;
         Input = input;
+        Takes = takes;
         Steps = steps;
     }
 
@@ -36,6 +37,12 @@ internal sealed class Scenario
     /// The route the scenario's input starts on, <see cref="InputRoute.InProcess"/> when the header leaves it out.
     /// </summary>
     public InputRoute Input { get; }
+
+    /// <summary>
+    /// The names its <c>with:</c> header says a <c>run:</c> of it passes in, or null when it has no <c>with:</c> and so
+    /// doesn't say whether another file runs it.
+    /// </summary>
+    public IReadOnlyList<string> Takes { get; }
 
     public IReadOnlyList<ScenarioNode> Steps { get; }
 }
