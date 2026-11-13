@@ -125,9 +125,17 @@ internal sealed class ImuiDriver : IInputDriver
         return Place();
     }
 
+    /// <summary>
+    /// Only a press Imui took goes up there. Imui's mouse then stays at the pointer only where it would for a move.
+    /// </summary>
     public bool ReleaseButton(MouseButton button)
     {
-        return _heldButtons.Remove(button) && QueueMouseEvent(ImMouseEventType.Up, button, default);
+        if (!_heldButtons.Remove(button))
+            return false;
+
+        QueueMouseEvent(ImMouseEventType.Up, button, default);
+        Place();
+        return true;
     }
 
     public void GiveBack()

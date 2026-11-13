@@ -82,10 +82,10 @@ public class ImuiDriverTests
         _driver.PressButton(MouseButton.Left);
 
         Assert.True(_driver.DragMouse(Delta(_onWindow, _underUgui), MouseButton.Left));
+        Assert.Equal((_underUgui.x, _underUgui.y), (ImuiDriver.Position.Value.x, ImuiDriver.Position.Value.y));
         _driver.ReleaseButton(MouseButton.Left);
 
         Assert.Equal(["Down Left 1", "Drag Left 40,0", "Up Left"], _backend.Queued);
-        Assert.Equal((_underUgui.x, _underUgui.y), (ImuiDriver.Position.Value.x, ImuiDriver.Position.Value.y));
         _driver.GiveBack();
     }
 
@@ -98,6 +98,19 @@ public class ImuiDriverTests
         Assert.True(_driver.MoveMouse(_underUgui));
 
         Assert.Equal((_underUgui.x, _underUgui.y), (ImuiDriver.Position.Value.x, ImuiDriver.Position.Value.y));
+        _driver.GiveBack();
+    }
+
+    [Fact]
+    public void LettingGoUnderAnotherUguiObject_TakesImuisMouseOffWhatsUnderIt()
+    {
+        _driver.MoveMouse(_onWindow);
+        _driver.PressButton(MouseButton.Left);
+        _driver.DragMouse(Delta(_onWindow, _underUgui), MouseButton.Left);
+
+        _driver.ReleaseButton(MouseButton.Left);
+
+        Assert.NotEqual((_underUgui.x, _underUgui.y), (ImuiDriver.Position.Value.x, ImuiDriver.Position.Value.y));
         _driver.GiveBack();
     }
 
