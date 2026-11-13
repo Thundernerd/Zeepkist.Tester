@@ -28,7 +28,8 @@ log() { printf '[ingame] %s\n' "$*"; }
 changed=(
     "$data/Autosaves" "$data/Backups" "$data/Mods"
     "$low/Technical/Backup" "$low/Belangrijk/Backups" "$low/DeletedBackups" "$low/LevelIndexes"
-    "$game/BepInEx/cache" "$game/BepInEx/LogOutput.log"
+    "$low/Player.log" "$low/Player-prev.log" "$low/LevelTrace.log" "$low/LevelTrace.previous.log" "$low/LevelTrace_verbose.log"
+    "$game/BepInEx/cache" "$game/BepInEx/config" "$game/BepInEx/LogOutput.log"
 )
 
 game_running() {
