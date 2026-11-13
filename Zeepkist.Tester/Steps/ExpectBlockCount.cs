@@ -10,6 +10,7 @@ namespace TNRD.Zeepkist.Tester.Steps;
 [Step("expect-block-count")]
 [Example("- expect-block-count: 3")]
 [Example("- expect-block-count: { count: 1, type: 2448 }")]
+[LineSyntax("<count> [<type>]")]
 [Requires(typeof(InEditor))]
 public sealed class ExpectBlockCount : Step
 {
