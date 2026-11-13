@@ -83,6 +83,15 @@ public class XmlDocsTests
         Assert.Equal("One.", XmlDocs.Read([renamed])("Mod", "T:Mod.Step"));
     }
 
+    [Fact]
+    public void Read_DocFileThatNamesNoAssembly_FindsItByItsFileName()
+    {
+        using var folder = new TemporaryFolder();
+        File.WriteAllText(Path.Combine(folder.Path, "Mod.xml"), "<doc><members><member name=\"T:Mod.Step\"><summary>One.</summary></member></members></doc>");
+
+        Assert.Equal("One.", XmlDocs.Read([Path.Combine(folder.Path, "Mod.dll")])("Mod", "T:Mod.Step"));
+    }
+
     private static string WriteDocs(TemporaryFolder folder, string assemblyName, string members, string fileName = null)
     {
         fileName ??= assemblyName;

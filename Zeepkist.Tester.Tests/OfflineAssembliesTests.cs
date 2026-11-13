@@ -55,8 +55,8 @@ public class OfflineAssembliesTests
     public void Build_StepWithATypeThatCantBeFound_NamesTheStepAndWhatsMissing(Type stepType)
     {
         using var folder = new TemporaryFolder();
-        using var assemblies = new OfflineAssemblies([CopyWithoutSampleCore(folder), RuntimeEnvironment.GetRuntimeDirectory()], "System.Runtime");
-        var step = assemblies.Load(Path.Combine(folder.Path, Path.GetFileName(stepType.Assembly.Location))).GetType(stepType.FullName);
+        using var assemblies = WithoutSampleCore(folder);
+        var step = LoadCopy(assemblies, folder, stepType);
 
         var exception = Assert.Throws<StepDefinitionException>(() => new StepDescriptorBuilder().Build(step));
 
@@ -68,21 +68,31 @@ public class OfflineAssembliesTests
     {
         var stateType = typeof(UnfoundSteps.WithinElsewhere);
         using var folder = new TemporaryFolder();
-        using var assemblies = new OfflineAssemblies([CopyWithoutSampleCore(folder), RuntimeEnvironment.GetRuntimeDirectory()], "System.Runtime");
-        var state = assemblies.Load(Path.Combine(folder.Path, Path.GetFileName(stateType.Assembly.Location))).GetType(stateType.FullName);
+        using var assemblies = WithoutSampleCore(folder);
+        var state = LoadCopy(assemblies, folder, stateType);
 
         var exception = Assert.Throws<StepDefinitionException>(() => new StepDescriptorBuilder().BuildState(state));
 
         Assert.Equal($"{stateType.FullName} uses a type from Zeepkist.Tester.Tests.SampleCore, which can't be found.", exception.Message);
     }
 
-    /// <returns>A folder with this assembly and the SDK, but not Zeepkist.Tester.Tests.SampleCore, which it references.</returns>
-    private static string CopyWithoutSampleCore(TemporaryFolder folder)
+    /// <summary>
+    /// Copies this assembly and the SDK to <paramref name="folder"/>, and reads from there, where Zeepkist.Tester.Tests.SampleCore, which this assembly references, can't be found.
+    /// </summary>
+    private static OfflineAssemblies WithoutSampleCore(TemporaryFolder folder)
     {
         foreach (var assembly in new[] { typeof(UnfoundSteps).Assembly, typeof(Step).Assembly })
             File.Copy(assembly.Location, Path.Combine(folder.Path, Path.GetFileName(assembly.Location)));
 
-        return folder.Path;
+        return new OfflineAssemblies([folder.Path, RuntimeEnvironment.GetRuntimeDirectory()], "System.Runtime");
+    }
+
+    /// <summary>
+    /// <paramref name="type"/> as read from the copy of its assembly in <paramref name="folder"/>.
+    /// </summary>
+    private static Type LoadCopy(OfflineAssemblies assemblies, TemporaryFolder folder, Type type)
+    {
+        return assemblies.Load(Path.Combine(folder.Path, Path.GetFileName(type.Assembly.Location))).GetType(type.FullName);
     }
 
     private static IEnumerable<Type> StepsIn(IEnumerable<Type> types)
