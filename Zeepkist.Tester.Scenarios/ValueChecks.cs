@@ -49,23 +49,17 @@ internal sealed class ValueChecks
 
     private void CheckValue(ArgumentDescriptor argument, ArgumentType type, ArgumentValue value, string what)
     {
-        switch (value)
-        {
-            case ListArgument list:
+        value.Match(
+            list =>
+            {
                 if (list.Items.Count < argument.MinItems)
                     _report(new ScenarioException(list.Location, $"{what} needs at least {argument.MinItems} item{(argument.MinItems == 1 ? string.Empty : "s")}, not {list.Items.Count}."));
 
                 foreach (var item in list.Items)
                     CheckValue(argument, type.ItemType, item, what);
-
-                break;
-            case ObjectArgument nested:
-                CheckArguments(what, type.Arguments, nested);
-                break;
-            default:
-                CheckScalar(argument, type, (ScalarArgument)value, what);
-                break;
-        }
+            },
+            nested => CheckArguments(what, type.Arguments, nested),
+            scalar => CheckScalar(argument, type, scalar, what));
     }
 
     /// <summary>
@@ -80,7 +74,7 @@ internal sealed class ValueChecks
                 return;
 
             foreach (var values in Combinations(names).Take(MostCombinations))
-                new WrittenValue(argument, type, Substitution.Replace(scalar.Text, name => values[name]), scalar.Location, what).Read();
+                new WrittenValue(argument, type, Substitution.Replace(scalar.Text, name => values[name]), scalar.Location, what).Check();
         }
         catch (ScenarioException exception)
         {

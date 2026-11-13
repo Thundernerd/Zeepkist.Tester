@@ -52,21 +52,8 @@ internal sealed class ScenarioLoader
 
     private void RequireRuns(string file, IReadOnlyList<ScenarioNode> nodes, List<string> running)
     {
-        foreach (var node in nodes)
-        {
-            switch (node)
-            {
-                case ForNode loop:
-                    RequireRuns(file, loop.Steps, running);
-                    break;
-                case RepeatNode repeat:
-                    RequireRuns(file, repeat.Steps, running);
-                    break;
-                case RunNode run:
-                    RequireRun(file, run, running);
-                    break;
-            }
-        }
+        foreach (var run in ScenarioNode.RunsIn(nodes))
+            RequireRun(file, run, running);
     }
 
     private void RequireRun(string file, RunNode run, List<string> running)

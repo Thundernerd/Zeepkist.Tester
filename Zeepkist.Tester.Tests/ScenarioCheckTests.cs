@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TNRD.Zeepkist.Tester.Cli;
+using TNRD.Zeepkist.Tester.Sdk;
 using Xunit;
 
 namespace TNRD.Zeepkist.Tester.Tests;
@@ -115,6 +116,22 @@ public class ScenarioCheckTests
         var problem = Assert.Single(ScenarioCheck.Run([a, b], CheckSteps.Registry));
 
         Assert.Equal($"{b}:2:5: error: run: 'run-cycle-a.ztest.yaml' is already running here, so it would never end. (run from {a}:2:5)", problem.ToString());
+    }
+
+    [Fact]
+    public void AnAlternativeThatHolds_IsEnough_EvenWhenALaterOneIsNoStateTheRegistryKnows()
+    {
+        using var folder = new TemporaryFolder();
+        var file = Write(folder, "a.ztest.yaml", "start: editor\nsteps:\n  - needs-either\n");
+        var registry = new StepRegistry
+        {
+            Steps = [new StepDescriptor { Name = "needs-either", Namespace = string.Empty, Arguments = [], Requires = [["editor", "mod.unknown"]] }],
+            States = [new StateDescriptor { Name = "editor", Namespace = string.Empty }],
+        };
+
+        var problems = ScenarioCheck.Run([file], registry);
+
+        Assert.Empty(problems);
     }
 
     [Fact]

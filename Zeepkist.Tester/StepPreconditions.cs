@@ -33,9 +33,9 @@ internal static class StepPreconditions
 
         foreach (var alternatives in Required(stepType))
         {
-            var unmet = alternatives.Select(state => OutermostUnmet(state, context)).TakeWhile(state => state != null).ToList();
-            if (unmet.Count == alternatives.Length)
-                throw new StepFailedException(ScenarioMessages.Needs(step, unmet.Distinct().Select(_builder.BuildState)));
+            var unmet = NestedStates.Unmet(alternatives, Within, state => ((IState)Activator.CreateInstance(state)).IsMet(context));
+            if (unmet != null)
+                throw new StepFailedException(ScenarioMessages.Needs(step, unmet.Select(_builder.BuildState)));
         }
     }
 
@@ -50,17 +50,8 @@ internal static class StepPreconditions
             .Concat(stepType.GetCustomAttributes<RequiresAnyAttribute>().Select(attribute => attribute.States));
     }
 
-    /// <summary>
-    /// Leaving a state leaves every state within it, so a state only holds when the ones around it do. Null when it holds,
-    /// and otherwise the state to name, because that's the one to get into first.
-    /// </summary>
-    private static Type OutermostUnmet(Type state, IStepContext context)
+    private static Type Within(Type state)
     {
-        var within = state.GetCustomAttribute<StateAttribute>().Within;
-        var outer = within == null ? null : OutermostUnmet(within, context);
-        if (outer != null)
-            return outer;
-
-        return ((IState)Activator.CreateInstance(state)).IsMet(context) ? null : state;
+        return state.GetCustomAttribute<StateAttribute>().Within;
     }
 }

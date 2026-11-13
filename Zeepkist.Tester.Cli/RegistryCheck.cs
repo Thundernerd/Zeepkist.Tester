@@ -68,14 +68,6 @@ internal static class RegistryCheck
         if (argument.Default == null || argument.Type.Kind is ArgumentKind.List or ArgumentKind.Object)
             return null;
 
-        try
-        {
-            new WrittenValue(argument, argument.Type, WrittenValue.DefaultText(argument.Default), new SourceLocation(string.Empty, 0, 0), what).Read();
-            return null;
-        }
-        catch (ScenarioException exception)
-        {
-            return exception.Problem;
-        }
+        return WrittenValue.ProblemWith(argument, argument.Type, WrittenValue.DefaultText(argument.Default), what);
     }
 }

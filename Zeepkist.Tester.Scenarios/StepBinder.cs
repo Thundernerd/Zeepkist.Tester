@@ -59,23 +59,23 @@ internal sealed class StepBinder
     private object Convert(Type type, ArgumentDescriptor argument, ArgumentType argumentType, ArgumentValue value, string what)
     {
         type = Nullable.GetUnderlyingType(type) ?? type;
-        switch (value)
-        {
-            case ListArgument list:
+        return value.Match(
+            list =>
+            {
                 var items = (IList)Activator.CreateInstance(type);
                 var itemType = type.GetGenericArguments()[0];
                 foreach (var item in list.Items)
                     items.Add(Convert(itemType, argument, argumentType.ItemType, item, what));
 
                 return items;
-            case ObjectArgument nested:
+            },
+            nested =>
+            {
                 var instance = Activator.CreateInstance(type);
                 Fill(instance, what, argumentType.Arguments, nested);
                 return instance;
-            default:
-                var scalar = (ScalarArgument)value;
-                return ConvertText(type, argument, argumentType, Substitute(scalar), scalar.Location, what);
-        }
+            },
+            scalar => ConvertText(type, argument, argumentType, Substitute(scalar), scalar.Location, what));
     }
 
     private string Substitute(ScalarArgument scalar)
@@ -93,23 +93,26 @@ internal sealed class StepBinder
     private static object ConvertText(Type type, ArgumentDescriptor argument, ArgumentType argumentType, string text, SourceLocation location, string what)
     {
         type = Nullable.GetUnderlyingType(type) ?? type;
-        var read = new WrittenValue(argument, argumentType, text, location, what).Read();
+        var written = new WrittenValue(argument, argumentType, text, location, what);
         switch (argumentType.Kind)
         {
             case ArgumentKind.Int:
+                return written.ReadInt();
             case ArgumentKind.Float:
+                return written.ReadFloat();
             case ArgumentKind.Bool:
-            case ArgumentKind.String:
-                return read;
+                return written.ReadBool();
             case ArgumentKind.Pixels:
-                return new Pixels((int)read);
+                return new Pixels(written.ReadInt());
             case ArgumentKind.Seconds:
-                return new Seconds((float)read);
+                return new Seconds(written.ReadSeconds());
             case ArgumentKind.Enum:
-                return type.GetFields(BindingFlags.Public | BindingFlags.Static)[(int)read].GetValue(null);
+                return type.GetFields(BindingFlags.Public | BindingFlags.Static)[written.ReadEnumIndex()].GetValue(null);
+            case ArgumentKind.String:
+                return written.ReadText();
             default:
                 // TextBlock, Keys, FileName, Name<T> and Ref<T> each hold the text
-                return Activator.CreateInstance(type, read);
+                return Activator.CreateInstance(type, written.ReadText());
         }
     }
 }
