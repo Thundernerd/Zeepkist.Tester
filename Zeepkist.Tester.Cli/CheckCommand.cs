@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using TNRD.Zeepkist.Tester.Scenarios;
 using TNRD.Zeepkist.Tester.Sdk;
 
 namespace TNRD.Zeepkist.Tester.Cli;
@@ -114,7 +115,7 @@ internal sealed class CheckCommand
         foreach (var problem in problems)
             _output.WriteLine(problem);
 
-        var testErrors = TestsLevelsNotFound(registry, config);
+        var testErrors = MissingTestLevels(registry, config);
         foreach (var error in testErrors)
             _output.WriteLine($"error: {error}");
 
@@ -128,14 +129,14 @@ internal sealed class CheckCommand
     /// Each C# test whose <see cref="TestDescriptor.Level"/> isn't in the configured <c>scenarios</c> folder, which is where the
     /// game looks for it. Without one there's nowhere to look.
     /// </summary>
-    private static List<string> TestsLevelsNotFound(StepRegistry registry, TestConfig config)
+    private static List<string> MissingTestLevels(StepRegistry registry, TestConfig config)
     {
         if (config?.Scenarios == null)
             return [];
 
         var folder = Path.Combine(config.Folder, config.Scenarios);
         return registry.Tests
-            .Where(test => test.Level != null && !File.Exists(Path.Combine(folder, test.Level.Replace('/', Path.DirectorySeparatorChar))))
+            .Where(test => test.Level != null && !File.Exists(ScenarioPaths.InFolder(folder, test.Level)))
             .Select(test => $"[InGameTest] {test.TypeName}.{test.MethodName} can't find its Level '{test.Level}' in {folder}.")
             .ToList();
     }
