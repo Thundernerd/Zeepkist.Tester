@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace TNRD.Zeepkist.Tester.Scenarios;
 
@@ -17,4 +18,20 @@ internal sealed class RunNode : ScenarioNode
     public string File { get; }
 
     public IReadOnlyDictionary<string, ScalarArgument> With { get; }
+
+    /// <summary>
+    /// Where <see cref="With"/> doesn't pass what the file's <c>with:</c> header says it takes: each name it leaves out, at
+    /// the run, and then each it passes that the file doesn't take, at its value. None when the file has no header.
+    /// </summary>
+    public IEnumerable<ScenarioException> Mismatches(Scenario file)
+    {
+        if (file.Takes == null)
+            return [];
+
+        var missing = file.Takes.Where(name => !With.ContainsKey(name))
+            .Select(name => new ScenarioException(Location, ScenarioMessages.RunWithMissing(File, name)));
+        var unknown = With.Where(entry => !file.Takes.Contains(entry.Key))
+            .Select(entry => new ScenarioException(entry.Value.Location, ScenarioMessages.RunWithUnknown(File, entry.Key, file.Takes)));
+        return missing.Concat(unknown);
+    }
 }

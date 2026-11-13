@@ -140,7 +140,13 @@ internal sealed class ScenarioCheck
         if (level != null && !File.Exists(level))
             Report(scenario.Start.Location, CheckSeverity.Error, $"start: {scenario.Start.State.Name} can't find '{scenario.Start.Value}' from this file.");
 
-        Follow(scenario, new Scope(null) { DefinesUnknownNames = mayBeGivenNames }, [scenario.Start.State.Name]);
+        var scope = new Scope(null) { DefinesUnknownNames = mayBeGivenNames && scenario.Takes == null };
+        foreach (var name in scenario.Takes ?? [])
+            scope.Define(name, new NamedValue([TextValue.Kind], true, null));
+
+        // A file that says it's run by others starts wherever they leave it, so any state may hold until it leaves one
+        HashSet<string> held = scenario.Takes == null ? [scenario.Start.State.Name] : [.. _states.Keys];
+        Follow(scenario, scope, held);
     }
 
     private void Follow(Scenario scenario, Scope scope, HashSet<string> held)
@@ -225,6 +231,9 @@ internal sealed class ScenarioCheck
         var scenario = Load(target);
         if (scenario == null)
             return;
+
+        foreach (var mismatch in run.Mismatches(scenario))
+            Report(mismatch.Location, CheckSeverity.Error, mismatch.Problem);
 
         var ranFrom = _ranFrom;
         _ranFrom = run.Location;

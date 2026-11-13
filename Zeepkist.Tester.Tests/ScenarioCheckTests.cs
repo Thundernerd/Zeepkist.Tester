@@ -190,6 +190,45 @@ public class ScenarioCheckTests
         Assert.Equal($"{called}:2:37: error: The name 'typo' {NotDefined} (run from {caller}:3:5)", problem.ToString());
     }
 
+    [Fact]
+    public void ARunFileCheckedAlone_KnowsTheNamesItsWithHeaderTakes_AndNoOthers()
+    {
+        using var folder = new TemporaryFolder();
+        var file = Write(folder, "shared.ztest.yaml", "with: [block, time]\nsteps:\n  - wait: ${time}\n  - place-block: \"${block}\"\n  - place-block: \"${lamp}\"\n");
+
+        var problem = Assert.Single(ScenarioCheck.Run([file], CheckSteps.Registry));
+
+        Assert.Equal($"{file}:5:18: error: The name 'lamp' {NotDefined}", problem.ToString());
+    }
+
+    [Fact]
+    public void ARunFileCheckedAlone_StartsWhereverItsCallerLeavesIt_SoOnlyWhatItLeavesItselfIsWarnedAbout()
+    {
+        using var folder = new TemporaryFolder();
+        var file = Write(folder, "shared.ztest.yaml", "with: []\nsteps:\n  - compile\n  - close-window\n  - new-script\n");
+
+        var problem = Assert.Single(ScenarioCheck.Run([file], CheckSteps.Registry));
+
+        Assert.Equal($"{file}:5:5: warning: new-script needs zls.window-open: Add open-window first.", problem.ToString());
+    }
+
+    [Fact]
+    public void ACallersWith_IsCheckedAgainstTheNamesTheFileTakes()
+    {
+        using var folder = new TemporaryFolder();
+        var caller = Write(folder, "a.ztest.yaml", "steps:\n  - run: b.ztest.yaml\n    with: { block: lamp, tiem: 1 }\n");
+        Write(folder, "b.ztest.yaml", "with: [block, time]\nsteps:\n  - wait: 1\n");
+
+        var problems = ScenarioCheck.Run([caller], CheckSteps.Registry).Select(problem => problem.ToString());
+
+        Assert.Equal(
+            [
+                $"{caller}:2:5: error: run: 'b.ztest.yaml' takes 'time', but with: doesn't pass it.",
+                $"{caller}:3:32: error: run: 'b.ztest.yaml' takes no 'tiem'. It takes: block, time.",
+            ],
+            problems);
+    }
+
     [Fact(Timeout = 60000)]
     public async Task ManyNestedRepeats_StopBeingFollowed_AndSaySo()
     {

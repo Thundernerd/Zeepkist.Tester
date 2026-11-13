@@ -115,6 +115,16 @@
       "description": "How input reaches the game: `in-process`, the default, or `os`, as a player's keyboard and mouse do.",
       "markdownDescription": "How input reaches the game: `in-process`, the default, or `os`, as a player's keyboard and mouse do."
     },
+    "with": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]+$"
+      },
+      "description": "Says another file runs this one, and the names its `run:` passes in through `with:`, such as `[block, time]`.",
+      "markdownDescription": "Says another file runs this one, and the names its `run:` passes in through `with:`, such as `[block, time]`."
+    },
     "steps": {
       "$ref": "#/definitions/steps"
     }

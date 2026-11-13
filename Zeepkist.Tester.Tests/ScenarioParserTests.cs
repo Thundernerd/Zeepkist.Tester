@@ -17,7 +17,7 @@ public class ScenarioParserTests
         { "two-documents", 4, 1, "A scenario is one YAML document, but this is another." },
         { "root-is-a-list", 1, 1, "A scenario is a map with a steps: key, not a list." },
         { "key-is-a-list", 1, 3, "A key has to be a single value, not a list." },
-        { "unknown-header-key", 1, 1, "A scenario has no key 'descriptoin'. It takes: description, use, start, input, steps." },
+        { "unknown-header-key", 1, 1, "A scenario has no key 'descriptoin'. It takes: description, use, start, input, with, steps." },
         { "no-steps", 1, 1, "A scenario needs steps:." },
         { "empty-steps", 1, 8, "steps: has no steps in it." },
         { "steps-is-a-map", 2, 3, "steps: takes a list of steps, not a map." },
@@ -77,6 +77,9 @@ public class ScenarioParserTests
         { "no-arguments-map", 2, 11, "undo takes no arguments, so write it as a bare string." },
         { "unquoted-substitution-in-flow", 2, 31, "While parsing a flow mapping, did not find expected ',' or '}'. Inside { } or [ ], quote a value with ${ or a colon in it." },
         { "nested-too-deep", 1, 107, "Lists and maps are nested more than 100 deep here." },
+        { "header-with-is-a-map", 1, 7, "with: takes a list of the names a run: of this file passes in, such as [block, time]." },
+        { "header-with-twice", 1, 11, "with: has the name 'a' twice." },
+        { "header-with-bad-name", 1, 11, "'b c' can't be a name: it has to match ^[A-Za-z0-9_-]+$." },
         { "with-bad-name", 3, 13, "'b c' can't be a name: it has to match ^[A-Za-z0-9_-]+$." },
     };
 

@@ -48,7 +48,7 @@ internal sealed class ScenarioParser
         if (root is not YamlMappingNode header)
             throw Fail(root, $"A scenario is a map with a steps: key, not {Describe(root)}.");
 
-        var entries = ReadKeys(header, "A scenario", "description", "use", "start", "input", "steps");
+        var entries = ReadKeys(header, "A scenario", "description", "use", "start", "input", "with", "steps");
         if (!entries.TryGetValue("steps", out var steps))
             throw Fail(header, "A scenario needs steps:.");
 
@@ -56,7 +56,8 @@ internal sealed class ScenarioParser
         var start = entries.TryGetValue("start", out written) ? ReadStart(written) : ScenarioStart.Default;
         var input = entries.TryGetValue("input", out written) ? ReadInput(written) : InputRoute.InProcess;
         var use = entries.TryGetValue("use", out written) ? ReadUse(written) : [];
-        return new Scenario(_file, description, use, start, input, ReadBody(steps, use));
+        var takes = entries.TryGetValue("with", out written) ? ReadTakes(written) : null;
+        return new Scenario(_file, description, use, start, input, takes, ReadBody(steps, use));
     }
 
     private List<string> ReadUse(YamlNode written)
@@ -72,6 +73,27 @@ internal sealed class ScenarioParser
         }
 
         return list.Select(item => ((YamlScalarNode)item).Value).Distinct().ToList();
+    }
+
+    /// <summary>
+    /// The header's <c>with:</c>: the names a <c>run:</c> of this file passes in.
+    /// </summary>
+    private List<string> ReadTakes(YamlNode written)
+    {
+        if (written is not YamlSequenceNode list)
+            throw Fail(written, "with: takes a list of the names a run: of this file passes in, such as [block, time].");
+
+        var names = new List<string>();
+        foreach (var item in list)
+        {
+            var name = ReadName(item, "a name");
+            if (names.Contains(name))
+                throw Fail(item, $"with: has the name '{name}' twice.");
+
+            names.Add(name);
+        }
+
+        return names;
     }
 
     private ScenarioStart ReadStart(YamlNode written)
