@@ -21,6 +21,7 @@ internal sealed class WrittenValue
     private readonly SourceLocation _location;
     private readonly string _what;
 
+    /// <remarks>The location is null only inside <see cref="ProblemWith"/>, which drops it.</remarks>
     public WrittenValue(ArgumentDescriptor argument, ArgumentType type, string text, SourceLocation location, string what)
     {
         _argument = argument;
@@ -39,32 +40,57 @@ internal sealed class WrittenValue
     }
 
     /// <summary>
-    /// What the text says for its type: an int for a whole number or pixels, a float for a number or seconds, a bool, the
-    /// index of an enum's value, or else the text itself.
+    /// What's wrong with text that no file wrote, such as a default, so it has no location to give.
+    /// </summary>
+    /// <returns>Null when the text fits.</returns>
+    public static string ProblemWith(ArgumentDescriptor argument, ArgumentType type, string text, string what)
+    {
+        try
+        {
+            new WrittenValue(argument, type, text, null, what).Check();
+            return null;
+        }
+        catch (ScenarioException exception)
+        {
+            return exception.Problem;
+        }
+    }
+
+    /// <summary>
+    /// Reads the text as its type would, for what doesn't fit.
     /// </summary>
     /// <exception cref="ScenarioException">The value doesn't fit its argument.</exception>
-    public object Read()
+    public void Check()
     {
         switch (_type.Kind)
         {
             case ArgumentKind.Int:
             case ArgumentKind.Pixels:
-                return ToInt();
+                ReadInt();
+                break;
             case ArgumentKind.Float:
-                return ToFloat();
+                ReadFloat();
+                break;
             case ArgumentKind.Seconds:
-                return ToSeconds();
+                ReadSeconds();
+                break;
             case ArgumentKind.Bool:
-                return ToBool();
+                ReadBool();
+                break;
             case ArgumentKind.Enum:
-                return IndexInEnum();
+                ReadEnumIndex();
+                break;
             default:
-                RequirePattern();
-                return _text;
+                ReadText();
+                break;
         }
     }
 
-    private int ToInt()
+    /// <summary>
+    /// A whole number, or pixels.
+    /// </summary>
+    /// <exception cref="ScenarioException">The value doesn't fit its argument.</exception>
+    public int ReadInt()
     {
         if (!int.TryParse(_text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number))
             throw Fail($"{_what} takes a whole number, not '{_text}'.");
@@ -73,7 +99,8 @@ internal sealed class WrittenValue
         return number;
     }
 
-    private float ToFloat()
+    /// <exception cref="ScenarioException">The value doesn't fit its argument.</exception>
+    public float ReadFloat()
     {
         if (!TryParseFloat(_text, out var number))
             throw Fail($"{_what} takes a number, not '{_text}'.");
@@ -82,7 +109,8 @@ internal sealed class WrittenValue
         return (float)number;
     }
 
-    private float ToSeconds()
+    /// <exception cref="ScenarioException">The value doesn't fit its argument.</exception>
+    public float ReadSeconds()
     {
         var match = _seconds.Match(_text);
         if (!match.Success || !TryParseFloat(match.Groups["number"].Value, out var number))
@@ -93,12 +121,17 @@ internal sealed class WrittenValue
         return (float)seconds;
     }
 
-    private bool ToBool()
+    /// <exception cref="ScenarioException">The value doesn't fit its argument.</exception>
+    public bool ReadBool()
     {
         return _text == "true" || (_text == "false" ? false : throw Fail($"{_what} takes true or false, not '{_text}'."));
     }
 
-    private int IndexInEnum()
+    /// <summary>
+    /// The index of the enum's value, in the order of <see cref="ArgumentType.EnumValues"/>.
+    /// </summary>
+    /// <exception cref="ScenarioException">The value doesn't fit its argument.</exception>
+    public int ReadEnumIndex()
     {
         var index = _type.EnumValues.ToList().IndexOf(_text);
         if (index < 0)
@@ -108,13 +141,16 @@ internal sealed class WrittenValue
     }
 
     /// <summary>
-    /// A list's items have their pattern on their own type, unless the argument gives one.
+    /// The text itself, for every kind that holds text. A list's items have their pattern on their own type, unless the argument gives one.
     /// </summary>
-    private void RequirePattern()
+    /// <exception cref="ScenarioException">The value doesn't fit its argument.</exception>
+    public string ReadText()
     {
         var pattern = _argument.Pattern ?? _type.Pattern;
         if (pattern != null && !Regex.IsMatch(_text, ToEndOfText(pattern)))
             throw Fail($"{_what} has to match {pattern}, not '{_text}'.");
+
+        return _text;
     }
 
     private void RequireRange(double number)

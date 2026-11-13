@@ -72,7 +72,7 @@ internal sealed class ValueChecks
             return;
 
         foreach (var values in Combinations(names).Take(MostCombinations))
-            new WrittenValue(argument, type, Substitution.Replace(scalar.Text, name => values[name]), scalar.Location, what).Read();
+            new WrittenValue(argument, type, Substitution.Replace(scalar.Text, name => values[name]), scalar.Location, what).Check();
     }
 
     /// <summary>
