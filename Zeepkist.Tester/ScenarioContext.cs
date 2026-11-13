@@ -6,7 +6,7 @@ using TNRD.Zeepkist.Tester.Sdk;
 namespace TNRD.Zeepkist.Tester;
 
 /// <summary>
-/// What one scenario keeps while it runs, which goes when it ends.
+/// What one scenario or C# test keeps while it runs, which goes when it ends.
 /// </summary>
 internal class ScenarioContext : RunContext, IScenarioContext
 {
@@ -18,7 +18,7 @@ internal class ScenarioContext : RunContext, IScenarioContext
     }
 
     /// <param name="run">The run it's part of.</param>
-    /// <param name="scenarioName">The running scenario.</param>
+    /// <param name="scenarioName">The running scenario, or the C# test's name.</param>
     /// <param name="state">What <see cref="Scenario{T}"/> keeps, which each of the scenario's steps shares.</param>
     private protected ScenarioContext(RunContext run, string scenarioName, Dictionary<Type, object> state)
         : base(run.Logger, run.Services)
@@ -41,9 +41,17 @@ internal class ScenarioContext : RunContext, IScenarioContext
     }
 
     /// <summary>
-    /// A context for one step of this scenario, or for a C# test, which runs steps with <paramref name="run"/>.
+    /// A context for one step of this scenario or C# test.
     /// </summary>
-    public StepContext ForStep(IRunHost host, IExceptionLog exceptions, IValues values, Func<Step, IEnumerator> run = null)
+    public StepContext ForStep(IRunHost host, IExceptionLog exceptions, IValues values)
+    {
+        return new StepContext(this, host, exceptions, values, _state, null);
+    }
+
+    /// <summary>
+    /// A context for the C# test itself, which runs its steps with <paramref name="run"/>.
+    /// </summary>
+    public StepContext ForTest(IRunHost host, IExceptionLog exceptions, IValues values, Func<Step, IEnumerator> run)
     {
         return new StepContext(this, host, exceptions, values, _state, run);
     }
