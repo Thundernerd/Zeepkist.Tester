@@ -133,18 +133,66 @@ internal static class ReferenceFolders
         if (!Directory.Exists(packageFolder))
             return packageFolder;
 
-        return Directory.GetDirectories(packageFolder)
-            .Select(versionFolder => (Folder: versionFolder, Version: Path.GetFileName(versionFolder).Split('+')[0]))
-            .OrderBy(version => ParseVersion(version.Version))
-            .ThenBy(version => !version.Version.Contains('-'))
-            .ThenBy(version => version.Version, StringComparer.OrdinalIgnoreCase)
-            .Select(version => version.Folder)
-            .LastOrDefault() ?? packageFolder;
+        return Directory.GetDirectories(packageFolder).Order(VersionFolderOrder.Instance).LastOrDefault() ?? packageFolder;
     }
 
-    private static Version ParseVersion(string version)
+    /// <summary>
+    /// Orders version folders as SemVer does: by the version, then a stable version after its prereleases, then
+    /// prereleases by their labels, a dot-separated part at a time, with numeric parts compared as numbers.
+    /// </summary>
+    private sealed class VersionFolderOrder : IComparer<string>
     {
-        return Version.TryParse(version.Split('-')[0], out var parsed) ? parsed : new Version();
+        public static readonly VersionFolderOrder Instance = new();
+
+        public int Compare(string x, string y)
+        {
+            var (xVersion, xLabel) = Parse(x);
+            var (yVersion, yLabel) = Parse(y);
+
+            var byVersion = xVersion.CompareTo(yVersion);
+            if (byVersion != 0)
+                return byVersion;
+
+            if (xLabel == null || yLabel == null)
+                return (xLabel == null).CompareTo(yLabel == null);
+
+            var xParts = xLabel.Split('.');
+            var yParts = yLabel.Split('.');
+            foreach (var (xPart, yPart) in xParts.Zip(yParts))
+            {
+                var byPart = ComparePart(xPart, yPart);
+                if (byPart != 0)
+                    return byPart;
+            }
+
+            return xParts.Length.CompareTo(yParts.Length);
+        }
+
+        private static (Version Version, string Label) Parse(string versionFolder)
+        {
+            var name = Path.GetFileName(versionFolder).Split('+')[0];
+            var dash = name.IndexOf('-');
+            var core = dash < 0 ? name : name[..dash];
+            var label = dash < 0 ? null : name[(dash + 1)..];
+
+            return (Version.TryParse(core, out var version) ? version : new Version(), label);
+        }
+
+        /// <summary>
+        /// Numeric parts are compared as numbers and go before the others, which are compared as text.
+        /// </summary>
+        private static int ComparePart(string x, string y)
+        {
+            var xIsNumber = ulong.TryParse(x, out var xNumber);
+            var yIsNumber = ulong.TryParse(y, out var yNumber);
+            if (xIsNumber && yIsNumber)
+                return xNumber.CompareTo(yNumber);
+
+            if (xIsNumber != yIsNumber)
+                return xIsNumber ? -1 : 1;
+
+            return StringComparer.OrdinalIgnoreCase.Compare(x, y);
+        }
     }
 
     /// <summary>

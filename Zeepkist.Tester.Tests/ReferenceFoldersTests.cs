@@ -57,6 +57,18 @@ public class ReferenceFoldersTests
     }
 
     [Fact]
+    public void For_PrereleasesOfOneVersion_TakesTheNewestByTheirNumbers()
+    {
+        using var folder = new TemporaryFolder();
+        var cache = CacheWith(folder, "zeepsdk", "1.0.0-beta.2", "1.0.0-beta.10", "1.0.0-alpha.11");
+        var plugin = PluginBuiltWith(folder, cache, "Other/1.0.0", "other/1.0.0");
+
+        var folders = ReferenceFolders.For([plugin], _ => null);
+
+        Assert.Contains(Path.Combine(cache, "zeepsdk", "1.0.0-beta.10", "lib"), folders);
+    }
+
+    [Fact]
     public void For_NuGetConfigAboveThePlugin_TakesPackagesFromItsGlobalPackagesFolder()
     {
         using var folder = new TemporaryFolder();
