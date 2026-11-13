@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -23,13 +22,8 @@ internal static class InitCommand
 
     private static readonly JsonDocumentOptions _readOptions = new JsonDocumentOptions { AllowTrailingCommas = true };
 
-    private static readonly JsonSerializerOptions _writeOptions = new JsonSerializerOptions
-    {
-        WriteIndented = true,
-        NewLine = "\n",
-        IndentSize = 4,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
+    // VS Code's own indent for settings.json
+    private static readonly JsonSerializerOptions _writeOptions = ReadableJson.Options(4);
 
     /// <param name="arguments">What came after <c>init</c>.</param>
     /// <param name="output">Where to report.</param>

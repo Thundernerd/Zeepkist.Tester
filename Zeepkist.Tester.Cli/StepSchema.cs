@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using TNRD.Zeepkist.Tester.Scenarios;
@@ -32,14 +31,7 @@ internal static class StepSchema
     /// </summary>
     private const string NumberText = "^[-+]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][-+]?[0-9]+)?$";
 
-    private static readonly JsonSerializerOptions _indented = new JsonSerializerOptions
-    {
-        WriteIndented = true,
-        NewLine = "\n",
-
-        // A file for people to read, and no page to put it in, so backticks and quotes stay as they are
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
+    private static readonly JsonSerializerOptions _indented = ReadableJson.Options(2);
 
     private const string NamePattern = Name<object>.Pattern;
 
