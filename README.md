@@ -64,6 +64,15 @@ ztest init      # has VS Code check **/*.ztest.yaml against it, in .vscode/setti
 
 The schema is lenient where an editor reads YAML differently from the tester: a text value may be a number or `null`, a number may be quoted, and a mod's step may be written without its prefix whether or not `use:` lists its namespace. `ztest check` catches what it lets through.
 
+## Step reference
+
+`ztest docs` writes every step and state, the tester's and your mod's, as Markdown: each step's summary, arguments, the states it needs and changes, and its examples, and for each state the steps that get into it and out of it. Link to the file rather than keeping a table of steps by hand.
+
+```sh
+ztest docs --plugin bin/Debug/net472/MyMod.InGameTests.dll   # writes steps.md
+ztest docs --output docs/steps.md                             # the "testPlugin" of the nearest zeepkist-test.json
+```
+
 ## License
 
 [MIT](LICENSE)

@@ -25,6 +25,7 @@ internal static class Program
             "check" => CheckCommand.Run(arguments, output, folder),
             "schema" => SchemaCommand.Run(arguments, output, folder),
             "init" => InitCommand.Run(arguments, output, folder),
+            "docs" => DocsCommand.Run(arguments, output, folder),
             _ => null,
         };
         if (exitCode != null)
@@ -40,5 +41,6 @@ internal static class Program
         output.WriteLine(CheckCommand.Usage);
         output.WriteLine(SchemaCommand.Usage);
         output.WriteLine(InitCommand.Usage);
+        output.WriteLine(DocsCommand.Usage);
     }
 }
