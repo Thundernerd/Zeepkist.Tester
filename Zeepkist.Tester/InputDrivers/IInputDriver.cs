@@ -32,7 +32,8 @@ internal interface IInputDriver
     public bool ReleaseButton(MouseButton button);
 
     /// <summary>
-    /// Lets go of what it holds and reads the player's mouse again. This can't fail.
+    /// Lets go of what it holds and reads the player's mouse again. This can't fail. One that throws anyway breaks only
+    /// itself: <see cref="InProcessDrivers"/> logs what it threw and still has the drivers after it let go.
     /// </summary>
     public void GiveBack();
 }

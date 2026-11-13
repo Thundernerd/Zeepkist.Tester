@@ -16,7 +16,8 @@ internal interface IActionDriver
     public bool Set(string action, float value);
 
     /// <summary>
-    /// Lets go of every action it holds. This can't fail.
+    /// Lets go of every action it holds. This can't fail. One that throws anyway breaks only itself:
+    /// <see cref="TesterInput"/> logs what it threw.
     /// </summary>
     public void GiveBack();
 }

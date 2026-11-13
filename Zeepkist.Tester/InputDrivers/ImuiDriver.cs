@@ -9,13 +9,15 @@ namespace TNRD.Zeepkist.Tester.InputDrivers;
 /// <summary>
 /// Hands keys and a mouse to Imui's backend, which the game's UI and ZeepSDK's windows take their input from, the way
 /// its <c>OnGUI</c> and pointer handlers hand it Unity's. The mouse is a position, which Imui reads each frame to find
-/// the hovered control, and the button's events, one a frame. Unity's own <c>Input</c>, and so the level editor, never
-/// sees them.
+/// the hovered control, and the button's events, one a frame. A press counts clicks in a row as the backend counts a
+/// player's, so two quick clicks in one place are a double-click. Unity's own <c>Input</c>, and so the level editor,
+/// never sees them.
 /// </summary>
 internal sealed class ImuiDriver : IInputDriver
 {
     private readonly List<KeyPress> _heldKeys = [];
     private readonly HashSet<MouseButton> _heldButtons = [];
+    private readonly ImuiClicks _clicks = new ImuiClicks();
     private ImuiUnityGUIBackend _backend;
 
     /// <summary>
@@ -85,8 +87,12 @@ internal sealed class ImuiDriver : IInputDriver
 
     public bool PressButton(MouseButton button)
     {
-        if (!QueueMouseEvent(ImMouseEventType.Down, button, Vector2.zero))
+        var backend = Backend;
+        if (backend == null)
             return false;
+
+        var count = _clicks.Press(button, backend.GetMousePosition(), Time.unscaledTime);
+        QueueMouseEvent(ImMouseEventType.Down, button, Vector2.zero, count);
 
         _heldButtons.Add(button);
         return true;
@@ -116,18 +122,20 @@ internal sealed class ImuiDriver : IInputDriver
             QueueMouseEvent(ImMouseEventType.Up, button, Vector2.zero);
 
         _heldButtons.Clear();
+        _clicks.Forget();
         ReleaseKeys([.. _heldKeys]);
         _heldKeys.Clear();
         Position = null;
     }
 
-    private bool QueueMouseEvent(ImMouseEventType type, MouseButton button, Vector2 delta)
+    private bool QueueMouseEvent(ImMouseEventType type, MouseButton button, Vector2 delta, int count = 1)
     {
+        // The count is how many clicks in a row a press is, which the backend gives only its Down events
         var backend = Backend;
         if (backend == null)
             return false;
 
-        backend.mouseEventsQueue.PushFront(new ImMouseEvent(type, (int)button, EventModifiers.None, delta, ImMouseDevice.Mouse));
+        backend.mouseEventsQueue.PushFront(new ImMouseEvent(type, (int)button, EventModifiers.None, delta, ImMouseDevice.Mouse, count));
         return true;
     }
 }

@@ -1082,7 +1082,7 @@ public sealed class ScenarioRunnerTests : IDisposable
     /// </summary>
     private sealed class RecordingInput : IInput
     {
-        private readonly IInput _input = new TesterInput(new InProcessDrivers(), new NoActions(), () => 0);
+        private readonly IInput _input = new TesterInput(new InProcessDrivers(_ => { }), new NoActions(), () => 0, _ => { });
         private readonly Recorder _recorder;
 
         public RecordingInput(Recorder recorder)

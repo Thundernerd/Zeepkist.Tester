@@ -17,14 +17,17 @@ public class TesterInputTests
     // The unit tests' UnityEngine has no method bodies, so not Vector2's constructor either
     private static readonly Vector2 _point = new Vector2 { x = 10, y = 20 };
 
+    private static readonly Action<Exception> _ignoreFailure = _ => { };
+
     private readonly FakeDriver _driver = new FakeDriver();
     private readonly FakeActions _actions = new FakeActions();
+    private readonly List<Exception> _logged = [];
     private readonly TesterInput _input;
     private float _now;
 
     public TesterInputTests()
     {
-        _input = new TesterInput(_driver, _actions, () => _now);
+        _input = new TesterInput(_driver, _actions, () => _now, _logged.Add);
     }
 
     private static Func<IInput, IEnumerator>[] Calls =>
@@ -278,6 +281,19 @@ public class TesterInputTests
     }
 
     [Fact]
+    public void GiveBack_LetsGoOfTheActions_WhenTheKeysAndMouseThrow_AndLogsWhatEachThrew()
+    {
+        var keysThrew = new InvalidOperationException("keys stuck");
+        var actionsThrew = new InvalidOperationException("actions stuck");
+        _driver.GiveBackThrows = keysThrew;
+        _actions.GiveBackThrows = actionsThrew;
+
+        _input.GiveBack();
+
+        Assert.Equal([keysThrew, actionsThrew], _logged);
+    }
+
+    [Fact]
     public void GiveBack_LeavesTheRouteAlone()
     {
         _input.Route = InputRoute.Os;
@@ -291,7 +307,7 @@ public class TesterInputTests
     public void TheInProcessRoute_HandsEveryDriverEachCall()
     {
         var other = new FakeDriver();
-        var composite = new InProcessDrivers(_driver, other);
+        var composite = new InProcessDrivers(_ignoreFailure, _driver, other);
 
         Assert.True(composite.PressButton(MouseButton.Left));
         composite.GiveBack();
@@ -301,9 +317,22 @@ public class TesterInputTests
     }
 
     [Fact]
+    public void TheInProcessRoute_GivesBackOnEveryDriver_WhenOneThrows_AndLogsWhatItThrew()
+    {
+        var thrown = new InvalidOperationException("stuck");
+        var logged = new List<Exception>();
+        var composite = new InProcessDrivers(logged.Add, new FakeDriver { GiveBackThrows = thrown }, _driver);
+
+        composite.GiveBack();
+
+        Assert.Equal(["give back"], _driver.Events);
+        Assert.Equal([thrown], logged);
+    }
+
+    [Fact]
     public void TheInProcessRoute_TakesTheInput_WhenAnyDriverDoes()
     {
-        var composite = new InProcessDrivers(new FakeDriver { Takes = false }, _driver);
+        var composite = new InProcessDrivers(_ignoreFailure, new FakeDriver { Takes = false }, _driver);
 
         Assert.True(composite.ReleaseButton(MouseButton.Left));
         Assert.Equal(["release Left"], _driver.Events);
@@ -312,7 +341,7 @@ public class TesterInputTests
     [Fact]
     public void TheInProcessRoute_DoesntTakeTheInput_WhenNoDriverDoes()
     {
-        var composite = new InProcessDrivers(new FakeDriver { Takes = false }, new FakeDriver { Takes = false });
+        var composite = new InProcessDrivers(_ignoreFailure, new FakeDriver { Takes = false }, new FakeDriver { Takes = false });
 
         Assert.False(composite.MoveMouse(_point));
     }
@@ -361,8 +390,13 @@ public class TesterInputTests
             return Takes;
         }
 
+        public Exception GiveBackThrows { get; set; }
+
         public void GiveBack()
         {
+            if (GiveBackThrows != null)
+                throw GiveBackThrows;
+
             Events.Add("give back");
         }
     }
@@ -403,8 +437,13 @@ public class TesterInputTests
             return Add([$"release {button}"]);
         }
 
+        public Exception GiveBackThrows { get; set; }
+
         public void GiveBack()
         {
+            if (GiveBackThrows != null)
+                throw GiveBackThrows;
+
             Events.Add("give back");
         }
 
