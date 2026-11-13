@@ -24,13 +24,16 @@ internal sealed class LineScenario
     /// </summary>
     public IReadOnlyList<string> Use => Steps.Select(step => step.Step.Namespace).Where(name => name.Length > 0).Distinct().ToList();
 
-    private IEnumerable<StepNode> Steps => Entries.Select(entry => entry.Step).Where(step => step != null);
+    /// <summary>
+    /// Its steps, without its comments and blank lines.
+    /// </summary>
+    public IReadOnlyList<StepNode> Steps => Entries.Select(entry => entry.Step).Where(step => step != null).ToList();
 
     /// <summary>
     /// The scenario its converted file would be: the old format has no header, so it starts in the editor with input in process.
     /// </summary>
     public Scenario ToScenario(string file)
     {
-        return new Scenario(file, null, Use, ScenarioStart.Default, InputRoute.InProcess, null, [.. Steps]);
+        return new Scenario(file, null, Use, ScenarioStart.Default, InputRoute.InProcess, null, Steps);
     }
 }

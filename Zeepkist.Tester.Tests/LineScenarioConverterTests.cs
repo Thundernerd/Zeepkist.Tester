@@ -93,7 +93,7 @@ public class LineScenarioConverterTests
         var yaml = LineScenarioConverter.Write(old, ZlsSteps.Registry);
         var scenario = ScenarioParser.Parse("new.ztest.yaml", new StringReader(yaml), ZlsSteps.Registry);
 
-        AssertSameSteps(old.Entries.Select(entry => entry.Step).Where(step => step != null).ToList(), scenario.Steps.Cast<StepNode>().ToList(), yaml);
+        AssertSameSteps(old.Steps, scenario.Steps.Cast<StepNode>().ToList(), yaml);
         return yaml;
     }
 
