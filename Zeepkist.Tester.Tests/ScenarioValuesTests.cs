@@ -212,6 +212,22 @@ public class ScenarioValuesTests
         Assert.Equal("The name 'h' is a text, not a block.", Assert.Throws<StepFailedException>(() => values.Get<BlockValue>("h")).Message);
     }
 
+    [Fact]
+    public void Define_KindWhoseSubstituteIsntAProperty_FailsTheStepNamingIt()
+    {
+        var exception = Assert.Throws<StepFailedException>(() => new ScenarioValues().Define("lamp", new InvalidSteps.SubstituteMissing()));
+
+        Assert.Equal($"Value kind Substitute 'Missing' ({typeof(InvalidSteps.SubstituteMissing).FullName}) isn't a public string property of it.", exception.Message);
+    }
+
+    [Fact]
+    public void Define_KindWhoseSubstituteIsntAString_FailsTheStepNamingIt()
+    {
+        var exception = Assert.Throws<StepFailedException>(() => new ScenarioValues().Define("lamp", new InvalidSteps.SubstituteNotAString()));
+
+        Assert.Equal($"Value kind Substitute 'Number' ({typeof(InvalidSteps.SubstituteNotAString).FullName}) isn't a public string property of it.", exception.Message);
+    }
+
     private void Define(string name, string uid)
     {
         new Name<BlockValue>(name).Set(_context, new BlockValue { Uid = uid });

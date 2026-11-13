@@ -46,6 +46,7 @@ internal sealed class ScenarioValues : IValues
         if (value == null)
             throw new StepFailedException($"The name '{name}' has to be defined with a value, not null.");
 
+        RequireSubstituteMember(typeof(T));
         _values.Add(name, new Defined(value, typeof(T)));
     }
 
@@ -85,6 +86,20 @@ internal sealed class ScenarioValues : IValues
     private Defined FindOrNull(string name)
     {
         return _values.TryGetValue(name, out var defined) ? defined : _outer?.FindOrNull(name);
+    }
+
+    /// <summary>
+    /// A step's own kind doesn't always reach the registry's rules through an argument, so this is where its member is checked then.
+    /// </summary>
+    private static void RequireSubstituteMember(Type valueType)
+    {
+        var member = valueType.GetCustomAttribute<ValueKindAttribute>()?.Substitute;
+        if (member == null)
+            return;
+
+        var property = valueType.GetProperty(member);
+        if (property == null || !property.CanRead || property.PropertyType != typeof(string))
+            throw new StepFailedException($"Value kind Substitute '{member}' ({valueType.FullName}) isn't a public string property of it.");
     }
 
     private static string KindOf(Type valueType)
