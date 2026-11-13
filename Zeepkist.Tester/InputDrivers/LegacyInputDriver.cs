@@ -148,11 +148,10 @@ internal sealed class LegacyInputDriver : IInputDriver
         {
             _heldKeys.Remove(key);
             var strokes = _strokes[key];
-            var last = strokes[strokes.Count - 1];
-            if (last.Down > _frame())
+            if (LastStroke(key).Down > _frame())
                 strokes.RemoveAt(strokes.Count - 1);
             else
-                last.Up = _frame() + 1;
+                LastStroke(key).Up = _frame() + 1;
         }
 
         _mouseDelta = default;
@@ -406,11 +405,9 @@ internal sealed class LegacyInputDriver : IInputDriver
         if (!_strokes.TryGetValue(key, out var strokes))
             _strokes[key] = strokes = [];
 
-        var down = _frame() + 1;
-        if (strokes.Count > 0 && strokes[strokes.Count - 1].Up >= down)
-            down = strokes[strokes.Count - 1].Up.Value + 1;
-
-        strokes.Add(new Stroke { Down = down });
+        var seenIn = _frame() + 1;
+        var down = strokes.Count > 0 && LastStroke(key).Up >= seenIn ? LastStroke(key).Up.Value + 1 : seenIn;
+        strokes.Add(new Stroke { Down = down, Later = down - seenIn });
         if (strokes.Count > KeptStrokes)
             strokes.RemoveAt(0);
     }
@@ -429,10 +426,17 @@ internal sealed class LegacyInputDriver : IInputDriver
             return;
         }
 
-        // Let go before it goes down, it's down and up in one frame, as a quick tap is
+        // One put down later goes up as much later, so it's held as long as it was pressed. Let go before it goes down,
+        // it's down and up in one frame, as a quick tap is
         _heldKeys.Remove(key);
-        var last = _strokes[key][_strokes[key].Count - 1];
-        last.Up = Math.Max(_frame() + 1, last.Down);
+        var last = LastStroke(key);
+        last.Up = Math.Max(_frame() + 1 + last.Later, last.Down);
+    }
+
+    private Stroke LastStroke(KeyCode key)
+    {
+        var strokes = _strokes[key];
+        return strokes[strokes.Count - 1];
     }
 
     private void MoveTo(Vector3 position)
@@ -447,5 +451,10 @@ internal sealed class LegacyInputDriver : IInputDriver
         public int Down { get; set; }
 
         public int? Up { get; set; }
+
+        /// <summary>
+        /// How many frames after the one it would have gone down in it does, as its last stroke's up was still to come.
+        /// </summary>
+        public int Later { get; set; }
     }
 }

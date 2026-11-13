@@ -88,6 +88,26 @@ public class LegacyInputDriverTests
     }
 
     [Fact]
+    public void ReleaseKeys_OfAKeyPutDownLater_KeepsItHeldAsLongAsItWasPressed()
+    {
+        _driver.PressKeys([Key(KeyCode.A)]);
+        _frame = 11;
+        _driver.ReleaseKeys([Key(KeyCode.A)]);
+        _driver.PressKeys([Key(KeyCode.A)]);
+        _frame = 12;
+        _driver.ReleaseKeys([Key(KeyCode.A)]);
+
+        _frame = 13;
+        Assert.True(_driver.GetKeyDown(KeyCode.A));
+        Assert.False(_driver.GetKeyUp(KeyCode.A));
+        Assert.True(_driver.GetKey(KeyCode.A));
+
+        _frame = 14;
+        Assert.True(_driver.GetKeyUp(KeyCode.A));
+        Assert.False(_driver.GetKey(KeyCode.A));
+    }
+
+    [Fact]
     public void PressKeys_AfterAQuickTapInTheSameFrame_IsDownAgainInTheFrameAfterTheTap()
     {
         _driver.PressKeys([Key(KeyCode.A)]);
