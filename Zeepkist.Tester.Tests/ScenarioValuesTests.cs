@@ -212,6 +212,52 @@ public class ScenarioValuesTests
         Assert.Equal("The name 'h' is a text, not a block.", Assert.Throws<StepFailedException>(() => values.Get<BlockValue>("h")).Message);
     }
 
+    [Fact]
+    public void Define_KindWhoseSubstituteIsntAProperty_FailsTheStepNamingIt()
+    {
+        var exception = Assert.Throws<StepFailedException>(() => new ScenarioValues().Define("lamp", new InvalidSteps.SubstituteMissing()));
+
+        Assert.Equal($"Value kind Substitute 'Missing' ({typeof(InvalidSteps.SubstituteMissing).FullName}) isn't a public string property of it.", exception.Message);
+    }
+
+    [Fact]
+    public void Define_KindWhoseSubstituteIsntAString_FailsTheStepNamingIt()
+    {
+        var exception = Assert.Throws<StepFailedException>(() => new ScenarioValues().Define("lamp", new InvalidSteps.SubstituteNotAString()));
+
+        Assert.Equal($"Value kind Substitute 'Number' ({typeof(InvalidSteps.SubstituteNotAString).FullName}) isn't a public string property of it.", exception.Message);
+    }
+
+    [Fact]
+    public void Define_KindWhoseSubstituteHasAPrivateGetter_FailsTheStepNamingIt()
+    {
+        var exception = Assert.Throws<StepFailedException>(() => new ScenarioValues().Define("lamp", new InvalidSteps.SubstituteWithAPrivateGetter()));
+
+        Assert.Equal($"Value kind Substitute 'Uid' ({typeof(InvalidSteps.SubstituteWithAPrivateGetter).FullName}) isn't a public string property of it.", exception.Message);
+    }
+
+    [Fact]
+    public void Get_AnotherClassOfTheSameKind_FailsTheStepNamingBothClasses()
+    {
+        var values = new ScenarioValues();
+        values.Define("x", new InvalidSteps.LampOne());
+
+        var exception = Assert.Throws<StepFailedException>(() => values.Get<InvalidSteps.LampTwo>("x"));
+
+        Assert.Equal($"{typeof(InvalidSteps.LampOne).FullName} and {typeof(InvalidSteps.LampTwo).FullName} are both the value kind 'lamp'. A kind's name has to be unique across every mod's steps.", exception.Message);
+    }
+
+    [Fact]
+    public void Get_AnotherClassOfTheSameNameWithoutAKind_IsNotCalledAKindClash()
+    {
+        var values = new ScenarioValues();
+        values.Define("x", new One.Plain());
+
+        var exception = Assert.Throws<StepFailedException>(() => values.Get<Other.Plain>("x"));
+
+        Assert.Equal("The name 'x' is a Plain, not a Plain.", exception.Message);
+    }
+
     private void Define(string name, string uid)
     {
         new Name<BlockValue>(name).Set(_context, new BlockValue { Uid = uid });
@@ -220,4 +266,19 @@ public class ScenarioValuesTests
     private sealed class Context : BareStepContext
     {
     }
+
+    private static class One
+    {
+        public sealed class Plain
+        {
+        }
+    }
+
+    private static class Other
+    {
+        public sealed class Plain
+        {
+        }
+    }
 }
+
