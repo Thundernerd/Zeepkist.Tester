@@ -239,6 +239,17 @@ public class ScenarioValuesTests
         Assert.Equal($"{typeof(InvalidSteps.LampOne).FullName} and {typeof(InvalidSteps.LampTwo).FullName} are both the value kind 'lamp'. A kind's name has to be unique across every mod's steps.", exception.Message);
     }
 
+    [Fact]
+    public void Get_AnotherClassOfTheSameNameWithoutAKind_IsNotCalledAKindClash()
+    {
+        var values = new ScenarioValues();
+        values.Define("x", new One.Plain());
+
+        var exception = Assert.Throws<StepFailedException>(() => values.Get<Other.Plain>("x"));
+
+        Assert.Equal("The name 'x' is a Plain, not a Plain.", exception.Message);
+    }
+
     private void Define(string name, string uid)
     {
         new Name<BlockValue>(name).Set(_context, new BlockValue { Uid = uid });
@@ -247,4 +258,19 @@ public class ScenarioValuesTests
     private sealed class Context : BareStepContext
     {
     }
+
+    private static class One
+    {
+        public sealed class Plain
+        {
+        }
+    }
+
+    private static class Other
+    {
+        public sealed class Plain
+        {
+        }
+    }
 }
+

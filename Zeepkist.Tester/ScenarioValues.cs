@@ -62,7 +62,7 @@ internal sealed class ScenarioValues : IValues
 
         // A check only compares kinds' names, so two classes of one kind pass it and land here
         var kind = KindOf(typeof(T));
-        if (kind == defined.Kind)
+        if (kind == defined.Kind && HasKind(typeof(T)) && HasKind(defined.ValueType))
             throw new StepFailedException(ValueKindMessages.Clash(defined.ValueType, typeof(T), kind));
 
         throw new StepFailedException(ScenarioMessages.WrongKind(name, defined.Kind, kind));
@@ -105,6 +105,11 @@ internal sealed class ScenarioValues : IValues
         var property = valueType.GetProperty(member);
         if (property == null || !property.CanRead || property.PropertyType != typeof(string))
             throw new StepFailedException(ValueKindMessages.SubstituteNotAString(member, valueType));
+    }
+
+    private static bool HasKind(Type valueType)
+    {
+        return valueType.GetCustomAttribute<ValueKindAttribute>() != null;
     }
 
     private static string KindOf(Type valueType)
