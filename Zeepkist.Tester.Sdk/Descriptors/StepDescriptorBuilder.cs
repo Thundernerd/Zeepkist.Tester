@@ -462,7 +462,7 @@ public sealed class StepDescriptorBuilder
 
         var substitute = NamedValue<string>(kindAttribute, nameof(ValueKindAttribute.Substitute));
         if (substitute != null && !IsStringProperty(valueType, substitute))
-            throw new StepDefinitionException($"Value kind Substitute '{substitute}' ({valueType.FullName}) isn't a public string property of it.");
+            throw new StepDefinitionException(ValueKindMessages.SubstituteNotAString(substitute, valueType));
 
         RequireOneClass(kinds, kind, valueType);
         return new ArgumentType { Kind = argumentKind, Pattern = Name<object>.Pattern, ValueKind = kind, BaseValueKinds = BaseKinds(valueType, kinds), Substitute = substitute };
@@ -497,7 +497,7 @@ public sealed class StepDescriptorBuilder
         }
 
         if (other.FullName != valueType.FullName || other.Assembly.GetName().Name != valueType.Assembly.GetName().Name)
-            throw new StepDefinitionException($"{other.FullName} and {valueType.FullName} are both the value kind '{kind}'. A kind's name has to be unique across every mod's steps.");
+            throw new StepDefinitionException(ValueKindMessages.Clash(other, valueType, kind));
     }
 
     private static bool IsStringProperty(Type type, string name)

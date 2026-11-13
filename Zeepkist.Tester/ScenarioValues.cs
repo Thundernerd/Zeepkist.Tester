@@ -60,7 +60,12 @@ internal sealed class ScenarioValues : IValues
         if (defined.Value is T value)
             return value;
 
-        throw new StepFailedException(ScenarioMessages.WrongKind(name, defined.Kind, KindOf(typeof(T))));
+        // A check only compares kinds' names, so two classes of one kind pass it and land here
+        var kind = KindOf(typeof(T));
+        if (kind == defined.Kind)
+            throw new StepFailedException(ValueKindMessages.Clash(defined.ValueType, typeof(T), kind));
+
+        throw new StepFailedException(ScenarioMessages.WrongKind(name, defined.Kind, kind));
     }
 
     public string Substitute(string text)
@@ -99,7 +104,7 @@ internal sealed class ScenarioValues : IValues
 
         var property = valueType.GetProperty(member);
         if (property == null || !property.CanRead || property.PropertyType != typeof(string))
-            throw new StepFailedException($"Value kind Substitute '{member}' ({valueType.FullName}) isn't a public string property of it.");
+            throw new StepFailedException(ValueKindMessages.SubstituteNotAString(member, valueType));
     }
 
     private static string KindOf(Type valueType)

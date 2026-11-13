@@ -228,6 +228,17 @@ public class ScenarioValuesTests
         Assert.Equal($"Value kind Substitute 'Number' ({typeof(InvalidSteps.SubstituteNotAString).FullName}) isn't a public string property of it.", exception.Message);
     }
 
+    [Fact]
+    public void Get_AnotherClassOfTheSameKind_FailsTheStepNamingBothClasses()
+    {
+        var values = new ScenarioValues();
+        values.Define("x", new InvalidSteps.LampOne());
+
+        var exception = Assert.Throws<StepFailedException>(() => values.Get<InvalidSteps.LampTwo>("x"));
+
+        Assert.Equal($"{typeof(InvalidSteps.LampOne).FullName} and {typeof(InvalidSteps.LampTwo).FullName} are both the value kind 'lamp'. A kind's name has to be unique across every mod's steps.", exception.Message);
+    }
+
     private void Define(string name, string uid)
     {
         new Name<BlockValue>(name).Set(_context, new BlockValue { Uid = uid });
