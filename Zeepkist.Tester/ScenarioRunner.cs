@@ -15,8 +15,6 @@ namespace TNRD.Zeepkist.Tester;
 /// </summary>
 internal sealed class ScenarioRunner
 {
-    private const string ScenarioFileEnd = ".ztest.yaml";
-
     private readonly IRunHost _host;
     private readonly ExceptionLog _exceptions;
     private readonly StepTypes _steps;
@@ -91,7 +89,7 @@ internal sealed class ScenarioRunner
         var name = (file.StartsWith(_folder, StringComparison.Ordinal) ? file.Substring(_folder.Length) : Path.GetFileName(file))
             .Replace('\\', '/')
             .TrimStart('/');
-        return name.EndsWith(ScenarioFileEnd, StringComparison.OrdinalIgnoreCase) ? name.Substring(0, name.Length - ScenarioFileEnd.Length) : name;
+        return ScenarioFiles.WithoutExtension(name);
     }
 
     /// <exception cref="StepDefinitionException">Two test plugins gave a service of one type.</exception>

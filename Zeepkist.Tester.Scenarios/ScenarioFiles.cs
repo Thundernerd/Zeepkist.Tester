@@ -22,6 +22,20 @@ internal static class ScenarioFiles
         return file.EndsWith(OldExtension, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// The name without its scenario extension, of either format.
+    /// </summary>
+    public static string WithoutExtension(string name)
+    {
+        foreach (var extension in new[] { Extension, OldExtension })
+        {
+            if (name.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+                return name.Substring(0, name.Length - extension.Length);
+        }
+
+        return name;
+    }
+
     /// <exception cref="ScenarioException">The file can't be read as a scenario. This is the first problem in it.</exception>
     public static Scenario Read(string file, TextReader reader, IEnumerable<StepDescriptor> steps)
     {
