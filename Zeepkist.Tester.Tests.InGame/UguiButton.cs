@@ -36,6 +36,15 @@ public sealed class UguiButton
         button.GetComponent<Button>().onClick.AddListener(() => Clicks++);
     }
 
+    /// <summary>
+    /// Centres the button on the point, in screen pixels counted from the bottom left, which is where its overlay canvas
+    /// draws it.
+    /// </summary>
+    public void MoveTo(Vector2 screenPoint)
+    {
+        _button.position = screenPoint;
+    }
+
     public void Hide()
     {
         if (_canvas != null)
