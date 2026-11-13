@@ -13,21 +13,15 @@ public sealed class InputOff
     private readonly List<IDisposable> _layers = [];
 
     /// <summary>Turns off the category's maps for every player.</summary>
-    /// <returns>Whether ZeepSDK has an override for the category.</returns>
-    public bool TurnOff(string category)
+    public void TurnOff(InputCategory category)
     {
         var stack = category switch
         {
-            "Gameplay" => ControlsApi.GameplayInputOverride,
-            "LevelEditor" => ControlsApi.LevelEditorInputOverride,
-            "Menu" => ControlsApi.MenuInputOverride,
-            _ => (InputOverrideStack)null,
+            InputCategory.Gameplay => ControlsApi.GameplayInputOverride,
+            InputCategory.LevelEditor => ControlsApi.LevelEditorInputOverride,
+            _ => ControlsApi.MenuInputOverride,
         };
-        if (stack == null)
-            return false;
-
         _layers.Add(stack.Override(false));
-        return true;
     }
 
     /// <summary>Turns on what <see cref="TurnOff"/> turned off.</summary>

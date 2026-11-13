@@ -2,6 +2,6 @@ description: An input action the game has turned off isn't sent, so undo fails w
 start: editor
 steps:
   - place-start
-  - sample.turn-off-input: LevelEditor
+  - sample.turn-off-input: level-editor
   # Fails on purpose: the game has EditorUndo turned off right now
   - undo

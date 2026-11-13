@@ -10,14 +10,13 @@ namespace TNRD.Zeepkist.Tester.Tests.InGame;
 [Step("turn-off-input")]
 public sealed class TurnOffInput : Step
 {
-    /// <summary>The category: Gameplay, LevelEditor or Menu.</summary>
+    /// <summary>The category.</summary>
     [Arg(Primary = true)]
-    public required string Category { get; set; }
+    public required InputCategory Category { get; set; }
 
     public override IEnumerator Run(IStepContext context)
     {
-        if (!context.Get<InputOff>().TurnOff(Category))
-            context.Fail($"ZeepSDK has no input override for {Category}.");
+        context.Get<InputOff>().TurnOff(Category);
 
         // The maps are off from Rewired's next update
         yield return null;
