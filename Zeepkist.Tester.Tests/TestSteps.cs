@@ -28,6 +28,7 @@ public static class TestSteps
     [Step("place-block")]
     [Example("- place-block: lamp")]
     [Example("- place-block: { function: lamp, as: my-lamp }")]
+    [LineSyntax("<function> [as <as>]")]
     public sealed class PlaceBlock : Step
     {
         /// <summary>The Block Function.</summary>

@@ -23,6 +23,13 @@ public class StepDescriptorBuilderTests
     }
 
     [Fact]
+    public void Build_LineSyntax_IsTheOldLineFormAsWritten()
+    {
+        Assert.Equal("<function> [as <as>]", Build(typeof(TestSteps.PlaceBlock)).LineSyntax);
+        Assert.Null(Build(typeof(TestSteps.Wait)).LineSyntax);
+    }
+
+    [Fact]
     public void Build_PrimaryScalarArgument_IsNamedInKebabCaseAndRequired()
     {
         var descriptor = Build(typeof(TestSteps.Wait));

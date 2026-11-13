@@ -9,6 +9,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Zeepkist.Tester" />
     <InternalsVisibleTo Include="Zeepkist.Tester.Cli" />
+    <InternalsVisibleTo Include="Zeepkist.Tester.Scenarios" />
     <InternalsVisibleTo Include="Zeepkist.Tester.Tests" />
   </ItemGroup>
 
