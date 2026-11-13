@@ -21,10 +21,8 @@ internal static class SchemaCommand
         var plugins = new List<string>();
         for (var i = 0; i < arguments.Count; i++)
         {
-            if (arguments[i] != "--plugin" || i + 1 >= arguments.Count)
+            if (!PluginArguments.TryRead(arguments, ref i, plugins))
                 return null;
-
-            plugins.Add(arguments[++i]);
         }
 
         var steps = ProjectSteps.Read(folder, plugins, output);
@@ -38,8 +36,7 @@ internal static class SchemaCommand
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            output.WriteLine($"error: Can't write {SchemaFile.RelativePath}: {exception.Message}");
-            return 1;
+            return output.Fail($"Can't write {SchemaFile.RelativePath}: {exception.Message}");
         }
     }
 }

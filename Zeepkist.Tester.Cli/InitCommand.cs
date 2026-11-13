@@ -45,8 +45,7 @@ internal static class InitCommand
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {
-            output.WriteLine($"error: {exception.Message}");
-            return 1;
+            return output.Fail(exception.Message);
         }
     }
 
@@ -58,13 +57,13 @@ internal static class InitCommand
             var text = File.ReadAllText(path);
             if (HasComments(text))
             {
-                output.WriteLine($"error: {path} has comments, which rewriting it would lose. Add this to it yourself:");
+                output.WriteError($"{path} has comments, which rewriting it would lose. Add this to it yourself:");
                 output.WriteLine($"    \"{Setting}\": {{ \"{SchemaFile.RelativePath}\": \"{ScenarioGlob}\" }}");
                 return 1;
             }
 
             if (JsonNode.Parse(text, documentOptions: _readOptions) is not JsonObject read)
-                return Fail(output, $"{path} isn't a JSON object.");
+                return output.Fail($"{path} isn't a JSON object.");
 
             settings = read;
         }
@@ -73,7 +72,7 @@ internal static class InitCommand
             settings[Setting] = new JsonObject();
 
         if (settings[Setting] is not JsonObject schemas)
-            return Fail(output, $"{Setting} in {path} isn't a JSON object.");
+            return output.Fail($"{Setting} in {path} isn't a JSON object.");
 
         if (!AddGlob(schemas))
         {
@@ -133,11 +132,5 @@ internal static class InitCommand
         output.WriteLine("Run ztest schema, or ztest check, to write the schema. In other editors, or for a scenario outside this folder, start the file with a comment that points at it:");
         output.WriteLine($"    # yaml-language-server: $schema=<path to {SchemaFile.RelativePath}>   (VS Code)");
         output.WriteLine($"    # $schema: <path to {SchemaFile.RelativePath}>                        (Rider)");
-    }
-
-    private static int Fail(TextWriter output, string problem)
-    {
-        output.WriteLine($"error: {problem}");
-        return 1;
     }
 }

@@ -22,6 +22,6 @@ internal sealed class CheckProblem
 
     public override string ToString()
     {
-        return $"{Location}: {(Severity == CheckSeverity.Error ? "error" : "warning")}: {Message}";
+        return CommandOutput.Line(Location, Severity, Message);
     }
 }
