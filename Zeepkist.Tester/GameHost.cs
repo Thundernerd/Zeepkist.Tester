@@ -81,9 +81,9 @@ internal sealed class GameHost : IRunHost
             .Where(StepDescriptorBuilder.IsTestPlugin);
     }
 
-    public IEnumerator EnterStart(ScenarioStart start, string scenarioFile)
+    public IEnumerator EnterStart(ScenarioStart start, string levelFolder)
     {
-        return _walk.Enter(start, scenarioFile);
+        return _walk.Enter(start, levelFolder);
     }
 
     public IEnumerator Screenshot(string name, bool covered = false)

@@ -38,8 +38,8 @@ internal sealed class StartWalk
     }
 
     /// <param name="start">Where to go.</param>
-    /// <param name="scenarioFile">What a level file in <paramref name="start"/> is written relative to.</param>
-    public IEnumerator Enter(ScenarioStart start, string scenarioFile)
+    /// <param name="levelFolder">What a level file in <paramref name="start"/> is written relative to.</param>
+    public IEnumerator Enter(ScenarioStart start, string levelFolder)
     {
         yield return _pastStartScreen ? ToMainMenu() : FromStartScreen();
         yield return AwaitMainMenu();
@@ -53,7 +53,7 @@ internal sealed class StartWalk
         {
             location = GameLocation.Editor;
             yield return NewLevel();
-            if (start.LevelPath(scenarioFile) is { } level)
+            if (start.LevelPath(levelFolder) is { } level)
                 yield return OpenLevel(level);
         }
         else if (start.State == StartState.FreePlay)

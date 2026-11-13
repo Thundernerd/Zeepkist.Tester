@@ -17,13 +17,16 @@ internal sealed class InGameTestRunner
     private readonly ExceptionLog _exceptions;
     private readonly RunCatalog _catalog;
     private readonly RunRecorder _recorder;
+    private readonly string _scenariosFolder;
 
     /// <param name="host">The game.</param>
     /// <param name="exceptions">Where the game's exceptions are listed under each test.</param>
     /// <param name="catalog">The tests to choose from, and the steps they run.</param>
     /// <param name="recorder">Records each step.</param>
-    public InGameTestRunner(IRunHost host, ExceptionLog exceptions, RunCatalog catalog, RunRecorder recorder)
+    /// <param name="scenariosFolder">What a test's <see cref="InGameTestAttribute.Level"/> is relative to.</param>
+    public InGameTestRunner(IRunHost host, ExceptionLog exceptions, RunCatalog catalog, RunRecorder recorder, string scenariosFolder)
     {
+        _scenariosFolder = scenariosFolder;
         _host = host;
         _exceptions = exceptions;
         _catalog = catalog;
@@ -46,8 +49,21 @@ internal sealed class InGameTestRunner
 
     private RunUnit UnitOf(InGameTest test, RunContext run)
     {
-        var start = new ScenarioStart(StartState.All.Single(state => state.Name == test.Descriptor.Start), new Dictionary<string, string>());
-        return new RunUnit(new ScenarioContext(run, test.Descriptor.Name), string.Empty, start, InputRoute.InProcess, unit => RunTest(unit, test));
+        return new RunUnit(new ScenarioContext(run, test.Descriptor.Name), string.Empty, StartOf(test.Descriptor), _scenariosFolder, InputRoute.InProcess, unit => RunTest(unit, test));
+    }
+
+    /// <summary>
+    /// The test's start as a scenario's <c>start:</c> would say it, with its level file or free play's UID.
+    /// </summary>
+    private static ScenarioStart StartOf(TestDescriptor test)
+    {
+        var state = StartState.All.Single(state => state.Name == test.Start);
+        var arguments = new Dictionary<string, string>();
+        var argument = state == StartState.FreePlay ? test.FreePlayUid : test.Level;
+        if (state.Argument != null && argument != null)
+            arguments.Add(state.Argument, argument);
+
+        return new ScenarioStart(state, arguments);
     }
 
     /// <summary>
