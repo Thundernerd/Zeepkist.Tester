@@ -24,12 +24,13 @@ internal static class DocsCommand
         string file = null;
         for (var i = 0; i < arguments.Count; i++)
         {
-            if (arguments[i] == "--plugin" && i + 1 < arguments.Count)
-                plugins.Add(arguments[++i]);
-            else if (arguments[i] == "--output" && i + 1 < arguments.Count && file == null)
-                file = arguments[++i];
-            else
+            if (PluginArguments.TryRead(arguments, ref i, plugins))
+                continue;
+
+            if (arguments[i] != "--output" || i + 1 >= arguments.Count || file != null)
                 return null;
+
+            file = arguments[++i];
         }
 
         var steps = ProjectSteps.Read(folder, plugins, output);
@@ -43,8 +44,7 @@ internal static class DocsCommand
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
-            output.WriteLine($"error: Can't write {path}: {exception.Message}");
-            return 1;
+            return output.Fail($"Can't write {path}: {exception.Message}");
         }
 
         output.WriteLine(string.Create(CultureInfo.InvariantCulture, $"Wrote {steps.Registry.Steps.Count} steps and {steps.Registry.States.Count} states to {path}."));

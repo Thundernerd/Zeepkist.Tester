@@ -40,12 +40,13 @@ internal sealed class ConvertCommand
     {
         for (var i = 0; i < arguments.Count; i++)
         {
-            if (arguments[i] == "--plugin" && i + 1 < arguments.Count)
-                _plugins.Add(arguments[++i]);
-            else if (arguments[i].StartsWith('-'))
+            if (PluginArguments.TryRead(arguments, ref i, _plugins))
+                continue;
+
+            if (arguments[i].StartsWith('-'))
                 return false;
-            else
-                _paths.Add(arguments[i]);
+
+            _paths.Add(arguments[i]);
         }
 
         return _paths.Count > 0;
@@ -68,7 +69,7 @@ internal sealed class ConvertCommand
 
             var inFolder = Directory.GetFiles(path, "*" + OldExtension, SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToList();
             if (inFolder.Count == 0)
-                return Fail($"No {OldExtension} files in {path}.");
+                return _output.Fail($"No {OldExtension} files in {path}.");
 
             files.AddRange(inFolder);
         }
@@ -92,7 +93,7 @@ internal sealed class ConvertCommand
         var target = Target(file);
         if (File.Exists(target))
         {
-            _output.WriteLine($"error: {target} is already there. Move it out of the way to convert {file}.");
+            _output.WriteError($"{target} is already there. Move it out of the way to convert {file}.");
             return false;
         }
 
@@ -106,12 +107,12 @@ internal sealed class ConvertCommand
         }
         catch (ScenarioException exception)
         {
-            _output.WriteLine($"{exception.Location}: error: {exception.Problem}");
+            _output.WriteError(exception.Location, exception.Problem);
             return false;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            _output.WriteLine($"error: Can't convert {file}: {exception.Message}");
+            _output.WriteError($"Can't convert {file}: {exception.Message}");
             return false;
         }
 
@@ -124,11 +125,5 @@ internal sealed class ConvertCommand
         var name = Path.GetFileName(file);
         var stem = name.EndsWith(OldExtension, StringComparison.Ordinal) ? name.Substring(0, name.Length - OldExtension.Length) : Path.GetFileNameWithoutExtension(name);
         return Path.Combine(Path.GetDirectoryName(file) ?? string.Empty, stem + NewExtension);
-    }
-
-    private int Fail(string problem)
-    {
-        _output.WriteLine($"error: {problem}");
-        return 1;
     }
 }
