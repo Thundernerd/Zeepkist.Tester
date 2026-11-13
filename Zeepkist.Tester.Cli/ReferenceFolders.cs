@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Xml;
+using System.Xml.Linq;
 
 namespace TNRD.Zeepkist.Tester.Cli;
 
@@ -24,12 +26,15 @@ internal static class ReferenceFolders
     /// the facades that forward to it come from one place. Each package is taken at the version the first assembly with
     /// a restore beside it built against, and at the newest version in the cache otherwise.
     /// </remarks>
-    public static IEnumerable<string> For(IEnumerable<string> assemblyPaths)
+    /// <param name="assemblyPaths">The assemblies to read, test plugins first.</param>
+    /// <param name="environmentVariable">Reads an environment variable. Defaults to this process's.</param>
+    public static IEnumerable<string> For(IEnumerable<string> assemblyPaths, Func<string, string> environmentVariable = null)
     {
+        environmentVariable ??= Environment.GetEnvironmentVariable;
         var paths = assemblyPaths.Select(Path.GetFullPath).ToList();
         var ownFolders = paths.Select(Path.GetDirectoryName).Distinct();
         var restore = paths.Select(Restore.Beside).FirstOrDefault(found => found != null);
-        var cache = restore?.PackageFolders.FirstOrDefault() ?? NuGetCache();
+        var cache = restore?.PackageFolders.FirstOrDefault() ?? NuGetCache(paths, environmentVariable);
 
         var referenceAssemblies = Path.Combine(PackageFolder(restore, cache, ReferenceAssembliesPackage), "build", ".NETFramework", "v4.7.2");
 
@@ -41,12 +46,67 @@ internal static class ReferenceFolders
             .Append(AppContext.BaseDirectory);
     }
 
-    private static string NuGetCache()
+    /// <summary>
+    /// The global packages folder as NuGet finds it: <c>NUGET_PACKAGES</c>, then the <c>globalPackagesFolder</c> of the
+    /// nearest <c>nuget.config</c> above the first assembly, then that of the user's, then the default.
+    /// </summary>
+    private static string NuGetCache(IReadOnlyList<string> assemblyPaths, Func<string, string> environmentVariable)
     {
-        var configured = Environment.GetEnvironmentVariable("NUGET_PACKAGES");
-        return string.IsNullOrEmpty(configured)
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages")
-            : configured;
+        var configured = environmentVariable("NUGET_PACKAGES");
+        if (!string.IsNullOrEmpty(configured))
+            return configured;
+
+        var startFolder = assemblyPaths.Select(Path.GetDirectoryName).FirstOrDefault();
+        return ConfigFiles(startFolder).Select(GlobalPackagesFolder).FirstOrDefault(folder => folder != null)
+            ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages");
+    }
+
+    /// <summary>
+    /// The <c>nuget.config</c> files that apply in <paramref name="startFolder"/>, nearest first, and then the user's.
+    /// </summary>
+    private static IEnumerable<string> ConfigFiles(string startFolder)
+    {
+        for (var folder = startFolder; folder != null; folder = Path.GetDirectoryName(folder))
+        {
+            foreach (var name in (string[])["nuget.config", "NuGet.config", "NuGet.Config"])
+            {
+                var file = Path.Combine(folder, name);
+                if (File.Exists(file))
+                {
+                    yield return file;
+                    break;
+                }
+            }
+        }
+
+        var userFolder = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NuGet")
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "NuGet");
+        var userConfig = Path.Combine(userFolder, "NuGet.Config");
+        if (File.Exists(userConfig))
+            yield return userConfig;
+    }
+
+    /// <summary>
+    /// The <c>globalPackagesFolder</c> <paramref name="configFile"/> sets, relative to its own folder, or
+    /// <see langword="null"/> when it sets none or can't be read.
+    /// </summary>
+    private static string GlobalPackagesFolder(string configFile)
+    {
+        try
+        {
+            var value = XDocument.Load(configFile).Root?.Element("config")?.Elements("add")
+                .LastOrDefault(add => string.Equals((string)add.Attribute("key"), "globalPackagesFolder", StringComparison.OrdinalIgnoreCase))
+                ?.Attribute("value")?.Value;
+            if (string.IsNullOrWhiteSpace(value))
+                return null;
+
+            return Path.GetFullPath(Environment.ExpandEnvironmentVariables(value), Path.GetDirectoryName(configFile));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or XmlException)
+        {
+            return null;
+        }
     }
 
     /// <summary>

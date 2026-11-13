@@ -32,6 +32,53 @@ public class ReferenceFoldersTests
         Assert.DoesNotContain(Path.Combine(cache, "zeepsdk", "1.0.0-beta", "lib"), folders);
     }
 
+    [Fact]
+    public void For_NuGetConfigAboveThePlugin_TakesPackagesFromItsGlobalPackagesFolder()
+    {
+        using var folder = new TemporaryFolder();
+        var cache = CacheWith(folder, "zeepkist.gamelibs", "18.7.2061");
+        var plugin = PluginWithoutARestore(folder);
+        File.WriteAllText(Path.Combine(folder.Path, "nuget.config"), """
+            <?xml version="1.0" encoding="utf-8"?>
+            <configuration>
+              <config>
+                <add key="globalPackagesFolder" value="cache" />
+              </config>
+            </configuration>
+            """);
+
+        var folders = ReferenceFolders.For([plugin], _ => null);
+
+        Assert.Contains(Path.Combine(cache, "zeepkist.gamelibs", "18.7.2061", "lib"), folders);
+    }
+
+    [Fact]
+    public void For_NuGetPackagesSet_TakesItOverANuGetConfig()
+    {
+        using var folder = new TemporaryFolder();
+        var cache = CacheWith(folder, "zeepkist.gamelibs", "18.7.2061");
+        var plugin = PluginWithoutARestore(folder);
+        File.WriteAllText(Path.Combine(folder.Path, "nuget.config"), """
+            <configuration>
+              <config>
+                <add key="globalPackagesFolder" value="elsewhere" />
+              </config>
+            </configuration>
+            """);
+
+        var folders = ReferenceFolders.For([plugin], name => name == "NUGET_PACKAGES" ? cache : null);
+
+        Assert.Contains(Path.Combine(cache, "zeepkist.gamelibs", "18.7.2061", "lib"), folders);
+    }
+
+    private static string PluginWithoutARestore(TemporaryFolder folder)
+    {
+        var output = Directory.CreateDirectory(Path.Combine(folder.Path, "MyMod", "bin", "Debug", "net472")).FullName;
+        var plugin = Path.Combine(output, "MyMod.dll");
+        File.WriteAllBytes(plugin, []);
+        return plugin;
+    }
+
     private static string CacheWith(TemporaryFolder folder, string package, params string[] versions)
     {
         var cache = Path.Combine(folder.Path, "cache");
