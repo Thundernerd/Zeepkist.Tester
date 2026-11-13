@@ -115,6 +115,15 @@ public sealed class ProgramTests : IDisposable
     }
 
     [Fact]
+    public void Check_AnOldFile_ReportsEachLineThatCantBeRead()
+    {
+        var file = Write("a.zlstest", "nope\ncompile lamp\nset-text\n");
+
+        Assert.Equal(1, Run("check", file, "--plugin", _modPath));
+        Assert.Equal([$"{file}:1:1: error: There's no step 'nope'.", $"{file}:3:1: error: set-text has no end."], Lines().Skip(1).SkipLast(1));
+    }
+
+    [Fact]
     public void Check_AFolder_ChecksBothFormats_WhateverTheExtensionsCase()
     {
         var old = Write("a.ZLSTEST", "compile lamp\n");

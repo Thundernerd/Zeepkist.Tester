@@ -25,22 +25,40 @@ internal sealed class LineScenarioReader
     private readonly string _file;
     private readonly IReadOnlyList<StepDescriptor> _steps;
 
-    private LineScenarioReader(string file, IEnumerable<StepDescriptor> steps)
+    /// <summary>
+    /// Takes each line that can't be read. It throws it to end the reading there, or keeps it to go on with the next line.
+    /// </summary>
+    private readonly Action<ScenarioException> _report;
+
+    private LineScenarioReader(string file, IEnumerable<StepDescriptor> steps, Action<ScenarioException> report)
     {
         _file = file;
         _steps = steps.ToList();
+        _report = report;
     }
 
     /// <exception cref="ScenarioException">A line can't be read as a step.</exception>
     public static LineScenario Read(string file, TextReader reader, IEnumerable<StepDescriptor> steps)
     {
-        return new LineScenarioReader(file, steps).Read(reader.ReadToEnd());
+        return new LineScenarioReader(file, steps, problem => throw problem).Read(reader.ReadToEnd());
+    }
+
+    /// <summary>
+    /// Reads the file the way <see cref="Read"/> does, but goes on after each line that can't be read, so <c>ztest check</c> can report them all at once.
+    /// </summary>
+    /// <returns>The scenario, or null when a line can't be read, and each problem in the order of its line.</returns>
+    public static (LineScenario Scenario, IReadOnlyList<ScenarioException> Problems) ReadAll(string file, TextReader reader, IEnumerable<StepDescriptor> steps)
+    {
+        var problems = new List<ScenarioException>();
+        var scenario = new LineScenarioReader(file, steps, problems.Add).Read(reader.ReadToEnd());
+        return (problems.Count == 0 ? scenario : null, problems);
     }
 
     private LineScenario Read(string text)
     {
         var lines = text.Replace("\r\n", "\n").Split('\n');
         var entries = new List<LineEntry>();
+        var hadProblems = false;
         for (var i = 0; i < lines.Length; i++)
         {
             var line = lines[i].Trim();
@@ -56,12 +74,20 @@ internal sealed class LineScenarioReader
             }
             else
             {
-                entries.Add(LineEntry.ForStep(ReadStep(lines, ref i)));
+                try
+                {
+                    entries.Add(LineEntry.ForStep(ReadStep(lines, ref i)));
+                }
+                catch (ScenarioException problem)
+                {
+                    _report(problem);
+                    hadProblems = true;
+                }
             }
         }
 
         // A scenario needs steps:, and the old format had no file without them either
-        if (!entries.Any(entry => entry.Step != null))
+        if (!hadProblems && !entries.Any(entry => entry.Step != null))
             throw new ScenarioException(new SourceLocation(_file, 1, 1), "The file has no steps.");
 
         return new LineScenario(entries);

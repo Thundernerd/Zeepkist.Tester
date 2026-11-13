@@ -48,7 +48,7 @@ internal static class ScenarioFiles
     }
 
     /// <summary>
-    /// As <see cref="ScenarioParser.ParseAll"/>. A <c>.zlstest</c> stops at its first problem, as the old format did.
+    /// As <see cref="ScenarioParser.ParseAll"/>, for either format.
     /// </summary>
     public static ScenarioReading ReadAll(string file, TextReader reader, IEnumerable<StepDescriptor> steps)
     {
@@ -57,7 +57,8 @@ internal static class ScenarioFiles
 
         try
         {
-            return new ScenarioReading(LineScenarioReader.Read(file, reader, steps).ToScenario(file), []);
+            var (scenario, problems) = LineScenarioReader.ReadAll(file, reader, steps);
+            return new ScenarioReading(scenario?.ToScenario(file), problems);
         }
         catch (ScenarioException exception)
         {
