@@ -54,9 +54,17 @@ internal sealed class LegacyInputDriver : IInputDriver
     private readonly Func<int> _frame;
     private readonly Func<float> _deltaTime;
     private readonly Dictionary<string, (int Frame, float Value)> _ramps = [];
+    /// <summary>
+    /// How many strokes of a key it keeps, for a key axis read again after frames it wasn't.
+    /// </summary>
+    private const int KeptStrokes = 8;
+
     private readonly Dictionary<KeyCode, int> _heldKeys = [];
-    private readonly Dictionary<KeyCode, int> _downFrames = [];
-    private readonly Dictionary<KeyCode, int> _upFrames = [];
+
+    /// <summary>
+    /// Each key's strokes, oldest first: the frame it goes down in and the one it goes up in, null while it's held.
+    /// </summary>
+    private readonly Dictionary<KeyCode, List<Stroke>> _strokes = [];
     private (int Frame, float X, float Y) _mouseDelta;
 
     /// <param name="frame">Unity's <c>Time.frameCount</c>.</param>
@@ -132,10 +140,12 @@ internal sealed class LegacyInputDriver : IInputDriver
         foreach (var key in _heldKeys.Keys.ToList())
         {
             _heldKeys.Remove(key);
-            if (_downFrames[key] > _frame())
-                _downFrames.Remove(key);
+            var strokes = _strokes[key];
+            var last = strokes[strokes.Count - 1];
+            if (last.Down > _frame())
+                strokes.RemoveAt(strokes.Count - 1);
             else
-                _upFrames[key] = _frame() + 1;
+                last.Up = _frame() + 1;
         }
 
         _mouseDelta = default;
@@ -145,9 +155,9 @@ internal sealed class LegacyInputDriver : IInputDriver
     /// <summary>
     /// A key or mouse button is held, as Unity counts them.
     /// </summary>
-    public bool AnyKey => _downFrames.Keys.Any(GetKey);
+    public bool AnyKey => _strokes.Keys.Any(GetKey);
 
-    public bool AnyKeyDown => _downFrames.Keys.Any(GetKeyDown);
+    public bool AnyKeyDown => _strokes.Keys.Any(GetKeyDown);
 
     /// <summary>
     /// Where the mouse is, in screen pixels counted from the bottom left, or null while it's the player's.
@@ -179,12 +189,12 @@ internal sealed class LegacyInputDriver : IInputDriver
 
     public bool GetKeyDown(KeyCode key)
     {
-        return _downFrames.TryGetValue(key, out var frame) && frame == _frame();
+        return StrokesOf(key).Any(stroke => stroke.Down == _frame());
     }
 
     public bool GetKeyUp(KeyCode key)
     {
-        return _upFrames.TryGetValue(key, out var frame) && frame == _frame();
+        return StrokesOf(key).Any(stroke => stroke.Up == _frame());
     }
 
     /// <summary>
@@ -319,10 +329,12 @@ internal sealed class LegacyInputDriver : IInputDriver
     /// </summary>
     private bool HeldIn(KeyCode key, int frame)
     {
-        if (!_downFrames.TryGetValue(key, out var down) || frame < down)
-            return false;
+        return StrokesOf(key).Any(stroke => stroke.Down <= frame && (stroke.Up == null || frame < stroke.Up));
+    }
 
-        return _heldKeys.ContainsKey(key) || frame < _upFrames[key];
+    private IEnumerable<Stroke> StrokesOf(KeyCode key)
+    {
+        return _strokes.TryGetValue(key, out var strokes) ? strokes : [];
     }
 
     /// <summary>
@@ -360,7 +372,7 @@ internal sealed class LegacyInputDriver : IInputDriver
     private int FirstDown(string axis)
     {
         var (positive, negative) = _keyAxes[axis];
-        return positive.Concat(negative).Select(key => _downFrames.TryGetValue(key, out var down) ? down : int.MaxValue).Min();
+        return positive.Concat(negative).SelectMany(StrokesOf).Select(stroke => stroke.Down).DefaultIfEmpty(int.MaxValue).Min();
     }
 
     private static float MoveTowards(float from, float to, float by)
@@ -368,10 +380,29 @@ internal sealed class LegacyInputDriver : IInputDriver
         return Math.Abs(to - from) <= by ? to : from + (Math.Sign(to - from) * by);
     }
 
+    /// <summary>
+    /// A key already held stays down from its first press. One whose release the game hasn't seen yet goes down the frame
+    /// after it sees it go up, as a key can't go up and down in one frame.
+    /// </summary>
     private void Press(KeyCode key)
     {
-        _heldKeys[key] = _heldKeys.TryGetValue(key, out var count) ? count + 1 : 1;
-        _downFrames[key] = _frame() + 1;
+        if (_heldKeys.TryGetValue(key, out var count))
+        {
+            _heldKeys[key] = count + 1;
+            return;
+        }
+
+        _heldKeys[key] = 1;
+        if (!_strokes.TryGetValue(key, out var strokes))
+            _strokes[key] = strokes = [];
+
+        var down = _frame() + 1;
+        if (strokes.Count > 0 && strokes[strokes.Count - 1].Up >= down)
+            down = strokes[strokes.Count - 1].Up.Value + 1;
+
+        strokes.Add(new Stroke { Down = down });
+        if (strokes.Count > KeptStrokes)
+            strokes.RemoveAt(0);
     }
 
     /// <summary>
@@ -388,7 +419,16 @@ internal sealed class LegacyInputDriver : IInputDriver
             return;
         }
 
+        // Let go before it goes down, it's down and up in one frame, as a quick tap is
         _heldKeys.Remove(key);
-        _upFrames[key] = _frame() + 1;
+        var last = _strokes[key][_strokes[key].Count - 1];
+        last.Up = Math.Max(_frame() + 1, last.Down);
+    }
+
+    private sealed class Stroke
+    {
+        public int Down { get; set; }
+
+        public int? Up { get; set; }
     }
 }

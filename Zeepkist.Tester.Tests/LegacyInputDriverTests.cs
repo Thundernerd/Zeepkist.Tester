@@ -67,6 +67,56 @@ public class LegacyInputDriverTests
     }
 
     [Fact]
+    public void PressKeys_InTheFrameOfItsRelease_IsUpInOneFrame_AndDownInTheNext_AsTypingADoubledLetterIs()
+    {
+        _driver.PressKeys([Key(KeyCode.A)]);
+        _frame = 11;
+        _driver.ReleaseKeys([Key(KeyCode.A)]);
+        _driver.PressKeys([Key(KeyCode.A)]);
+        Assert.True(_driver.GetKey(KeyCode.A));
+        Assert.True(_driver.GetKeyDown(KeyCode.A));
+
+        _frame = 12;
+        Assert.True(_driver.GetKeyUp(KeyCode.A));
+        Assert.False(_driver.GetKeyDown(KeyCode.A));
+        Assert.False(_driver.GetKey(KeyCode.A));
+
+        _frame = 13;
+        Assert.True(_driver.GetKeyDown(KeyCode.A));
+        Assert.False(_driver.GetKeyUp(KeyCode.A));
+        Assert.True(_driver.GetKey(KeyCode.A));
+    }
+
+    [Fact]
+    public void PressKeys_AfterAQuickTapInTheSameFrame_IsDownAgainInTheFrameAfterTheTap()
+    {
+        _driver.PressKeys([Key(KeyCode.A)]);
+        _driver.ReleaseKeys([Key(KeyCode.A)]);
+        _driver.PressKeys([Key(KeyCode.A)]);
+
+        _frame = 11;
+        Assert.True(_driver.GetKeyDown(KeyCode.A));
+        Assert.True(_driver.GetKeyUp(KeyCode.A));
+        Assert.False(_driver.GetKey(KeyCode.A));
+
+        _frame = 12;
+        Assert.True(_driver.GetKeyDown(KeyCode.A));
+        Assert.True(_driver.GetKey(KeyCode.A));
+    }
+
+    [Fact]
+    public void PressKeys_OfAKeyAlreadyHeld_DoesntPutItDownAgain()
+    {
+        _driver.PressKeys([Key(KeyCode.Escape)]);
+        _frame = 12;
+        _driver.PressKeys([Key(KeyCode.Escape)]);
+
+        _frame = 13;
+        Assert.False(_driver.GetKeyDown(KeyCode.Escape));
+        Assert.True(_driver.GetKey(KeyCode.Escape));
+    }
+
+    [Fact]
     public void ReleaseKeys_OfAKeyPressedTwice_KeepsItHeldUntilBothAreReleased()
     {
         _driver.PressKeys([Key(KeyCode.Escape), Key(KeyCode.Escape)]);
