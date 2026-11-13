@@ -70,19 +70,26 @@ internal static class ReferenceFolders
     }
 
     /// <summary>
-    /// The folder of the package's newest version, or the package's own when it isn't in the cache.
+    /// The folder of the package's newest version, or the package's own when it isn't in the cache. A stable version is
+    /// newer than its prereleases.
     /// </summary>
     private static string NewestVersion(string packageFolder)
     {
         if (!Directory.Exists(packageFolder))
             return packageFolder;
 
-        return Directory.GetDirectories(packageFolder).MaxBy(ParseVersion) ?? packageFolder;
+        return Directory.GetDirectories(packageFolder)
+            .Select(versionFolder => (Folder: versionFolder, Version: Path.GetFileName(versionFolder).Split('+')[0]))
+            .OrderBy(version => ParseVersion(version.Version))
+            .ThenBy(version => !version.Version.Contains('-'))
+            .ThenBy(version => version.Version, StringComparer.OrdinalIgnoreCase)
+            .Select(version => version.Folder)
+            .LastOrDefault() ?? packageFolder;
     }
 
-    private static Version ParseVersion(string versionFolder)
+    private static Version ParseVersion(string version)
     {
-        return Version.TryParse(Path.GetFileName(versionFolder).Split('-')[0], out var version) ? version : new Version();
+        return Version.TryParse(version.Split('-')[0], out var parsed) ? parsed : new Version();
     }
 
     /// <summary>

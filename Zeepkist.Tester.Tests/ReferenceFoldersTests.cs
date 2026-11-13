@@ -19,6 +19,19 @@ public class ReferenceFoldersTests
         Assert.DoesNotContain(Path.Combine(cache, "zeepkist.gamelibs", "18.10.2087", "lib"), folders);
     }
 
+    [Fact]
+    public void For_NoVersionFromTheRestore_TakesTheNewestAndAStableOneOverItsPrerelease()
+    {
+        using var folder = new TemporaryFolder();
+        var cache = CacheWith(folder, "zeepsdk", "1.0.0", "1.0.0-beta", "0.9.0");
+        var plugin = PluginBuiltWith(folder, cache, "Other/1.0.0", "other/1.0.0");
+
+        var folders = ReferenceFolders.For([plugin]);
+
+        Assert.Contains(Path.Combine(cache, "zeepsdk", "1.0.0", "lib"), folders);
+        Assert.DoesNotContain(Path.Combine(cache, "zeepsdk", "1.0.0-beta", "lib"), folders);
+    }
+
     private static string CacheWith(TemporaryFolder folder, string package, params string[] versions)
     {
         var cache = Path.Combine(folder.Path, "cache");
