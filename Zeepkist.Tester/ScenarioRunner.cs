@@ -358,7 +358,7 @@ internal sealed class ScenarioRunner
             var problem = ProblemDefining(() => values.Define(loop.Variable, new TextValue(value)));
             if (problem != null)
             {
-                yield return FailNode(scenario, frame, "for", loop.Location, problem);
+                yield return FailNode(scenario, frame, ControlNodes.For, loop.Location, problem);
                 yield break;
             }
 
@@ -388,7 +388,7 @@ internal sealed class ScenarioRunner
         });
         if (problem != null)
         {
-            yield return FailNode(scenario, frame, "run", run.Location, problem);
+            yield return FailNode(scenario, frame, ControlNodes.Run, run.Location, problem);
             yield break;
         }
 
