@@ -34,12 +34,20 @@ internal sealed class OfflineAssemblies : IDisposable
         catch (FileLoadException exception)
         {
             var name = AssemblyName.GetAssemblyName(path).Name;
-            var other = _context.GetAssemblies().FirstOrDefault(assembly => assembly.GetName().Name == name);
+            var other = Locate(name);
             if (other == null)
                 throw;
 
-            throw new UnreadableAssemblyException($"{path} is another build of {name}, which is already read from {other.Location}. Only one build of an assembly can be read.", exception);
+            throw new UnreadableAssemblyException($"{path} is another build of {name}, which is already read from {other}. Only one build of an assembly can be read.", exception);
         }
+    }
+
+    /// <summary>
+    /// Where the assembly with a name was read from, or null when none of that name is read yet.
+    /// </summary>
+    public string Locate(string assemblyName)
+    {
+        return _context.GetAssemblies().FirstOrDefault(assembly => assembly.GetName().Name == assemblyName)?.Location;
     }
 
     public void Dispose()

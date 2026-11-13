@@ -39,6 +39,30 @@ internal static class XmlDocs
         return (assembly, id) => summaries.GetValueOrDefault((assembly, id));
     }
 
+    /// <summary>
+    /// As <see cref="Read(IEnumerable{string})"/>, but reads an assembly's doc file only once a summary from it is asked for,
+    /// so it also finds the docs of an assembly that is only referenced, such as one with states a mod's steps name.
+    /// </summary>
+    /// <param name="locate">The path of the assembly with a name, or null when it can't be found.</param>
+    public static Func<string, string, string> ReadWhenAsked(Func<string, string> locate)
+    {
+        var byAssembly = new Dictionary<string, Func<string, string, string>>();
+        return (assembly, id) =>
+        {
+            if (!byAssembly.TryGetValue(assembly, out var summaries))
+            {
+                var path = locate(assembly);
+                if (path == null)
+                    return null;
+
+                summaries = Read([path]);
+                byAssembly.Add(assembly, summaries);
+            }
+
+            return summaries(assembly, id);
+        };
+    }
+
     private static string ToMarkdown(XElement element)
     {
         return string.Concat(element.Nodes().Select(node => node switch

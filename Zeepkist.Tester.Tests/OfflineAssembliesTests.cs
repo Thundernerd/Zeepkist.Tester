@@ -76,6 +76,48 @@ public class OfflineAssembliesTests
         Assert.Equal($"{stateType.FullName} uses a type from Zeepkist.Tester.Tests.SampleCore, which can't be found.", exception.Message);
     }
 
+    [Theory]
+    [InlineData(typeof(UnfoundSteps.RequiresElsewhere))]
+    [InlineData(typeof(UnfoundSteps.RequiresAnyElsewhere))]
+    [InlineData(typeof(UnfoundSteps.EntersElsewhere))]
+    [InlineData(typeof(UnfoundSteps.LeavesElsewhere))]
+    public void BuildRegistry_StepNamingAStateThatCantBeFound_NamesTheStepAndWhatsMissing(Type stepType)
+    {
+        using var folder = new TemporaryFolder();
+        using var assemblies = WithoutSampleCore(folder);
+        var step = LoadCopy(assemblies, folder, stepType);
+
+        var exception = Assert.Throws<StepDefinitionException>(() => new StepDescriptorBuilder().BuildRegistry([step], []));
+
+        Assert.Equal($"{stepType.FullName} uses a type from Zeepkist.Tester.Tests.SampleCore, which can't be found.", exception.Message);
+    }
+
+    [Theory]
+    [InlineData(typeof(UnfoundSteps.StateBaseElsewhere))]
+    [InlineData(typeof(UnfoundSteps.ConstructorElsewhere))]
+    public void BuildRegistry_StateWithATypeThatCantBeFound_NamesTheStateAndWhatsMissing(Type stateType)
+    {
+        using var folder = new TemporaryFolder();
+        using var assemblies = WithoutSampleCore(folder);
+        var state = LoadCopy(assemblies, folder, stateType);
+
+        var exception = Assert.Throws<StepDefinitionException>(() => new StepDescriptorBuilder().BuildRegistry([], [state]));
+
+        Assert.Equal($"{stateType.FullName} uses a type from Zeepkist.Tester.Tests.SampleCore, which can't be found.", exception.Message);
+    }
+
+    [Fact]
+    public void BuildRegistry_StepNamingAStateBasedOnATypeThatCantBeFound_NamesTheState()
+    {
+        using var folder = new TemporaryFolder();
+        using var assemblies = WithoutSampleCore(folder);
+        var step = LoadCopy(assemblies, folder, typeof(UnfoundSteps.RequiresAStateBasedElsewhere));
+
+        var exception = Assert.Throws<StepDefinitionException>(() => new StepDescriptorBuilder().BuildRegistry([step], []));
+
+        Assert.Equal($"{typeof(UnfoundSteps.StateBaseElsewhere).FullName} uses a type from Zeepkist.Tester.Tests.SampleCore, which can't be found.", exception.Message);
+    }
+
     /// <summary>
     /// Copies this assembly and the SDK to <paramref name="folder"/>, and reads from there, where Zeepkist.Tester.Tests.SampleCore, which this assembly references, can't be found.
     /// </summary>
