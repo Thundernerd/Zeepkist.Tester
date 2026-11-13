@@ -30,7 +30,7 @@ internal sealed class GameHost : IRunHost
         _walk = new StartWalk(game, logger, report);
         Input_Legacy.Driver = new LegacyInputDriver(() => Time.frameCount);
         Action<Exception> logGiveBackFailure = exception => logger.LogError($"{TestRun.Marker} an input driver failed to give back: {exception}");
-        var inProcess = new InProcessDrivers(logGiveBackFailure, new ImuiDriver(), Input_Legacy.Driver, new UguiPointer<GameObject>(new UguiScene()));
+        var inProcess = new InProcessDrivers(logGiveBackFailure, new ImuiDriver(new ImuiBackend(), () => Time.unscaledTime), Input_Legacy.Driver, new UguiPointer<GameObject>(new UguiScene()));
         Input = new TesterInput(inProcess, new RewiredDriver(), () => Now, logGiveBackFailure);
     }
 

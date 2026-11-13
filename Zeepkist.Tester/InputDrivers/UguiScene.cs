@@ -10,10 +10,17 @@ namespace TNRD.Zeepkist.Tester.InputDrivers;
 /// and events go to an object's handlers through <see cref="ExecuteEvents"/>, as Unity's own input module sends them.
 /// Imui's windows are a uGUI graphic too, which <see cref="ImuiDriver"/> hands the mouse to, so a point over one finds
 /// nothing here: it doesn't get the mouse twice, and what's behind the window gets none of it, as with the player's.
+/// The Imui driver asks the same raycast, through <see cref="TopAt"/>, whether the window is on top at its pointer.
 /// </summary>
 internal sealed class UguiScene : IUguiScene<GameObject>
 {
+    /// <summary>
+    /// <see cref="TopAt"/>'s, which is static, as uGUI is only used from Unity's main thread.
+    /// </summary>
+    private static readonly List<RaycastResult> _topResults = [];
+
     private readonly List<RaycastResult> _results = [];
+
     /// <summary>
     /// What the last <see cref="HitAt"/> found, which is what the pointer is over now.
     /// </summary>
@@ -37,23 +44,27 @@ internal sealed class UguiScene : IUguiScene<GameObject>
 
     public GameObject HitAt(Vector2 screenPoint)
     {
-        _results.Clear();
-        EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = screenPoint }, _results);
-        _lastHit = default;
-        foreach (var result in _results)
-        {
-            // Sorted topmost first, as the input module takes them
-            if (result.gameObject != null)
-            {
-                _lastHit = result;
-                break;
-            }
-        }
-
-        if (_lastHit.gameObject != null && _lastHit.gameObject.GetComponent<ImuiUnityGUIBackend>() != null)
+        _lastHit = Topmost(screenPoint, _results);
+        if (IsImui(_lastHit.gameObject))
             _lastHit = default;
 
         return _lastHit.gameObject;
+    }
+
+    /// <summary>
+    /// What's on top at the point for <see cref="ImuiDriver"/>, from the same raycast as <see cref="HitAt"/>.
+    /// </summary>
+    /// <param name="screenPoint">In Unity's screen pixels, counted from the bottom left.</param>
+    public static UguiTop TopAt(Vector2 screenPoint)
+    {
+        if (EventSystem.current == null)
+            return UguiTop.NoEventSystem;
+
+        var hit = Topmost(screenPoint, _topResults).gameObject;
+        if (hit == null)
+            return UguiTop.Nothing;
+
+        return IsImui(hit) ? UguiTop.Imui : UguiTop.Other;
     }
 
     public GameObject Parent(GameObject node)
@@ -126,5 +137,27 @@ internal sealed class UguiScene : IUguiScene<GameObject>
                 ExecuteEvents.Execute(node, data, ExecuteEvents.pointerClickHandler);
                 break;
         }
+    }
+
+    /// <summary>
+    /// The topmost of what the event system's raycasters find at the point, as the input module takes it, or nothing.
+    /// </summary>
+    private static RaycastResult Topmost(Vector2 screenPoint, List<RaycastResult> results)
+    {
+        results.Clear();
+        EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = screenPoint }, results);
+        foreach (var result in results)
+        {
+            // Sorted topmost first
+            if (result.gameObject != null)
+                return result;
+        }
+
+        return default;
+    }
+
+    private static bool IsImui(GameObject node)
+    {
+        return node != null && node.GetComponent<ImuiUnityGUIBackend>() != null;
     }
 }
