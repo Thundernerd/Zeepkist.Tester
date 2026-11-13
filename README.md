@@ -35,7 +35,7 @@ The build should finish with zero warnings. CI treats any warning as an error.
 
 `ztest check` finds mistakes in scenarios with no game: unknown steps and arguments, values that don't fit, names used before they're defined and missing `run:` files as errors, and steps whose required state doesn't hold as warnings. It prints `file:line:col: error|warning: message` and exits with 1 on errors.
 
-A file that other scenarios `run:` says so, and what it takes, with a `with:` header. It can then be checked on its own, and each `run:` of it is checked for passing exactly those names:
+A file that's meant to be run by others says so with a `with:` header listing the names it takes, `[]` when it takes none. It can then be checked on its own, and each `run:` of it is checked for passing exactly those names:
 
 ```yaml
 with: [block, time]

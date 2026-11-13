@@ -46,7 +46,7 @@ internal static class ScenarioMessages
 
     public static string RunWithUnknown(string file, string name, IReadOnlyList<string> takes)
     {
-        return takes.Count == 0 ? $"run: '{file}' takes no names, so not '{name}'." : $"run: '{file}' takes no '{name}'. It takes: {string.Join(", ", takes)}.";
+        return takes.Count == 0 ? $"run: '{file}' takes no '{name}'. It takes none." : $"run: '{file}' takes no '{name}'. It takes: {string.Join(", ", takes)}.";
     }
 
     /// <summary>
