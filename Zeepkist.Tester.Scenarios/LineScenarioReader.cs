@@ -20,7 +20,7 @@ internal sealed class LineScenarioReader
     private const string DragWindowEdgeSideways = "drag-window-edge-sideways";
     private const string ExpectError = "expect-error";
 
-    private static readonly Regex _setTextValues =new Regex(@"\{uid:(?<name>[^}]*)\}|\$\{");
+    private static readonly Regex _setTextValues = new Regex(@"\{uid:(?<name>[^}]*)\}|\$\{");
 
     private readonly string _file;
     private readonly IReadOnlyList<StepDescriptor> _steps;
