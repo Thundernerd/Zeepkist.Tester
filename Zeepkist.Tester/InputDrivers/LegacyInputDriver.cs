@@ -27,7 +27,7 @@ internal sealed class LegacyInputDriver : IInputDriver
     private static readonly Dictionary<string, KeyCode> _names = NameKeys();
 
     /// <summary>
-    /// The game's Input Manager's axes that keys push, by name.
+    /// The game's Input Manager's axes that keys push, by name. Each has a gravity and a sensitivity of 3, and snaps.
     /// </summary>
     private static readonly Dictionary<string, (KeyCode[] Positive, KeyCode[] Negative)> _keyAxes = new Dictionary<string, (KeyCode[] Positive, KeyCode[] Negative)>
     {
@@ -46,16 +46,25 @@ internal sealed class LegacyInputDriver : IInputDriver
         ["Mouse Y"] = (false, 0.1f),
     };
 
+    /// <summary>
+    /// How far a key axis moves in a second, towards where its keys push and back to 0, in the game's Input Manager.
+    /// </summary>
+    private const float KeyAxisSpeed = 3;
+
     private readonly Func<int> _frame;
+    private readonly Func<float> _deltaTime;
+    private readonly Dictionary<string, (int Frame, float Value)> _ramps = [];
     private readonly Dictionary<KeyCode, int> _heldKeys = [];
     private readonly Dictionary<KeyCode, int> _downFrames = [];
     private readonly Dictionary<KeyCode, int> _upFrames = [];
     private (int Frame, float X, float Y) _mouseDelta;
 
     /// <param name="frame">Unity's <c>Time.frameCount</c>.</param>
-    public LegacyInputDriver(Func<int> frame)
+    /// <param name="deltaTime">Seconds since the frame before, for how far a key axis ramps in this one.</param>
+    public LegacyInputDriver(Func<int> frame, Func<float> deltaTime)
     {
         _frame = frame;
+        _deltaTime = deltaTime;
     }
 
     public bool PressKeys(IReadOnlyList<KeyPress> keys)
@@ -165,11 +174,7 @@ internal sealed class LegacyInputDriver : IInputDriver
 
     public bool GetKey(KeyCode key)
     {
-        if (!_downFrames.TryGetValue(key, out var down) || _frame() < down)
-            return false;
-
-        // Released keys are held until the frame that sees them go up
-        return _heldKeys.ContainsKey(key) || _frame() < _upFrames[key];
+        return HeldIn(key, _frame());
     }
 
     public bool GetKeyDown(KeyCode key)
@@ -183,18 +188,30 @@ internal sealed class LegacyInputDriver : IInputDriver
     }
 
     /// <summary>
-    /// One of the game's axes in its Input Manager, as the player's with what this adds to it. A key axis adds -1, 0 or 1
-    /// as it snaps, and stays within 1 either way; a mouse axis adds how far the drags moved the mouse in the frame before,
-    /// times the axis's sensitivity. An axis it doesn't know is the player's.
+    /// One of the game's axes in its Input Manager, as <c>GetAxis</c> has it: the player's with what this adds to it. A
+    /// key axis ramps as Unity's does: each frame it moves by 3 a second towards where its held keys push it, falls back to
+    /// 0 as fast once they're let go, and starts from 0 when the other way is pressed. It stays within 1 with the player's.
+    /// A mouse axis is as <see cref="AxisRaw"/> has it. An axis it doesn't know is the player's.
     /// </summary>
     public float Axis(string name, float player)
     {
         name ??= string.Empty;
-        if (_keyAxes.TryGetValue(name, out var keys))
-        {
-            var pushed = (keys.Positive.Any(GetKey) ? 1 : 0) - (keys.Negative.Any(GetKey) ? 1 : 0);
-            return Math.Max(-1, Math.Min(1, player + pushed));
-        }
+        if (!_keyAxes.ContainsKey(name))
+            return AxisRaw(name, player);
+
+        return Math.Max(-1, Math.Min(1, player + Ramp(name)));
+    }
+
+    /// <summary>
+    /// One of the game's axes in its Input Manager, as <c>GetAxisRaw</c> has it: the player's with what this adds to it. A
+    /// key axis adds -1, 0 or 1 as it snaps, and stays within 1 either way; a mouse axis adds how far the drags moved the
+    /// mouse in the frame before, times the axis's sensitivity. An axis it doesn't know is the player's.
+    /// </summary>
+    public float AxisRaw(string name, float player)
+    {
+        name ??= string.Empty;
+        if (_keyAxes.ContainsKey(name))
+            return Math.Max(-1, Math.Min(1, player + Pushed(name, _frame())));
 
         if (!_mouseAxes.TryGetValue(name, out var mouse) || _mouseDelta.Frame != _frame())
             return player;
@@ -295,6 +312,60 @@ internal sealed class LegacyInputDriver : IInputDriver
     private static KeyCode KeyOf(MouseButton button)
     {
         return KeyCode.Mouse0 + (int)button;
+    }
+
+    /// <summary>
+    /// Down from its down frame, and held until the frame that sees it go up.
+    /// </summary>
+    private bool HeldIn(KeyCode key, int frame)
+    {
+        if (!_downFrames.TryGetValue(key, out var down) || frame < down)
+            return false;
+
+        return _heldKeys.ContainsKey(key) || frame < _upFrames[key];
+    }
+
+    /// <summary>
+    /// -1, 0 or 1: where the key axis's keys held in the frame push it.
+    /// </summary>
+    private int Pushed(string axis, int frame)
+    {
+        var (positive, negative) = _keyAxes[axis];
+        return (positive.Any(key => HeldIn(key, frame)) ? 1 : 0) - (negative.Any(key => HeldIn(key, frame)) ? 1 : 0);
+    }
+
+    /// <summary>
+    /// Where the key axis has ramped to by this frame. It steps through each frame since it was last read, with this
+    /// frame's delta time for each, so reading it once a frame, as the game does, ramps it as Unity would.
+    /// </summary>
+    private float Ramp(string axis)
+    {
+        var now = _frame();
+        // Never read, it's been 0 until its keys first went down
+        if (!_ramps.TryGetValue(axis, out var ramp))
+            ramp = (Math.Min(now, FirstDown(axis)) - 1, 0);
+
+        var step = KeyAxisSpeed * _deltaTime();
+        for (var frame = ramp.Frame + 1; frame <= now; frame++)
+        {
+            var target = Pushed(axis, frame);
+            var value = target * ramp.Value < 0 ? 0 : ramp.Value;
+            ramp = (frame, MoveTowards(value, target, step));
+        }
+
+        _ramps[axis] = ramp;
+        return ramp.Value;
+    }
+
+    private int FirstDown(string axis)
+    {
+        var (positive, negative) = _keyAxes[axis];
+        return positive.Concat(negative).Select(key => _downFrames.TryGetValue(key, out var down) ? down : int.MaxValue).Min();
+    }
+
+    private static float MoveTowards(float from, float to, float by)
+    {
+        return Math.Abs(to - from) <= by ? to : from + (Math.Sign(to - from) * by);
     }
 
     private void Press(KeyCode key)

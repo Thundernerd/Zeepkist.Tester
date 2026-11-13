@@ -13,10 +13,11 @@ public class LegacyInputDriverTests
 {
     private readonly LegacyInputDriver _driver;
     private int _frame = 10;
+    private float _deltaTime = 0.1f;
 
     public LegacyInputDriverTests()
     {
-        _driver = new LegacyInputDriver(() => _frame);
+        _driver = new LegacyInputDriver(() => _frame, () => _deltaTime);
     }
 
     [Fact]
@@ -262,13 +263,69 @@ public class LegacyInputDriverTests
     [InlineData((int)KeyCode.DownArrow, "Vertical", -1)]
     [InlineData((int)KeyCode.S, "Vertical", -1)]
     [InlineData((int)KeyCode.D, "Vertical", 0)]
-    public void Axis_OfTheGamesKeyAxes_IsWhereItsHeldKeysPush(int key, string axis, float expected)
+    public void AxisRaw_OfTheGamesKeyAxes_IsWhereItsHeldKeysPush(int key, string axis, float expected)
     {
         Assert.Equal(0, _driver.Axis(axis, 0));
         _driver.PressKeys([Key((KeyCode)key)]);
 
         _frame = 11;
-        Assert.Equal(expected, _driver.Axis(axis, 0));
+        Assert.Equal(expected, _driver.AxisRaw(axis, 0));
+    }
+
+    [Fact]
+    public void Axis_OfAKeyAxis_RampsWithTheGamesSensitivity_WhileAxisRawSnaps()
+    {
+        _driver.PressKeys([Key(KeyCode.D)]);
+
+        _frame = 11;
+        Assert.Equal(0.3f, _driver.Axis("Horizontal", 0), 3);
+        Assert.Equal(1, _driver.AxisRaw("Horizontal", 0));
+
+        _frame = 12;
+        Assert.Equal(0.6f, _driver.Axis("Horizontal", 0), 3);
+
+        _frame = 13;
+        Assert.Equal(0.9f, _driver.Axis("Horizontal", 0), 3);
+
+        _frame = 14;
+        Assert.Equal(1, _driver.Axis("Horizontal", 0), 3);
+        Assert.Equal(1, _driver.AxisRaw("Horizontal", 0));
+    }
+
+    [Fact]
+    public void Axis_OfAKeyAxis_IsTheSameWhenReadTwiceInAFrame()
+    {
+        _driver.PressKeys([Key(KeyCode.D)]);
+
+        _frame = 11;
+        _driver.Axis("Horizontal", 0);
+        Assert.Equal(0.3f, _driver.Axis("Horizontal", 0), 3);
+    }
+
+    [Fact]
+    public void Axis_OfAKeyAxis_FallsBackWithTheGamesGravity_OnceLetGo()
+    {
+        _driver.PressKeys([Key(KeyCode.D)]);
+        _frame = 11;
+        _driver.ReleaseKeys([Key(KeyCode.D)]);
+        Assert.Equal(0.3f, _driver.Axis("Horizontal", 0), 3);
+
+        _frame = 12;
+        Assert.Equal(0, _driver.Axis("Horizontal", 0), 3);
+        Assert.Equal(0, _driver.AxisRaw("Horizontal", 0));
+    }
+
+    [Fact]
+    public void Axis_OfAKeyAxis_SnapsToZero_WhenTheOtherWayIsPressed()
+    {
+        _driver.PressKeys([Key(KeyCode.D)]);
+        _frame = 14;
+        Assert.Equal(1, _driver.Axis("Horizontal", 0), 3);
+        _driver.ReleaseKeys([Key(KeyCode.D)]);
+        _driver.PressKeys([Key(KeyCode.A)]);
+
+        _frame = 15;
+        Assert.Equal(-0.3f, _driver.Axis("Horizontal", 0), 3);
     }
 
     [Fact]
@@ -308,8 +365,8 @@ public class LegacyInputDriverTests
         _driver.DragMouse(Point(5, 0), MouseButton.Left);
 
         _frame = 11;
-        Assert.Equal(1, _driver.Axis("Horizontal", 1));
-        Assert.Equal(0.5f, _driver.Axis("Horizontal", -0.5f));
+        Assert.Equal(1, _driver.AxisRaw("Horizontal", 1));
+        Assert.Equal(0.5f, _driver.AxisRaw("Horizontal", -0.5f));
         Assert.Equal(8, _driver.Axis("mouse x", 3));
         Assert.Equal(0.25f, _driver.Axis("Fire1", 0.25f));
     }
