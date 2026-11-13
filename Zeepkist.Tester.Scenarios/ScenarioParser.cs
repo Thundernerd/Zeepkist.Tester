@@ -158,13 +158,13 @@ internal sealed class ScenarioParser
             throw Fail(item, "A step is a name or a map with its name as the key, but this map is empty.");
 
         var written = map.Children.Keys.Select(ReadKey).ToList();
-        if (written.Contains("for"))
+        if (written.Contains(ControlNodes.For))
             return ReadFor(map);
 
-        if (written.Contains("repeat"))
+        if (written.Contains(ControlNodes.Repeat))
             return ReadRepeat(map);
 
-        if (written.Contains("run"))
+        if (written.Contains(ControlNodes.Run))
             return ReadRun(map);
 
         if (map.Children.Count != 1)
@@ -183,9 +183,9 @@ internal sealed class ScenarioParser
 
     private ForNode ReadFor(YamlMappingNode map)
     {
-        var entries = ReadKeys(map, "for:", "for", "steps");
-        if (entries["for"] is not YamlMappingNode variables || variables.Children.Count == 0)
-            throw Fail(entries["for"], "for: takes a variable and its values, such as { h: [64, 120] }.");
+        var entries = ReadKeys(map, "for:", ControlNodes.For, "steps");
+        if (entries[ControlNodes.For] is not YamlMappingNode variables || variables.Children.Count == 0)
+            throw Fail(entries[ControlNodes.For], "for: takes a variable and its values, such as { h: [64, 120] }.");
 
         if (variables.Children.Count > 1)
             throw Fail(variables.Children.Keys.ElementAt(1), "A for has one variable, but this is another. Nest two fors for every combination.");
@@ -215,18 +215,18 @@ internal sealed class ScenarioParser
 
     private RepeatNode ReadRepeat(YamlMappingNode map)
     {
-        var entries = ReadKeys(map, "repeat:", "repeat", "steps");
-        var written = ReadScalar(entries["repeat"], "repeat:");
+        var entries = ReadKeys(map, "repeat:", ControlNodes.Repeat, "steps");
+        var written = ReadScalar(entries[ControlNodes.Repeat], "repeat:");
         if (!int.TryParse(written, NumberStyles.None, CultureInfo.InvariantCulture, out var count) || count < 1)
-            throw Fail(entries["repeat"], $"repeat: takes a whole number of at least 1, not '{written}'.");
+            throw Fail(entries[ControlNodes.Repeat], $"repeat: takes a whole number of at least 1, not '{written}'.");
 
         return new RepeatNode(Location(map), count, ReadBody(RequireSteps(map, entries, "repeat:")));
     }
 
     private RunNode ReadRun(YamlMappingNode map)
     {
-        var entries = ReadKeys(map, "run:", "run", "with");
-        var file = ReadLiteral(entries["run"], "run:");
+        var entries = ReadKeys(map, "run:", ControlNodes.Run, "with");
+        var file = ReadLiteral(entries[ControlNodes.Run], "run:");
         var with = new Dictionary<string, ScalarArgument>();
         if (entries.TryGetValue("with", out var written))
         {
