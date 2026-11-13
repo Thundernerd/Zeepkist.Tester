@@ -24,8 +24,7 @@ internal static class LineScenarioConverter
     public static string Write(LineScenario scenario, IReadOnlyList<StepDescriptor> steps)
     {
         var yaml = new StringBuilder();
-        var written = scenario.Entries.Where(entry => entry.Step != null).Select(entry => entry.Step.Step).Distinct().ToList();
-        var use = written.Where(step => step.Namespace.Length > 0).Select(step => step.Namespace).Distinct().ToList();
+        var use = scenario.Use;
         if (use.Count > 0)
             yaml.Append("use: [").Append(string.Join(", ", use)).Append("]\n");
 
