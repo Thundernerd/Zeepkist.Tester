@@ -95,7 +95,7 @@ case "$mode" in
         "start-main-menu.ztest.yaml","start-editor-to-test-mode.ztest.yaml","start-free-play.ztest.yaml",
         "start-free-play.ztest.yaml","start-level.ztest.yaml","start-free-play.ztest.yaml","start-editor.ztest.yaml",
         "start-main-menu.ztest.yaml","start-free-play.ztest.yaml","start-main-menu.ztest.yaml"]' ;;
-    *) tests='["CSharpTests"]' scenarios='["core-steps.ztest.yaml","a-step-fails.ztest.yaml","control-nodes.ztest.yaml","screenshots.ztest.yaml","exceptions.ztest.yaml","blocks.ztest.yaml","named-blocks.ztest.yaml","test-mode.ztest.yaml","test-mode-needs-a-start.ztest.yaml","a-setting-it-does-not-have.ztest.yaml","imui-input.ztest.yaml","legacy-input.ztest.yaml","rewired-input.ztest.yaml","ugui-input.ztest.yaml","mouse-held.ztest.yaml","mouse-given-back.ztest.yaml"]' ;;
+    *) tests='["CSharpTests"]' scenarios='["core-steps.ztest.yaml","a-step-fails.ztest.yaml","control-nodes.ztest.yaml","screenshots.ztest.yaml","exceptions.ztest.yaml","blocks.ztest.yaml","named-blocks.ztest.yaml","test-mode.ztest.yaml","test-mode-needs-a-start.ztest.yaml","a-setting-it-does-not-have.ztest.yaml","imui-input.ztest.yaml","legacy-input.ztest.yaml","rewired-input.ztest.yaml","rewired-input-off.ztest.yaml","rewired-input-back-on.ztest.yaml","ugui-input.ztest.yaml","mouse-held.ztest.yaml","mouse-given-back.ztest.yaml"]' ;;
 esac
 printf '{"runId":"%s","mods":[{"guid":"%s"}],"scenarios":%s,"tests":%s}' "$run_id" "$guid" "$scenarios" "$tests" >"$tester/run.json"
 
@@ -148,6 +148,8 @@ if [[ "$mode" == --start-states ]]; then
     jq -e '(.Exceptions // []) | length == 0' "$results" >/dev/null || { log "the game logged exceptions"; failed=1; }
 elif [[ -z "$mode" ]]; then
     jq -e '(.Screenshots | index("a-step-fails-failure.png")) and (.Screenshots | index("CSharpTests-AStepFails-failure.png")) and (.Screenshots | index("control-nodes-height-64.png")) and (.BlankScreenshots | keys == ["screenshots-covered.png"])' "$results" >/dev/null || { log "the screenshots aren't what they should be"; failed=1; }
+    # It fails for the action being off, not for anything else that leaves the history where it was
+    jq -e '[.Steps[] | select(.Scenario == "rewired-input-off" and .Name == "undo") | .Detail] == ["The game has EditorUndo turned off right now."]' "$results" >/dev/null || { log "rewired-input-off's undo didn't fail for its action being off"; failed=1; }
 fi
 
 ((failed == 0)) || { log "not what this run should do"; exit 1; }
