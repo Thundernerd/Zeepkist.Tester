@@ -23,12 +23,7 @@ public sealed class SetNamedSetting : Step
 
     public override IEnumerator Run(IStepContext context)
     {
-        var central = context.RequireEditor();
-        if (central == null)
-            yield break;
-
-        var type = central.undoRedo.allBlocksDictionary[Block.Get(context).Uid].blockID;
-        var key = NamedBlocks.KeyOf(type, Setting) ?? throw new StepFailedException($"{Block} has no setting called {Setting}.");
+        var key = NamedBlocks.KeyOf(context.Blocks.TypeOf(Block), Setting) ?? throw new StepFailedException($"{Block} has no setting called {Setting}.");
         yield return context.Blocks.SetSetting(Block, key, Value);
     }
 }

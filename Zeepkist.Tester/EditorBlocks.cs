@@ -38,12 +38,15 @@ internal sealed class EditorBlocks : IEditorBlocks
         return placed;
     }
 
+    public int TypeOf(Ref<BlockValue> block)
+    {
+        return Find(RequireEditor(), block).blockID;
+    }
+
     public IEnumerator SetSetting(Ref<BlockValue> block, string key, string value)
     {
         var central = RequireEditor();
-        var uid = block.Get(_context).Uid;
-        if (!central.undoRedo.allBlocksDictionary.TryGetValue(uid, out var properties) || properties == null)
-            throw new StepFailedException($"The level has no block with {block}'s UID \"{uid}\" any more.");
+        var properties = Find(central, block);
 
         var blockEdits = properties.GetAllBlockEditV18sFromThisBlock();
         if (blockEdits.Count == 0)
@@ -67,6 +70,15 @@ internal sealed class EditorBlocks : IEditorBlocks
             _context.Fail($"The block didn't keep {key} {value}.", written, kept);
         else
             _context.Detail = $"{block}: {key} = {kept}, history position {historyBefore} → {central.undoRedo.currentHistoryPosition}";
+    }
+
+    private BlockProperties Find(LEV_LevelEditorCentral central, Ref<BlockValue> block)
+    {
+        var uid = block.Get(_context).Uid;
+        if (!central.undoRedo.allBlocksDictionary.TryGetValue(uid, out var properties) || properties == null)
+            throw new StepFailedException($"The level has no block with {block}'s UID \"{uid}\" any more.");
+
+        return properties;
     }
 
     private LEV_LevelEditorCentral RequireEditor()

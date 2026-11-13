@@ -5,8 +5,8 @@ namespace TNRD.Zeepkist.Tester.Sdk;
 /// <summary>
 /// The level editor's blocks, changed as the core steps <c>place-block</c> and <c>set-block-setting</c> change them, which are
 /// thin wrappers over this. A mod's step uses it the same way, after finding a block's type or a setting's key by names of its own.
-/// Each fails the step, with a <see cref="StepFailedException"/>, outside the level editor, and says what it did in
-/// <see cref="IStepContext.Detail"/>.
+/// Each stops the step and fails it, with a <see cref="StepFailedException"/>, outside the level editor and when the game won't
+/// take the change.
 /// </summary>
 public interface IEditorBlocks
 {
@@ -17,12 +17,21 @@ public interface IEditorBlocks
     /// </summary>
     /// <param name="type">The block's ID in the game's block list, the number a level file stores for it.</param>
     /// <param name="name">A name for the block, so later steps can use it and write <c>${name}</c> for its UID.</param>
+    /// <returns>The block, whose UID <see cref="IStepContext.Detail"/> also gives.</returns>
     public BlockValue Place(int type, Name<BlockValue>? name = null);
+
+    /// <summary>
+    /// The block's type: its ID in the game's block list, such as to look up its settings by names of a mod's own. Fails the step
+    /// when the level no longer has the block.
+    /// </summary>
+    public int TypeOf(Ref<BlockValue> block);
 
     /// <summary>
     /// Changes a setting of a block, as changing it in the block's settings panel does: through the block's editor, so it's one
     /// undo step and the level keeps it. Fails the step when the level no longer has the block, when it has no settings panel or
-    /// no setting under <paramref name="key"/>, when <paramref name="value"/> doesn't fit the setting, or when the block didn't keep it.
+    /// no setting under <paramref name="key"/>, or when <paramref name="value"/> doesn't fit the setting. A block that didn't keep
+    /// the value fails the step with <see cref="IStepContext.Fail"/> after the change, so a caller that goes on checks
+    /// <see cref="IStepContext.Failed"/>. Says what it did in <see cref="IStepContext.Detail"/>, as <see cref="Place"/> does.
     /// </summary>
     /// <param name="block">The block, as <see cref="Place"/> or a mod's step named it.</param>
     /// <param name="key">The setting's key, as a level file stores it. A failure lists the keys the block has.</param>

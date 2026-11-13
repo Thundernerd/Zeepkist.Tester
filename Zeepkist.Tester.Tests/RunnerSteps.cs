@@ -244,6 +244,9 @@ public static class RunnerSteps
         }
     }
 
+    /// <summary>
+    /// Names a block with a UID no level has.
+    /// </summary>
     [Step("name-block", Namespace = "t")]
     public sealed class NameBlock : Step
     {
@@ -287,6 +290,23 @@ public static class RunnerSteps
         {
             yield return context.Blocks.SetSetting(Block, "m", "2");
             context.Get<Recorder>().Events.Add("set without the editor");
+        }
+    }
+
+    /// <summary>
+    /// A mod's step that finds a block's type, to look up its settings by names of its own.
+    /// </summary>
+    [Step("type-of", Namespace = "t")]
+    public sealed class TypeOf : Step
+    {
+        [Arg(Primary = true)]
+        public required Ref<BlockValue> Block { get; set; }
+
+        public override IEnumerator Run(IStepContext context)
+        {
+            context.Blocks.TypeOf(Block);
+            context.Get<Recorder>().Events.Add("typed without the editor");
+            yield break;
         }
     }
 

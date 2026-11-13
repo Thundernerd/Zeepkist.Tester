@@ -213,18 +213,19 @@ Core steps (`press`, `type`, `hold`, `click`, `move-mouse`, `drag`) are thin wra
 public interface IEditorBlocks
 {
     BlockValue Place(int type, Name<BlockValue>? name = null);   // a cell to the side, selected, one undo step
+    int TypeOf(Ref<BlockValue> block);   // its ID in the game's block list
     IEnumerator SetSetting(Ref<BlockValue> block, string key, string value);   // through the block's editor, one undo step
 }
 ```
 
-`place-block` and `set-block-setting` are thin wrappers over this, as the input steps are over `context.Input`. Each fails the step with a `StepFailedException` outside the editor or when the game won't take it, and writes what it did to `Detail`, which the calling step can add to.
+`place-block` and `set-block-setting` are thin wrappers over this, as the input steps are over `context.Input`. Each fails the step with a `StepFailedException` outside the editor or when the game won't take the change, unlike `RequireEditor`, which fails it and returns null. A block that didn't keep a setting fails the step with `Fail` after the change. `Place` and `SetSetting` write what they did to `Detail`, which the calling step can add to.
 
 The tester only knows a block by its type ID and a setting by the key a level file stores it under. A mod that names them, as ZeepLogicScript names Block Functions and Settings, keeps its own steps with those names and looks them up in its own manifest before calling `context.Blocks` (#68):
 
 | `.zlstest` line | Becomes | What the mod's step does |
 | --- | --- | --- |
 | `place-block lamp as lamp` | `zls.place-block: { function: lamp, as: lamp }` | Finds the Block Function's type, then `Place(type, As)` |
-| `set-block-setting t mode global_velocity` | `zls.set-block-setting: { block: t, setting: mode, value: global_velocity }` | Finds the Setting's key, and the number an option is stored as, then `SetSetting(Block, key, value)` |
+| `set-block-setting t mode global_velocity` | `zls.set-block-setting: { block: t, setting: mode, value: global_velocity }` | Finds the Setting's key for the block's `TypeOf`, and the number an option is stored as, then `SetSetting(Block, key, value)` |
 | `expect-blocks 2` | `expect-blocks: 2`, under `use: [zls]` | Counts the Logic Blocks itself, as `expect-block-count` can only count one type |
 
 `ztest convert` writes the first two with their namespace, as the tester has steps of those names too. The in-game test plugin's `place-named-block` and `set-named-setting` do the same with a list of two blocks, in `named-blocks.ztest.yaml`.
