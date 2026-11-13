@@ -133,6 +133,20 @@ public class OfflineAssembliesTests
         Assert.Equal($"{testClass.FullName}.Test uses a type from Zeepkist.Tester.Tests.SampleCore, which can't be found.", exception.Message);
     }
 
+    [Fact]
+    public void FindStepsStatesAndTests_PluginWithoutOneOfItsReferences_FindsThemWithoutReadingWhatsMissing()
+    {
+        // Only building one reads what it uses, and that names the step, state or test
+        using var folder = new TemporaryFolder();
+        using var assemblies = WithoutSampleCore(folder);
+        var plugin = assemblies.Load(Path.Combine(folder.Path, Path.GetFileName(typeof(UnfoundSteps).Assembly.Location)));
+
+        Assert.False(StepDescriptorBuilder.IsTestPlugin(plugin));
+        Assert.Contains(typeof(UnfoundSteps.BaseElsewhere).FullName, StepDescriptorBuilder.FindSteps(plugin).Select(type => type.FullName));
+        Assert.Contains(typeof(UnfoundSteps.StateBaseElsewhere).FullName, StepDescriptorBuilder.FindStates(plugin).Select(type => type.FullName));
+        Assert.Contains(typeof(UnfoundSteps.TestParameterElsewhere).FullName, StepDescriptorBuilder.FindTests(plugin).Select(method => method.DeclaringType.FullName));
+    }
+
     /// <summary>
     /// Copies this assembly and the SDK to <paramref name="folder"/>, and reads from there, where Zeepkist.Tester.Tests.SampleCore, which this assembly references, can't be found.
     /// </summary>
