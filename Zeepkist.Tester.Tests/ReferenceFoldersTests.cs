@@ -20,6 +20,30 @@ public class ReferenceFoldersTests
     }
 
     [Fact]
+    public void For_RestoredVersionNotInTheCache_TakesTheNewest()
+    {
+        using var folder = new TemporaryFolder();
+        var cache = CacheWith(folder, "zeepkist.gamelibs", "18.7.2061", "18.10.2087");
+        var plugin = PluginBuiltWith(folder, cache, "Zeepkist.GameLibs/17.32.1912", "zeepkist.gamelibs/17.32.1912");
+
+        var folders = ReferenceFolders.For([plugin], _ => null);
+
+        Assert.Contains(Path.Combine(cache, "zeepkist.gamelibs", "18.10.2087", "lib"), folders);
+    }
+
+    [Fact]
+    public void For_RestoreFromAPackagesFolderThatIsGone_TakesTheRestoredVersionFromThisMachinesCache()
+    {
+        using var folder = new TemporaryFolder();
+        var cache = CacheWith(folder, "zeepkist.gamelibs", "17.32.1912", "18.10.2087");
+        var plugin = PluginBuiltWith(folder, Path.Combine(folder.Path, "gone"), "Zeepkist.GameLibs/17.32.1912", "zeepkist.gamelibs/17.32.1912");
+
+        var folders = ReferenceFolders.For([plugin], name => name == "NUGET_PACKAGES" ? cache : null);
+
+        Assert.Contains(Path.Combine(cache, "zeepkist.gamelibs", "17.32.1912", "lib"), folders);
+    }
+
+    [Fact]
     public void For_NoVersionFromTheRestore_TakesTheNewestAndAStableOneOverItsPrerelease()
     {
         using var folder = new TemporaryFolder();

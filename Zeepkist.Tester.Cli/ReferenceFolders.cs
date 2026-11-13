@@ -34,14 +34,17 @@ internal static class ReferenceFolders
         var paths = assemblyPaths.Select(Path.GetFullPath).ToList();
         var ownFolders = paths.Select(Path.GetDirectoryName).Distinct();
         var restore = paths.Select(Restore.Beside).FirstOrDefault(found => found != null);
-        var cache = restore?.PackageFolders.FirstOrDefault() ?? NuGetCache(paths, environmentVariable);
+        var cache = restore?.PackageFolders.FirstOrDefault(Directory.Exists) ?? NuGetCache(paths, environmentVariable);
 
-        var referenceAssemblies = Path.Combine(PackageFolder(restore, cache, ReferenceAssembliesPackage), "build", ".NETFramework", "v4.7.2");
+        // The version the restore took, when it's on disk, or else the newest in the cache
+        string PackageFolder(string package) => restore?.Find(package, cache) ?? NewestVersion(Path.Combine(cache, package));
+
+        var referenceAssemblies = Path.Combine(PackageFolder(ReferenceAssembliesPackage), "build", ".NETFramework", "v4.7.2");
 
         return ownFolders
             .Append(referenceAssemblies)
             .Append(Path.Combine(referenceAssemblies, "Facades"))
-            .Concat(_gamePackages.SelectMany(package => LibFolders(PackageFolder(restore, cache, package))))
+            .Concat(_gamePackages.SelectMany(package => LibFolders(PackageFolder(package))))
             .Append(RuntimeEnvironment.GetRuntimeDirectory())
             .Append(AppContext.BaseDirectory);
     }
@@ -107,14 +110,6 @@ internal static class ReferenceFolders
         {
             return null;
         }
-    }
-
-    /// <summary>
-    /// The folder of the version the restore took, when it's on disk, or else of the newest version in the cache.
-    /// </summary>
-    private static string PackageFolder(Restore restore, string cache, string package)
-    {
-        return restore?.Find(package) ?? NewestVersion(Path.Combine(cache, package));
     }
 
     /// <summary>
@@ -187,15 +182,15 @@ internal static class ReferenceFolders
         }
 
         /// <summary>
-        /// The folder of the version the restore took of <paramref name="package"/>, or <see langword="null"/> when it
-        /// took none or that version isn't on disk.
+        /// The folder of the version the restore took of <paramref name="package"/>, in its own package folders or in
+        /// <paramref name="cache"/>, or <see langword="null"/> when it took none or that version isn't on disk.
         /// </summary>
-        public string Find(string package)
+        public string Find(string package, string cache)
         {
             if (!_packagePaths.TryGetValue(package, out var path))
                 return null;
 
-            return PackageFolders.Select(packageFolder => Path.Combine(packageFolder, path)).FirstOrDefault(Directory.Exists);
+            return PackageFolders.Append(cache).Select(packageFolder => Path.Combine(packageFolder, path)).FirstOrDefault(Directory.Exists);
         }
 
         private static Restore Read(string assetsFile)
