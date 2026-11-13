@@ -41,6 +41,15 @@ ztest check                # the "scenarios" folder and "testPlugin" of the near
 ztest check --registry     # states no step enters, and other smells in the steps and states themselves
 ```
 
+## Step reference
+
+`ztest docs` writes every step and state, the tester's and your mod's, as Markdown: each step's summary, arguments, the states it needs and changes, and its examples, and for each state the steps that get into it and out of it. Link to the file rather than keeping a table of steps by hand.
+
+```sh
+ztest docs --plugin bin/Debug/net472/MyMod.InGameTests.dll   # writes steps.md
+ztest docs --output docs/steps.md                             # the "testPlugin" of the nearest zeepkist-test.json
+```
+
 ## License
 
 [MIT](LICENSE)

@@ -2,7 +2,7 @@
 
 The typed list of steps that the YAML parser, the editor schema, the step reference docs, `ztest check`, `ztest convert` and C# tests all come from. It replaces ZeepLogicScript's `StepList` + `StepArgument` + the hand-kept step table + `StepListTests`. Background: [generic-tester.md](../research/generic-tester.md) §4 and §7, and [scenario-format.md](../research/scenario-format.md).
 
-Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4), named values (#5), the states with their runtime check (#6), the parser (#7), `ztest check` (#8), the walks to where a scenario starts (#12), the scenario runner with its context and hooks (#13), the core steps (#14) and C# tests (#21); the rest isn't, and its names are placeholders.
+Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4), named values (#5), the states with their runtime check (#6), the parser (#7), `ztest check` (#8), the walks to where a scenario starts (#12), the scenario runner with its context and hooks (#13), the core steps (#14), C# tests (#21) and the step reference (#10); the rest isn't, and its names are placeholders.
 
 ## The one constraint that shapes it
 
@@ -542,7 +542,7 @@ public sealed class WindowTests
 | --- | --- | --- |
 | `.ztest/schema.json` | `ztest schema` (also every `ztest` run) | Core + the repo's `[TestPlugin]` assemblies. Each step is a `oneOf` branch: a bare string, `{name: scalar}` for `Primary`, or `{name: {…}}` with `additionalProperties: false`. |
 | `.vscode/settings.json` `yaml.schemas` entry | `ztest init` | `**/*.ztest.yaml` → the schema |
-| Step reference (Markdown) | `ztest docs` | `<summary>` docs, arguments, types, defaults, an example per step from `[Example("…")]` |
+| Step reference (Markdown) | `ztest docs [--output <file>] [--plugin <dll>]...` | Core + the plugins, or the nearest config's `testPlugin`. Per namespace: each step's `<summary>`, arguments (type, required, default, choices), the states it needs, enters and leaves, and its `[Example("…")]`s; each state's hint and the steps that enter and leave it. Written to `steps.md` unless `--output` names another file |
 | Offline checks | `ztest check [files or folders...] [--plugin <dll>]...`, `ztest check --registry` | The registry; reports `file:line:col: error\|warning: message`, and exits with 1 on errors |
 | `.zlstest` → YAML | `ztest convert` | The registry plus a `[LineSyntax("<function> [as <as>]")]` attribute per old step; see below |
 
