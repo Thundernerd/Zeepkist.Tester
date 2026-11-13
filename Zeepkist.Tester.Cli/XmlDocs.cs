@@ -55,7 +55,8 @@ internal static class XmlDocs
                 if (path == null)
                     return null;
 
-                summaries = byAssembly[assembly] = Read([path]);
+                summaries = Read([path]);
+                byAssembly.Add(assembly, summaries);
             }
 
             return summaries(assembly, id);
