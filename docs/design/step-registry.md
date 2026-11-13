@@ -540,7 +540,7 @@ public sealed class WindowTests
 
 | Output | By | From |
 | --- | --- | --- |
-| `.ztest/schema.json` | `ztest schema` (also every `ztest check` under a `zeepkist-test.json`, so it never goes stale) | Core + the repo's `[TestPlugin]` assemblies, as draft-07. Each step is a `oneOf` branch: a bare string `const` when it needs no arguments, and `{name: …}` with `additionalProperties: false` when it takes any, whose value is `{…}` or, with a `Primary`, a scalar. See *The editor schema*. |
+| `.ztest/schema.json` | `ztest schema` (also every `ztest check` under a `zeepkist-test.json`, so it never goes stale) | Core + the repo's `[TestPlugin]` assemblies, as draft-07. Each step is a `oneOf` branch: a bare string `const` when no argument is required, and `{name: …}` with `additionalProperties: false` when it takes any, whose value is `{…}` or, with a `Primary`, a scalar. See *The editor schema*. |
 | `.vscode/settings.json` `yaml.schemas` entry | `ztest init` | `**/*.ztest.yaml` → the schema |
 | Step reference (Markdown) | `ztest docs` | `<summary>` docs, arguments, types, defaults, an example per step from `[Example("…")]` |
 | Offline checks | `ztest check [files or folders...] [--plugin <dll>]...`, `ztest check --registry` | The registry; reports `file:line:col: error\|warning: message`, and exits with 1 on errors |
@@ -553,7 +553,9 @@ public sealed class WindowTests
 It's as strict as the parser wherever a schema can tell, and more lenient where it can't, so an editor never marks a scenario the parser reads:
 
 - The parser reads every scalar as text, but an editor reads a plain `2` as a number and `true` as a boolean. So a text argument (`string`, `TextBlock`, and the patterned ones: `Keys`, `FileName`, `Name`, `Ref`, `[Pattern]`) takes a number or a boolean as well, and only its text is checked against the pattern.
-- `int`, `Pixels`, `float`, `Seconds`, `bool` and enums take only their own type, or text with a `${name}` in it. `Seconds` also takes text such as `500ms`.
+- `int`, `Pixels`, `float`, `Seconds`, `bool` and enums take their own type, the same value in quotes, or text with a `${name}` in it. `Seconds` also takes text such as `500ms`.
+- A text value also takes `null` and `~`, which the parser reads as that text.
+- An editor has turned a value into a number or a boolean before the schema sees it, so the schema can't tell how it was written: it takes `True` and `TRUE` for a `bool`, `1.0` and `1e2` for an `int`, and `.5` and `1e3` for `Seconds`, which the parser doesn't. Nor does it check a range on a value in quotes or on `Seconds` written with a unit.
 - The schema can't see `use:`, so a mod's step is also taken without its prefix wherever it is, unless the tester has a step of that name. `ztest check` reports one without `use:`.
 - What only a sequence of nodes shows isn't in it: names used before they're defined, states, clashes that `use:` makes, and aliases. `ztest check` reports those.
 - Docs go in both `description` (Rider, Visual Studio) and `markdownDescription` (VS Code), with `default` from `[Arg(Default = …)]`.
