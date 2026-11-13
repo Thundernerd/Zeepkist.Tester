@@ -63,6 +63,19 @@ public class OfflineAssembliesTests
         Assert.Equal($"{stepType.FullName} uses a type from Zeepkist.Tester.Tests.SampleCore, which can't be found.", exception.Message);
     }
 
+    [Fact]
+    public void BuildState_StateWithinAStateThatCantBeFound_NamesTheStateAndWhatsMissing()
+    {
+        var stateType = typeof(UnfoundSteps.WithinElsewhere);
+        using var folder = new TemporaryFolder();
+        using var assemblies = new OfflineAssemblies([CopyWithoutSampleCore(folder), RuntimeEnvironment.GetRuntimeDirectory()], "System.Runtime");
+        var state = assemblies.Load(Path.Combine(folder.Path, Path.GetFileName(stateType.Assembly.Location))).GetType(stateType.FullName);
+
+        var exception = Assert.Throws<StepDefinitionException>(() => new StepDescriptorBuilder().BuildState(state));
+
+        Assert.Equal($"{stateType.FullName} uses a type from Zeepkist.Tester.Tests.SampleCore, which can't be found.", exception.Message);
+    }
+
     /// <returns>A folder with this assembly and the SDK, but not Zeepkist.Tester.Tests.SampleCore, which it references.</returns>
     private static string CopyWithoutSampleCore(TemporaryFolder folder)
     {

@@ -4,7 +4,7 @@ using TNRD.Zeepkist.Tester.Tests.SampleCore;
 namespace TNRD.Zeepkist.Tester.Tests;
 
 /// <summary>
-/// Steps that use a type from Zeepkist.Tester.Tests.SampleCore, for reading them offline where it can't be found.
+/// Steps and a state that use a type from Zeepkist.Tester.Tests.SampleCore, for reading them offline where it can't be found.
 /// </summary>
 public static class UnfoundSteps
 {
@@ -18,5 +18,14 @@ public static class UnfoundSteps
     {
         [Arg]
         public CoreState State { get; set; }
+    }
+
+    [State("within-elsewhere", Namespace = "zls", Within = typeof(CoreState))]
+    public sealed class WithinElsewhere : IState
+    {
+        public bool IsMet(IStepContext context)
+        {
+            return true;
+        }
     }
 }

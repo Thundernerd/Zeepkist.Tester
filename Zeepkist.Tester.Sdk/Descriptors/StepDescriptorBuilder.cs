@@ -90,14 +90,7 @@ public sealed class StepDescriptorBuilder
 
     public StepDescriptor Build(Type stepType)
     {
-        try
-        {
-            return BuildStep(stepType);
-        }
-        catch (FileNotFoundException exception)
-        {
-            throw new StepDefinitionException($"{stepType.FullName} uses a type from {MissingAssembly(exception)}, which can't be found.");
-        }
+        return NamingWhatsMissing(stepType, () => BuildStep(stepType));
     }
 
     private StepDescriptor BuildStep(Type stepType)
@@ -197,7 +190,7 @@ public sealed class StepDescriptorBuilder
 
     public StateDescriptor BuildState(Type stateType)
     {
-        return BuildState(stateType, []);
+        return NamingWhatsMissing(stateType, () => BuildState(stateType, []));
     }
 
     /// <summary>
@@ -578,6 +571,21 @@ public sealed class StepDescriptorBuilder
         catch (Exception exception) when (exception is FileNotFoundException or TypeLoadException)
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Builds a step or state, and when a type it uses is in an assembly that can't be found, says which step or state and which assembly.
+    /// </summary>
+    private static T NamingWhatsMissing<T>(Type owner, Func<T> build)
+    {
+        try
+        {
+            return build();
+        }
+        catch (FileNotFoundException exception)
+        {
+            throw new StepDefinitionException($"{owner.FullName} uses a type from {MissingAssembly(exception)}, which can't be found.");
         }
     }
 
