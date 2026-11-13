@@ -8,3 +8,6 @@
 
 # Levels stay as the game writes them, with a byte order mark and CRLF
 *.zeeplevel -text
+
+# The schema snapshots are compared byte for byte with what ztest writes, which is LF everywhere
+Zeepkist.Tester.Tests/Snapshots/*.json text eol=lf

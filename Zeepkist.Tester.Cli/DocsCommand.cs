@@ -32,27 +32,22 @@ internal static class DocsCommand
                 return null;
         }
 
-        var loaded = RegistryLoader.Load(plugins, folder);
-        if (loaded.Problem != null)
-            return Fail(output, loaded.Problem);
+        var steps = ProjectSteps.Read(folder, plugins, output);
+        if (steps == null)
+            return 1;
 
         var path = Path.Combine(folder, file ?? DefaultOutput);
         try
         {
-            File.WriteAllText(path, StepReference.Write(loaded.Registry));
+            File.WriteAllText(path, StepReference.Write(steps.Registry));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
-            return Fail(output, $"Can't write {path}: {exception.Message}");
+            output.WriteLine($"error: Can't write {path}: {exception.Message}");
+            return 1;
         }
 
-        output.WriteLine(string.Create(CultureInfo.InvariantCulture, $"Wrote {loaded.Registry.Steps.Count} steps and {loaded.Registry.States.Count} states to {path}."));
+        output.WriteLine(string.Create(CultureInfo.InvariantCulture, $"Wrote {steps.Registry.Steps.Count} steps and {steps.Registry.States.Count} states to {path}."));
         return 0;
-    }
-
-    private static int Fail(TextWriter output, string problem)
-    {
-        output.WriteLine($"error: {problem}");
-        return 1;
     }
 }

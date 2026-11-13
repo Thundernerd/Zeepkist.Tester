@@ -64,11 +64,14 @@ internal sealed class CheckCommand
 
     private int Run(string folder)
     {
-        var loaded = RegistryLoader.Load(_plugins, folder);
-        if (loaded.Problem != null)
-            return Fail(loaded.Problem);
+        var steps = ProjectSteps.Read(folder, _plugins, _output);
+        if (steps == null)
+            return 1;
 
-        return _checkRegistry ? CheckRegistry(loaded.Registry) : CheckScenarios(loaded.Registry, loaded.Config);
+        if (steps.Config != null)
+            SchemaFile.WriteQuietly(steps.Config.Folder, steps.Registry, _output);
+
+        return _checkRegistry ? CheckRegistry(steps.Registry) : CheckScenarios(steps.Registry, steps.Config);
     }
 
     private int CheckRegistry(StepRegistry registry)

@@ -23,6 +23,8 @@ internal static class Program
         var exitCode = args[0] switch
         {
             "check" => CheckCommand.Run(arguments, output, folder),
+            "schema" => SchemaCommand.Run(arguments, output, folder),
+            "init" => InitCommand.Run(arguments, output, folder),
             "docs" => DocsCommand.Run(arguments, output, folder),
             _ => null,
         };
@@ -37,6 +39,8 @@ internal static class Program
     {
         output.WriteLine("Usage: ztest <command>");
         output.WriteLine(CheckCommand.Usage);
+        output.WriteLine(SchemaCommand.Usage);
+        output.WriteLine(InitCommand.Usage);
         output.WriteLine(DocsCommand.Usage);
     }
 }
