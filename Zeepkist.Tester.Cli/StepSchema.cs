@@ -35,6 +35,7 @@ internal static class StepSchema
     private static readonly JsonSerializerOptions _indented = new JsonSerializerOptions
     {
         WriteIndented = true,
+        NewLine = "\n",
 
         // A file for people to read, and no page to put it in, so backticks and quotes stay as they are
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,

@@ -26,6 +26,7 @@ internal static class InitCommand
     private static readonly JsonSerializerOptions _writeOptions = new JsonSerializerOptions
     {
         WriteIndented = true,
+        NewLine = "\n",
         IndentSize = 4,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
