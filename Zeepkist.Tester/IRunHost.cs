@@ -34,7 +34,9 @@ internal interface IRunHost
     /// <summary>
     /// Takes the game to where a scenario starts. An exception from it leaves the game somewhere unknown.
     /// </summary>
-    public IEnumerator EnterStart(ScenarioStart start, string scenarioFile);
+    /// <param name="start">Where to go.</param>
+    /// <param name="levelFolder">What a level file in <paramref name="start"/> is written relative to.</param>
+    public IEnumerator EnterStart(ScenarioStart start, string levelFolder);
 
     /// <summary>
     /// With <paramref name="covered"/>, fills the frame with one color just before the capture, so the screenshot is blank.

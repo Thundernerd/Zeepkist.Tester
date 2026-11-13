@@ -36,8 +36,9 @@ internal sealed class ScenarioStart
     /// <summary>
     /// The level file to open, or null for a new level.
     /// </summary>
-    public string LevelPath(string scenarioFile)
+    /// <param name="folder">What the file is written relative to: a scenario's own folder, or the <c>scenarios</c> folder for a C# test.</param>
+    public string LevelPath(string folder)
     {
-        return State == StartState.Editor && Value != null ? ScenarioPaths.FromScenario(scenarioFile, Value) : null;
+        return State == StartState.Editor && Value != null ? ScenarioPaths.InFolder(folder, Value) : null;
     }
 }

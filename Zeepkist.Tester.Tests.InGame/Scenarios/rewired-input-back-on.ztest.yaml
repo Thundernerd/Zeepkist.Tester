@@ -1,0 +1,7 @@
+description: An input action is sent again once the game turns its category back on
+start: editor
+steps:
+  - place-start
+  - sample.turn-off-input: level-editor
+  - sample.turn-on-input
+  - undo

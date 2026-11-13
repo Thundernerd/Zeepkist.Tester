@@ -31,7 +31,7 @@ internal sealed class ScenarioRunner
     /// <param name="catalog">The steps scenarios can use, and the C# tests a run can choose from.</param>
     /// <param name="plugins">What the test plugins gave.</param>
     /// <param name="report">Takes each step's result.</param>
-    /// <param name="folder">What a scenario's name is relative to, so two files of one name in two folders stay apart.</param>
+    /// <param name="folder">What a scenario's name is relative to, so two files of one name in two folders stay apart, and a C# test's level file.</param>
     public ScenarioRunner(IRunHost host, ExceptionLog exceptions, RunCatalog catalog, IReadOnlyList<TestPluginRegistration> plugins, Action<RunStep> report, string folder)
     {
         _folder = folder;
@@ -40,7 +40,7 @@ internal sealed class ScenarioRunner
         _steps = catalog.Steps;
         _plugins = plugins;
         _recorder = new RunRecorder(host, report);
-        _tests = new InGameTestRunner(host, exceptions, catalog, _recorder);
+        _tests = new InGameTestRunner(host, exceptions, catalog, _recorder, folder);
         _loader = new ScenarioLoader(catalog.Steps.Descriptors);
     }
 
@@ -83,7 +83,7 @@ internal sealed class ScenarioRunner
 
     private RunUnit UnitOf(Scenario scenario, RunContext run)
     {
-        return new RunUnit(new ScenarioContext(run, ScenarioName(scenario.File)), scenario.File, scenario.Start, scenario.Input, unit => RunNodes(unit, scenario.Steps, Frame.Top(scenario.File)));
+        return new RunUnit(new ScenarioContext(run, ScenarioName(scenario.File)), scenario.File, scenario.Start, Path.GetDirectoryName(scenario.File), scenario.Input, unit => RunNodes(unit, scenario.Steps, Frame.Top(scenario.File)));
     }
 
     private string ScenarioName(string file)
@@ -207,7 +207,7 @@ internal sealed class ScenarioRunner
         var start = unit.Start;
         Exception error = null;
         var startedAt = _host.Now;
-        yield return GuardedRoutine.Run(_host.EnterStart(start, unit.File), exception => error = exception);
+        yield return GuardedRoutine.Run(_host.EnterStart(start, unit.LevelFolder), exception => error = exception);
         if (error == null)
             yield break;
 

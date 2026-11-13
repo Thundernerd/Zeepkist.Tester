@@ -25,7 +25,7 @@ dotnet test
 | `Zeepkist.Tester.Scenarios` | The scenario parser, which the plugin and the CLI share |
 | `Zeepkist.Tester.Cli` | The `ztest` dotnet tool: the runner and offline tools |
 | `Zeepkist.Tester.Tests` | Unit tests |
-| `Zeepkist.Tester.Tests.InGame` | A test plugin and scenarios for checking the harness in the real game. `run.sh <out dir>` deploys them, runs the game through Steam, compares the results with `expected-results.txt` and puts everything back. Four scenarios and two C# tests fail on purpose. `run.sh <out dir> --start-states` walks to each start state from the editor, test mode and free play, against `expected-start-states.txt` |
+| `Zeepkist.Tester.Tests.InGame` | A test plugin and scenarios for checking the harness in the real game. `run.sh <out dir>` deploys them, runs the game through Steam, compares the results with `expected-results.txt` and puts everything back. Five scenarios and two C# tests fail on purpose. `run.sh <out dir> --start-states` walks to each start state from the editor, test mode and free play, against `expected-start-states.txt` |
 | `Zeepkist.Tester.Tests.SampleMod` | A mod's assembly on net472, for the unit tests to build descriptors from |
 | `Zeepkist.Tester.Tests.SampleCore` | An assembly on net472 with a step as the tester ships them and a state for a mod's to nest in, for the same tests |
 
@@ -33,7 +33,7 @@ The build should finish with zero warnings. CI treats any warning as an error.
 
 ## Checking scenarios
 
-`ztest check` finds mistakes in scenarios with no game: unknown steps and arguments, values that don't fit, names used before they're defined and missing `run:` files as errors, and steps whose required state doesn't hold as warnings. It prints `file:line:col: error|warning: message` and exits with 1 on errors. It reports every problem it can in one run, such as each value that doesn't fit, and only stops at the first in a file that isn't valid YAML. Names and states are only checked in a file with no other errors.
+`ztest check` finds mistakes in scenarios with no game: unknown steps and arguments, values that don't fit, names used before they're defined, missing `run:` files and level files, and a C# test's `Level` that isn't in the configured `scenarios` folder as errors, and steps whose required state doesn't hold as warnings. It prints `file:line:col: error|warning: message`, or `error: message` for a C# test, and exits with 1 on errors. It reports every problem it can in one run, such as each value that doesn't fit, and only stops at the first in a file that isn't valid YAML. Names and states are only checked in a file with no other errors.
 
 A file that's meant to be run by others says so with a `with:` header listing the names it takes, `[]` when it takes none. It can then be checked on its own, and each `run:` of it is checked for passing exactly those names:
 

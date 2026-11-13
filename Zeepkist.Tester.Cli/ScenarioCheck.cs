@@ -121,7 +121,7 @@ internal sealed class ScenarioCheck
     private void FollowFromItsStart(Scenario scenario, bool mayBeGivenNames)
     {
         _nodesFollowed = 0;
-        var level = scenario.Start.LevelPath(scenario.File);
+        var level = scenario.Start.LevelPath(Path.GetDirectoryName(scenario.File));
         if (level != null && !File.Exists(level))
             Report(scenario.Start.Location, CheckSeverity.Error, $"start: {scenario.Start.State.Name} can't find '{scenario.Start.Value}' from this file.");
 

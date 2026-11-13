@@ -1,3 +1,4 @@
+using System.Linq;
 using Rewired;
 using TNRD.Zeepkist.Tester.Sdk;
 using UnityEngine;
@@ -8,7 +9,9 @@ namespace TNRD.Zeepkist.Tester.InputDrivers;
 /// Hands the game's input actions a value by their Rewired name. The game reads each action from an
 /// <see cref="InputActionScriptableObject"/>, which it fills from Rewired's events in Rewired's update. Right after that
 /// update, and before any of the game's own, this writes what the action reads in that frame, so whatever the action is
-/// bound to, and whoever reads it, it reads as a key or stick does.
+/// bound to, and whoever reads it, it reads as a key or stick does. A key only reaches an action through a map the game
+/// has on, and the game turns a category's maps off, as ZeepSDK's input overrides do while a text field has focus. So an
+/// action none of whose maps are on isn't sent: a step fails for it, and one held when it goes off lets go.
 /// </summary>
 internal sealed class RewiredDriver : IActionDriver
 {
@@ -25,6 +28,11 @@ internal sealed class RewiredDriver : IActionDriver
         var actionId = ReInput.mapping.GetActionId(action);
         if (actionId < 0)
             throw new StepFailedException($"The game has no input action called {action}.");
+
+        // The players the game reads actions for, as the write below does, not Rewired's System player
+        var players = Resources.FindObjectsOfTypeAll<InputPlayerScriptableObject>();
+        if (value != 0 && !players.Any(player => IsOn(player.player, actionId)))
+            throw new StepFailedException($"The game has {action} turned off right now.");
 
         _frames.Set(actionId, value);
         return true;
@@ -49,12 +57,31 @@ internal sealed class RewiredDriver : IActionDriver
         var actions = Resources.FindObjectsOfTypeAll<InputActionScriptableObject>();
         foreach (var frame in frames)
         {
+            var on = false;
             foreach (var action in actions)
             {
-                if (action.ID == frame.ActionId || action.ID == AnyAction)
+                // One whose player has the action off gets nothing: the game cleared its fields as it turned it off
+                if ((action.ID == frame.ActionId || action.ID == AnyAction) && IsOn(action.Player?.player, frame.ActionId))
+                {
                     Write(action, frame.For(action.UseAsButton, action.UseNegativeInput));
+                    on = true;
+                }
             }
+
+            // Turned off for every player since the step set it, so it lets go, as a held key's action does. One that has
+            // already let go is left to clear, so it's the player's again once it's back on.
+            if (!on && frame.Now != 0)
+                _frames.Set(frame.ActionId, 0);
         }
+    }
+
+    /// <summary>
+    /// Whether a key could reach the action for the player: one of its controllers has a map the game has on with
+    /// something bound to it.
+    /// </summary>
+    private static bool IsOn(Player player, int actionId)
+    {
+        return player != null && player.controllers.maps.ElementMapsWithAction(actionId, true).Any();
     }
 
     private static void Write(InputActionScriptableObject action, ActionFields fields)

@@ -23,6 +23,18 @@ public sealed class RunnerTests
         yield return context.Run(new Note { Text = "menu" });
     }
 
+    [InGameTest(Level = "levels/three-blocks.zeeplevel")]
+    public IEnumerator FromALevel(IStepContext context)
+    {
+        yield return context.Run(new Note { Text = "level" });
+    }
+
+    [InGameTest(Start = Start.FreePlay, FreePlayUid = "EZ01")]
+    public IEnumerator InFreePlay(IStepContext context)
+    {
+        yield return context.Run(new Note { Text = "free play" });
+    }
+
     [InGameTest]
     public IEnumerator FailsHalfway(IStepContext context)
     {

@@ -485,8 +485,10 @@ The steps the tester ships with so far:
 | `undo`, `redo` | Press the editor's key once, and fail if the history didn't move. | `editor` | |
 | `test-mode` | Starts test mode and waits for the round. The level needs a start block. | `editor` | leaves `editor`, enters `test-mode` |
 | `back-to-editor` | Quits through the pause menu and waits for the level to load. | `test-mode` | leaves `test-mode`, enters `editor` |
+| `press-action` | Presses one of the game's input actions by name for a frame, whatever it's bound to. In-process only: it fails on `input: os`. | | |
+| `hold-action` | Holds an input action for `for:`, at `value:` (default 1, from -1 to 1 for an axis). In-process only: it fails on `input: os`. | | |
 
-Input steps come with #20. `Zeepkist.Tester.Tests.InGame` is a test plugin and scenarios for the in-game check, and its `run.sh` deploys and runs them.
+The key and mouse input steps come with #20. `Zeepkist.Tester.Tests.InGame` is a test plugin and scenarios for the in-game check, and its `run.sh` deploys and runs them.
 
 `run.sh --start-states` runs a scenario per start state, in an order that leaves each of the editor with unsaved content, test mode and free play for each start. Its `free-play` scenario plays the adventure level `EZ01`, whose UID is the same on every install.
 
@@ -565,7 +567,7 @@ public sealed class WindowTests
 ```
 
 - An `[InGameTest]` is a public `IEnumerator` method that takes one `IStepContext`, on a concrete class with a public constructor that takes nothing, in a `[TestPlugin]` assembly. Each test gets a new instance of its class. The descriptor builder finds them in the game and offline (`StepRegistry.Tests`, as `TestDescriptor`s), and a method of another shape, or two tests with one `Class.Method`, is a `StepDefinitionException`.
-- `Start` is `Start.Editor` (a new level, the default) or `Start.MainMenu`. A level file or free play isn't there yet (#75).
+- `Start` is `Start.Editor` (a new level, the default), `Start.MainMenu` or `Start.FreePlay`, as a scenario's `start:`. `Level = "levels/window.zeeplevel"` opens that level file in the editor instead of a new level. It's relative to the `scenarios` folder next to the tester, where run.json's scenario files are, since a test has no file of its own. `Start.FreePlay` needs `FreePlayUid`, the level to play. Each start takes only its own argument: a `FreePlayUid` without `Start.FreePlay`, a `Level` with another start, or an empty one is a `StepDefinitionException`. `ztest check` reports a `Level` that isn't in the `scenarios` folder of the nearest `zeepkist-test.json`, and can't check it without one (#75).
 - `context.Run(step)` runs a step as one entry in the results, with its own pass or fail, after checking the states it requires. Within a scenario's step, `context.Run` fails the step: steps don't run steps.
 - A failed step stops the test, as it stops a scenario, with a screenshot. So a test needs no `if (context.Failed)` after each step.
 - The test's own context is for checks of its own: `Pass`, `Fail`, `Detail`, or an exception thrown outside a step. Those are recorded as an entry named `test`, which is also there when the test ran no step, so every test shows in the results. A test that only ran steps, which all passed, has no `test` entry.
