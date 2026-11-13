@@ -19,6 +19,13 @@ internal sealed class UguiPointer<TNode> : IInputDriver
     private readonly PointerState<TNode> _state = new PointerState<TNode>();
 
     /// <summary>
+    /// What took each held button's press, and where the pointer was then, as Unity's input module keeps a
+    /// <c>PointerEventData</c> per button: one button going down or up while another is held doesn't touch the other's.
+    /// In the order the input module goes through them.
+    /// </summary>
+    private readonly SortedDictionary<MouseButton, Press> _held = [];
+
+    /// <summary>
     /// What the pointer is in, from the object it's over up to the top.
     /// </summary>
     private readonly List<TNode> _entered = [];
@@ -71,13 +78,13 @@ internal sealed class UguiPointer<TNode> : IInputDriver
             return false;
 
         FindHit();
-        _state.Button = button;
-        _state.PressPosition = _state.Position;
-        _state.Pressed = Handler(_state.Hit, PointerEvent.Down);
-        if (_state.Pressed != null)
-            _scene.Send(_state.Pressed, PointerEvent.Down, _state);
-        else
-            _state.Pressed = Handler(_state.Hit, PointerEvent.Click);
+        DeselectIfElsewhere(button);
+        var pressed = Handler(_state.Hit, PointerEvent.Down);
+        var press = new Press(pressed ?? Handler(_state.Hit, PointerEvent.Click), _state.Position);
+        _held[button] = press;
+        LoadPress(button, press);
+        if (pressed != null)
+            _scene.Send(pressed, PointerEvent.Down, _state);
 
         EnterHit();
         return true;
@@ -95,36 +102,76 @@ internal sealed class UguiPointer<TNode> : IInputDriver
             return false;
 
         FindHit();
-        _state.Button = button;
-        var pressed = _state.Pressed;
-        if (pressed != null)
+        if (_held.TryGetValue(button, out var press))
         {
-            SendIfHandled(pressed, PointerEvent.Up);
-            if (Equals(Handler(_state.Hit, PointerEvent.Click), pressed))
-                _scene.Send(pressed, PointerEvent.Click, _state);
+            _held.Remove(button);
+            LoadPress(button, press);
+            var pressed = press.Pressed;
+            if (pressed != null)
+            {
+                SendIfHandled(pressed, PointerEvent.Up);
+                if (Equals(Handler(_state.Hit, PointerEvent.Click), pressed))
+                    _scene.Send(pressed, PointerEvent.Click, _state);
+            }
         }
 
-        _state.Pressed = null;
         EnterHit();
         return true;
     }
 
     /// <summary>
-    /// A held button goes up where it is, with no click, because the call that pressed it didn't finish. The pointer then
+    /// Each held button goes up where it is, with no click, because the call that pressed it didn't finish. The pointer then
     /// leaves what it's in, so nothing stays hovered for the player's mouse to find.
     /// </summary>
     public void GiveBack()
     {
-        if (_state.Pressed != null && Active)
-            SendIfHandled(_state.Pressed, PointerEvent.Up);
+        if (Active)
+        {
+            foreach (var held in _held)
+            {
+                LoadPress(held.Key, held.Value);
+                if (held.Value.Pressed != null)
+                    SendIfHandled(held.Value.Pressed, PointerEvent.Up);
+            }
+        }
 
-        _state.Pressed = null;
+        _held.Clear();
         _state.Hit = null;
         _placed = false;
         if (Active)
             EnterHit();
         else
             _entered.Clear();
+    }
+
+    /// <summary>
+    /// Selects nothing when the press isn't on what's selected, or on something in it, as the input module's
+    /// <c>DeselectIfSelectionChanged</c> does before a press goes down: a click elsewhere takes the focus from an input
+    /// field. Whatever the press lands on can then select itself.
+    /// </summary>
+    private void DeselectIfElsewhere(MouseButton button)
+    {
+        var selected = _scene.Selected;
+        if (selected == null)
+            return;
+
+        var selectable = SelfAndAbove(_state.Hit).FirstOrDefault(_scene.CanSelect);
+        if (Equals(selectable, selected))
+            return;
+
+        // Nothing has taken the press yet as the input module deselects
+        LoadPress(button, new Press(null, _state.Position));
+        _scene.Deselect(_state);
+    }
+
+    /// <summary>
+    /// Puts the button, what took its press and where, in the state the events that follow carry.
+    /// </summary>
+    private void LoadPress(MouseButton button, Press press)
+    {
+        _state.Button = button;
+        _state.Pressed = press.Pressed;
+        _state.PressPosition = press.Position;
     }
 
     /// <summary>
@@ -165,10 +212,13 @@ internal sealed class UguiPointer<TNode> : IInputDriver
     }
 
     /// <summary>
-    /// Leaves what the hit isn't in and enters what it newly is, as Unity's input module does: only below what both share.
+    /// Leaves what the hit isn't in and enters what it newly is, as Unity's input module does: only below what both share,
+    /// and with the left button's state, held or not, as the input module moves the pointer with that.
     /// </summary>
     private void EnterHit()
     {
+        LoadPress(MouseButton.Left, _held.TryGetValue(MouseButton.Left, out var left) ? left : default);
+
         var now = SelfAndAbove(_state.Hit).ToList();
 
         foreach (var node in _entered)
@@ -186,4 +236,9 @@ internal sealed class UguiPointer<TNode> : IInputDriver
         _entered.Clear();
         _entered.AddRange(now);
     }
+
+    /// <summary>
+    /// A held button: what took its press, or null when nothing did, and where the pointer was as it went down.
+    /// </summary>
+    private readonly record struct Press(TNode Pressed, Vector2 Position);
 }

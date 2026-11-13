@@ -59,6 +59,112 @@ public class UguiPointerTests
     }
 
     [Fact]
+    public void TwoButtonsHeldAtOnce_EachGoesUpOnWhatTookItsOwnPress_WithNoClickWhereReleasedOverSomethingElse()
+    {
+        _pointer.MoveMouse(_onButton);
+        _pointer.PressButton(MouseButton.Left);
+        _pointer.DragMouse(Delta(_onButton, _onOther), MouseButton.Left);
+        _pointer.PressButton(MouseButton.Right);
+        _pointer.ReleaseButton(MouseButton.Right);
+        _scene.Sent.Clear();
+
+        _pointer.ReleaseButton(MouseButton.Left);
+
+        Assert.Equal(["Up menu/button Left"], _scene.Sent);
+    }
+
+    [Fact]
+    public void TwoButtonsHeldAtOnce_EachClickWhatTookTheirOwnPress()
+    {
+        _pointer.MoveMouse(_onButton);
+        _pointer.PressButton(MouseButton.Left);
+        _pointer.DragMouse(Delta(_onButton, _onOther), MouseButton.Left);
+        _pointer.PressButton(MouseButton.Right);
+        _pointer.DragMouse(Delta(_onOther, _onButton), MouseButton.Left);
+        _scene.Sent.Clear();
+
+        _pointer.ReleaseButton(MouseButton.Left);
+        _pointer.DragMouse(Delta(_onButton, _onOther), MouseButton.Right);
+        _pointer.ReleaseButton(MouseButton.Right);
+
+        Assert.Equal(
+        [
+            "Up menu/button Left", "Click menu/button Left",
+            "Exit menu/button", "Enter menu/other",
+            "Up menu/other Right", "Click menu/other Right",
+        ], _scene.Sent);
+    }
+
+    [Fact]
+    public void ASecondButtonPressedAndReleasedWhileTheFirstIsHeld_ClicksWhatItPressed()
+    {
+        _pointer.MoveMouse(_onButton);
+        _pointer.PressButton(MouseButton.Left);
+        _pointer.DragMouse(Delta(_onButton, _onOther), MouseButton.Left);
+        _scene.Sent.Clear();
+
+        _pointer.PressButton(MouseButton.Right);
+        _pointer.ReleaseButton(MouseButton.Right);
+
+        Assert.Equal(["Down menu/other Right", "Up menu/other Right", "Click menu/other Right"], _scene.Sent);
+    }
+
+    [Fact]
+    public void WhatThePointerEntersAndLeaves_IsToldOfTheLeftButton_AsTheInputModuleMovesItWithThat()
+    {
+        _pointer.MoveMouse(_onButton);
+        _pointer.PressButton(MouseButton.Left);
+        _pointer.DragMouse(Delta(_onButton, _onOther), MouseButton.Left);
+        _pointer.PressButton(MouseButton.Right);
+        _pointer.ReleaseButton(MouseButton.Right);
+        _scene.Hovers.Clear();
+
+        _pointer.MoveMouse(_onNothing);
+
+        Assert.Equal(["Exit menu/other Left menu/button"], _scene.Hovers);
+    }
+
+    [Fact]
+    public void GiveBack_LetsGoOfEveryHeldButton()
+    {
+        _pointer.MoveMouse(_onButton);
+        _pointer.PressButton(MouseButton.Left);
+        _pointer.DragMouse(Delta(_onButton, _onOther), MouseButton.Left);
+        _pointer.PressButton(MouseButton.Right);
+        _scene.Sent.Clear();
+
+        _pointer.GiveBack();
+
+        Assert.Equal(["Up menu/button Left", "Up menu/other Right", "Exit menu/other"], _scene.Sent);
+    }
+
+    [Fact]
+    public void APressOverSomethingElse_DeselectsWhatIsSelected_BeforeThePressGoesDown()
+    {
+        _scene.Selectable.Add("menu/field");
+        _scene.Selected = "menu/field";
+        _pointer.MoveMouse(_onButton);
+        _scene.Sent.Clear();
+
+        _pointer.PressButton(MouseButton.Right);
+
+        Assert.Null(_scene.Selected);
+        Assert.Equal(["Deselect menu/field Right", "Down menu/button Right"], _scene.Sent);
+    }
+
+    [Fact]
+    public void APressOverWhatIsSelected_KeepsItSelected()
+    {
+        _scene.Selectable.Add("menu/button");
+        _scene.Selected = "menu/button";
+        _pointer.MoveMouse(_onButton);
+
+        _pointer.PressButton(MouseButton.Left);
+
+        Assert.Equal("menu/button", _scene.Selected);
+    }
+
+    [Fact]
     public void MovingToSomethingElse_LeavesWhatItWasIn_AndEntersWhatItNowIs_ButNotWhatBothShare()
     {
         _scene.Handlers["menu"] = [PointerEvent.Enter, PointerEvent.Exit];
@@ -157,9 +263,18 @@ public class UguiPointerTests
 
         public List<string> Sent { get; } = [];
 
+        /// <summary>
+        /// Each enter and exit, with the button and what took its press that it carries.
+        /// </summary>
+        public List<string> Hovers { get; } = [];
+
         public bool Ready { get; set; } = true;
 
         public bool ModuleReadsUnityInput { get; set; }
+
+        public HashSet<string> Selectable { get; } = [];
+
+        public string Selected { get; set; }
 
         public void Hit(Vector2 screenPoint, string node)
         {
@@ -182,8 +297,22 @@ public class UguiPointerTests
             return Handlers.TryGetValue(node, out var events) && events.Contains(pointerEvent);
         }
 
+        public bool CanSelect(string node)
+        {
+            return Selectable.Contains(node);
+        }
+
+        public void Deselect(PointerState<string> state)
+        {
+            Sent.Add($"Deselect {Selected} {state.Button}");
+            Selected = null;
+        }
+
         public void Send(string node, PointerEvent pointerEvent, PointerState<string> state)
         {
+            if (pointerEvent is PointerEvent.Enter or PointerEvent.Exit)
+                Hovers.Add($"{pointerEvent} {node} {state.Button} {state.Pressed}");
+
             Sent.Add(pointerEvent is PointerEvent.Enter or PointerEvent.Exit
                 ? $"{pointerEvent} {node}"
                 : $"{pointerEvent} {node} {state.Button}");
