@@ -20,6 +20,8 @@ public sealed class StepDescriptorBuilder
     // Also a different type on each runtime: the BCL's on .NET, the SDK's polyfill on net472
     private const string RequiredMemberAttributeName = "System.Runtime.CompilerServices.RequiredMemberAttribute";
 
+    private static readonly Regex _quotedAssemblyName = new Regex("'([^']+)'");
+
     private static readonly Regex _kebabCase = new Regex("^[a-z0-9]+(-[a-z0-9]+)*$");
 
     // A scenario reads these as control nodes, so a step with one of these names would be hidden when it's written unprefixed
@@ -44,9 +46,10 @@ public sealed class StepDescriptorBuilder
     internal string TesterAssemblyName { get; init; } = "Zeepkist.Tester";
 
     /// <summary>
-    /// Finds a member's <c>&lt;summary&gt;</c> by its XML doc id, such as <c>T:Mod.Compile</c>. There are no docs without it.
+    /// Finds a member's <c>&lt;summary&gt;</c> by the name of its assembly and its XML doc id, such as <c>Mod</c> and <c>T:Mod.Compile</c>.
+    /// There are no docs without it.
     /// </summary>
-    public Func<string, string> Summaries { get; init; } = _ => null;
+    public Func<string, string, string> Summaries { get; init; } = (_, _) => null;
 
     /// <summary>
     /// The types in an assembly with <see cref="StepAttribute"/>.
@@ -87,6 +90,11 @@ public sealed class StepDescriptorBuilder
 
     public StepDescriptor Build(Type stepType)
     {
+        return NamingWhatCantBeFound(stepType, () => BuildStep(stepType));
+    }
+
+    private StepDescriptor BuildStep(Type stepType)
+    {
         var stepAttribute = FindAttribute<StepAttribute>(stepType)
             ?? throw new StepDefinitionException($"{stepType.FullName} has no [Step] attribute.");
 
@@ -113,7 +121,7 @@ public sealed class StepDescriptorBuilder
             ],
             Enters = StateNames(DeclaredStates<EntersAttribute>(stepType).SelectMany(states => states)),
             Leaves = StateNames(DeclaredStates<LeavesAttribute>(stepType).SelectMany(states => states)),
-            Documentation = Summaries($"T:{DocName(stepType)}"),
+            Documentation = Summary('T', stepType),
             Examples = [.. FindAttributes(stepType, typeof(ExampleAttribute).FullName).Select(ConstructorValue<string>)],
             Arguments = arguments,
             LineSyntax = lineSyntax,
@@ -162,7 +170,7 @@ public sealed class StepDescriptorBuilder
             MethodName = method.Name,
             TypeName = owner.FullName,
             Start = start.Count == 0 ? ToKebabCase(nameof(Start.Editor)) : ToKebabCase(EnumMemberName(start[0])),
-            Documentation = Summaries($"M:{DocName(owner)}.{method.Name}({typeof(IStepContext).FullName})"),
+            Documentation = Summary('M', owner, $".{method.Name}({typeof(IStepContext).FullName})"),
         };
     }
 
@@ -188,7 +196,7 @@ public sealed class StepDescriptorBuilder
 
     public StateDescriptor BuildState(Type stateType)
     {
-        return BuildState(stateType, []);
+        return NamingWhatCantBeFound(stateType, () => BuildState(stateType, []));
     }
 
     /// <summary>
@@ -252,7 +260,7 @@ public sealed class StepDescriptorBuilder
             Namespace = stateNamespace,
             Within = within == null ? null : BuildState(within, [.. inner, stateType]).FullName,
             Hint = NamedValue<string>(stateAttribute, nameof(StateAttribute.Hint)),
-            Documentation = Summaries($"T:{DocName(stateType)}"),
+            Documentation = Summary('T', stateType),
         };
     }
 
@@ -342,7 +350,7 @@ public sealed class StepDescriptorBuilder
                 Name = name,
                 PropertyName = property.Name,
                 Type = type,
-                Documentation = Summaries($"P:{DocName(property.DeclaringType)}.{property.Name}"),
+                Documentation = Summary('P', property.DeclaringType, $".{property.Name}"),
                 IsPrimary = NamedValue<bool>(argAttribute, nameof(ArgAttribute.Primary)),
                 IsRequired = FindAttribute(property, RequiredMemberAttributeName) != null,
                 Default = WrittenDefault(argAttribute),
@@ -428,7 +436,7 @@ public sealed class StepDescriptorBuilder
         return new ArgumentType
         {
             Kind = ArgumentKind.Object,
-            Documentation = Summaries($"T:{DocName(type)}"),
+            Documentation = Summary('T', type),
             Arguments = BuildArguments(type, [.. enclosing, type]),
         };
     }
@@ -541,6 +549,18 @@ public sealed class StepDescriptorBuilder
         return member?.Name ?? value.Value.ToString();
     }
 
+    /// <summary>
+    /// A member's summary, by its XML doc id: such as <c>T:Mod.Compile</c> for <c>'T'</c> and the type, or <c>P:Mod.Compile.Function</c>
+    /// for <c>'P'</c>, the type that declares the property, and <c>.Function</c>.
+    /// </summary>
+    /// <param name="kind">The id's prefix: <c>T</c>, <c>P</c> or <c>M</c>.</param>
+    /// <param name="owner">The type, or the type that declares the member, which also says whose docs to look in.</param>
+    /// <param name="member">What follows the type in the id, if it's a member's.</param>
+    private string Summary(char kind, Type owner, string member = "")
+    {
+        return Summaries(owner.Assembly.GetName().Name, $"{kind}:{DocName(owner)}{member}");
+    }
+
     private static string DocName(Type type)
     {
         return type.FullName.Replace('+', '.');
@@ -589,6 +609,40 @@ public sealed class StepDescriptorBuilder
         catch (Exception exception) when (exception is FileNotFoundException or TypeLoadException)
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Builds a step or state, and when a type it uses is in an assembly that can't be found, says which step or state and which assembly.
+    /// </summary>
+    private static T NamingWhatCantBeFound<T>(Type owner, Func<T> build)
+    {
+        try
+        {
+            return build();
+        }
+        catch (FileNotFoundException exception)
+        {
+            throw new StepDefinitionException($"{owner.FullName} uses a type from {MissingAssembly(exception)}, which can't be found.");
+        }
+    }
+
+    /// <summary>
+    /// The name of the assembly a <see cref="FileNotFoundException"/> is about, such as <c>UnityEngine</c>.
+    /// </summary>
+    /// <remarks>
+    /// A MetadataLoadContext doesn't set <see cref="FileNotFoundException.FileName"/>, only quotes the assembly's full name in the message.
+    /// </remarks>
+    private static string MissingAssembly(FileNotFoundException exception)
+    {
+        var fullName = exception.FileName ?? _quotedAssemblyName.Match(exception.Message).Groups[1].Value;
+        try
+        {
+            return new AssemblyName(fullName).Name;
+        }
+        catch (Exception nameException) when (nameException is ArgumentException or FileLoadException)
+        {
+            return "an assembly";
         }
     }
 

@@ -20,9 +20,26 @@ internal sealed class OfflineAssemblies : IDisposable
         _context = new MetadataLoadContext(new FolderResolver(folders.ToList()), coreAssembly);
     }
 
+    /// <exception cref="UnreadableAssemblyException">The file isn't a .NET assembly, or another build of it is already loaded.</exception>
     public Assembly Load(string path)
     {
-        return _context.LoadFromAssemblyPath(Path.GetFullPath(path));
+        try
+        {
+            return _context.LoadFromAssemblyPath(Path.GetFullPath(path));
+        }
+        catch (BadImageFormatException exception)
+        {
+            throw new UnreadableAssemblyException($"{path} isn't a .NET assembly.", exception);
+        }
+        catch (FileLoadException exception)
+        {
+            var name = AssemblyName.GetAssemblyName(path).Name;
+            var other = _context.GetAssemblies().FirstOrDefault(assembly => assembly.GetName().Name == name);
+            if (other == null)
+                throw;
+
+            throw new UnreadableAssemblyException($"{path} is another build of {name}, which is already read from {other.Location}. Only one build of an assembly can be read.", exception);
+        }
     }
 
     public void Dispose()

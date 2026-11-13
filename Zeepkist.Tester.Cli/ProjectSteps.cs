@@ -55,7 +55,7 @@ internal sealed class ProjectSteps
         {
             return new ProjectSteps(config, OfflineRegistry.Read(paths));
         }
-        catch (StepDefinitionException exception)
+        catch (Exception exception) when (exception is StepDefinitionException or UnreadableAssemblyException)
         {
             return Fail(output, exception.Message);
         }

@@ -6,7 +6,7 @@ Status: sketch. The attributes, argument types and descriptors are built (#3), a
 
 ## The one constraint that shapes it
 
-**The registry must be readable without running the game.** `ztest check`, `ztest schema` and `ztest convert` run on the modder's machine, with no game, in a .NET 8+ CLI. They read the built test plugin DLLs with `System.Reflection.MetadataLoadContext`, which reads metadata only and runs no code, plus the XML doc file next to each DLL.
+**The registry must be readable without running the game.** `ztest check`, `ztest schema` and `ztest convert` run on the modder's machine, with no game, in a .NET 8+ CLI. They read the built test plugin DLLs with `System.Reflection.MetadataLoadContext`, which reads metadata only and runs no code, plus the XML doc file next to each DLL. A DLL that can't be read is an error that names it: a file that isn't a .NET assembly, or a second build of an assembly that's already read. So is a step or state that uses a type from an assembly that can't be found, naming both. Each doc file's summaries belong to the assembly it names, so two DLLs with a type of one name each keep their own.
 
 So a step is described by **attributes and property types only**. There's no registration code that has to run, and no custom parser objects the CLI would have to execute. What isn't static stays inside `Run`, which only the game executes. The CLI can then:
 - list every step of the core and each mod, with docs taken from `<summary>`;

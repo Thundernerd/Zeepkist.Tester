@@ -15,22 +15,28 @@ internal static class XmlDocs
     private static readonly Regex _whitespace = new Regex(@"\s+");
 
     /// <summary>
-    /// Finds a member's summary by its XML doc id, such as <c>T:Mod.Compile</c>. An assembly without a doc file adds nothing.
+    /// Finds a member's summary by the name of its assembly and its XML doc id, such as <c>Mod</c> and <c>T:Mod.Compile</c>.
+    /// An assembly without a doc file adds nothing.
     /// </summary>
-    public static Func<string, string> Read(IEnumerable<string> assemblyPaths)
+    /// <remarks>
+    /// Two assemblies can have a type of one name, so each doc file's summaries are kept apart, under the assembly it names.
+    /// </remarks>
+    public static Func<string, string, string> Read(IEnumerable<string> assemblyPaths)
     {
-        var summaries = new Dictionary<string, string>();
+        var summaries = new Dictionary<(string Assembly, string Id), string>();
         foreach (var path in assemblyPaths.Select(assemblyPath => Path.ChangeExtension(assemblyPath, ".xml")).Where(File.Exists))
         {
-            foreach (var member in XDocument.Load(path).Descendants("member"))
+            var doc = XDocument.Load(path);
+            var assembly = doc.Root?.Element("assembly")?.Element("name")?.Value ?? Path.GetFileNameWithoutExtension(path);
+            foreach (var member in doc.Descendants("member"))
             {
                 var summary = member.Element("summary");
                 if (summary != null)
-                    summaries[member.Attribute("name").Value] = _whitespace.Replace(ToMarkdown(summary), " ").Trim();
+                    summaries[(assembly, member.Attribute("name").Value)] = _whitespace.Replace(ToMarkdown(summary), " ").Trim();
             }
         }
 
-        return id => summaries.GetValueOrDefault(id);
+        return (assembly, id) => summaries.GetValueOrDefault((assembly, id));
     }
 
     private static string ToMarkdown(XElement element)

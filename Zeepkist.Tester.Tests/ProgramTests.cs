@@ -162,6 +162,26 @@ public sealed class ProgramTests : IDisposable
     }
 
     [Fact]
+    public void Check_APluginThatIsntAnAssembly_NamesIt()
+    {
+        var file = Write("a.ztest.yaml", "steps:\n  - undo\n");
+        var plugin = Write("native.dll", "not an assembly");
+
+        Assert.Equal(1, Run("check", file, "--plugin", plugin));
+        Assert.Equal([$"error: {plugin} isn't a .NET assembly."], Lines());
+    }
+
+    [Fact]
+    public void Check_TwoBuildsOfOnePlugin_NamesBoth()
+    {
+        var file = Write("a.ztest.yaml", "steps:\n  - undo\n");
+        var debug = AnotherBuild.Of(_modPath, Path.Combine(_folder.Path, "Debug"));
+
+        Assert.Equal(1, Run("check", file, "--plugin", _modPath, "--plugin", debug));
+        Assert.Equal([$"error: {debug} is another build of Zeepkist.Tester.Tests.SampleMod, which is already read from {_modPath}. Only one build of an assembly can be read."], Lines());
+    }
+
+    [Fact]
     public void Check_AnEmptyPath_IsAnErrorAndNotAStackTrace()
     {
         Assert.Equal(1, Run("check", string.Empty));
