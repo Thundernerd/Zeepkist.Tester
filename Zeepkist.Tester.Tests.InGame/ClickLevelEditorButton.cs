@@ -1,13 +1,12 @@
 using System.Collections;
 using TNRD.Zeepkist.Tester.Sdk;
 using TNRD.Zeepkist.Tester.States;
-using UnityEngine;
 
 namespace TNRD.Zeepkist.Tester.Tests.InGame;
 
 /// <summary>
-/// Opens the main menu's Level Editor page as its button does, then clicks the page's Level Editor button at its
-/// position, which should enter the level editor. It takes uGUI's hover and Unity's Input press together.
+/// Opens the main menu's Level Editor page, then clicks the page's Level Editor button at its position, which should
+/// enter the level editor. It takes uGUI's hover and Unity's Input press together.
 /// </summary>
 [Step("click-level-editor-button")]
 [Requires(typeof(InMainMenu))]
@@ -19,27 +18,13 @@ public sealed class ClickLevelEditorButton : Step
 
     public override IEnumerator Run(IStepContext context)
     {
-        var menu = Object.FindObjectOfType<LevelEditorUI>(true);
-        if (menu == null)
-        {
-            context.Fail("The main menu has no Level Editor page");
+        var page = new LevelEditorButton();
+        yield return page.Open(context);
+        if (page.Button == null)
             yield break;
-        }
-
-        menu.Open(true);
-
-        // The page lays out as it draws
-        yield return null;
-        yield return null;
-        var button = LevelEditorButton.Find(menu);
-        if (button == null)
-        {
-            context.Fail("The main menu has no Level Editor button");
-            yield break;
-        }
 
         var entriesBefore = context.Game.EditorEntries;
-        yield return context.Input.Click(ScreenPoints.Center((RectTransform)button.transform));
+        yield return context.Input.Click(page.Center);
         yield return context.WaitUntil(() => context.Game.EditorEntries > entriesBefore, new Seconds(LoadSeconds), "the level editor");
     }
 }
