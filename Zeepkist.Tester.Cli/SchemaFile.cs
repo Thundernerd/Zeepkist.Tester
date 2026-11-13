@@ -36,7 +36,7 @@ internal static class SchemaFile
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            output.WriteLine($"warning: Can't write {RelativePath}: {exception.Message}");
+            output.WriteWarning($"Can't write {RelativePath}: {exception.Message}");
         }
     }
 }

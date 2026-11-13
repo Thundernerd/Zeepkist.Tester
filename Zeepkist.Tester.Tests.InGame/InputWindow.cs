@@ -75,6 +75,19 @@ public sealed class InputWindow : IZeepGUIDrawer
     public bool ImuiMouseAtSliderLeft => Vector2.Distance(ImuiMouse, SliderLeftInImui) <= 0.5f;
 
     /// <summary>
+    /// Whether Imui finds the mouse on the text field, so it would hover it.
+    /// </summary>
+    public bool ImuiMouseOnField
+    {
+        get
+        {
+            var mouse = ImuiMouse;
+            return mouse.x >= _fieldRect.X && mouse.x <= _fieldRect.X + _fieldRect.W
+                && mouse.y >= _fieldRect.Y && mouse.y <= _fieldRect.Y + _fieldRect.H;
+        }
+    }
+
+    /// <summary>
     /// Whether Imui reads the player's mouse, and not one <c>context.Input</c> holds.
     /// </summary>
     public bool ImuiReadsPlayerMouse => ImuiMouse == PlayerMouse;

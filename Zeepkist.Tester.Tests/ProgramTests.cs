@@ -337,6 +337,7 @@ public sealed class ProgramTests : IDisposable
     [Theory]
     [InlineData]
     [InlineData("--nope")]
+    [InlineData("a.zlstest", "--plugin")]
     public void Convert_NoFilesOrABadOption_PrintsUsageAndFails(params string[] arguments)
     {
         Assert.Equal(1, Run(["convert", .. arguments]));
@@ -375,6 +376,7 @@ public sealed class ProgramTests : IDisposable
     [InlineData("--output")]
     [InlineData("--nope")]
     [InlineData("steps.md")]
+    [InlineData("--plugin")]
     public void Docs_ABadOption_PrintsUsageAndFails(string option)
     {
         Assert.Equal(1, Run("docs", option));
@@ -408,10 +410,12 @@ public sealed class ProgramTests : IDisposable
         Assert.False(Directory.Exists(Path.Combine(_folder.Path, ".ztest")));
     }
 
-    [Fact]
-    public void Schema_ABadOption_PrintsUsageAndFails()
+    [Theory]
+    [InlineData("--nope")]
+    [InlineData("--plugin")]
+    public void Schema_ABadOption_PrintsUsageAndFails(string option)
     {
-        Assert.Equal(1, Run("schema", "--nope"));
+        Assert.Equal(1, Run("schema", option));
         Assert.Contains("Usage: ztest", _output.ToString());
     }
 

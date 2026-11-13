@@ -67,7 +67,7 @@ internal sealed class ProjectSteps
 
     private static ProjectSteps Fail(TextWriter output, string problem)
     {
-        output.WriteLine($"error: {problem}");
+        output.WriteError(problem);
         return null;
     }
 }

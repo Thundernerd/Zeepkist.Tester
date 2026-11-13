@@ -1,10 +1,11 @@
+using System.Collections;
 using TNRD.Zeepkist.Tester.Sdk;
 using TNRD.Zeepkist.Tester.Tests.SampleCore;
 
 namespace TNRD.Zeepkist.Tester.Tests;
 
 /// <summary>
-/// Steps and states that use a type from Zeepkist.Tester.Tests.SampleCore, for reading them offline where it can't be found.
+/// Steps, states and C# tests that use a type from Zeepkist.Tester.Tests.SampleCore, for reading them offline where it can't be found.
 /// </summary>
 public static class UnfoundSteps
 {
@@ -80,5 +81,34 @@ public static class UnfoundSteps
     [Requires(typeof(StateBaseElsewhere))]
     public sealed class RequiresAStateBasedElsewhere : InvalidSteps.Base
     {
+    }
+
+    /// <summary>A C# test in a class with a constructor that takes a type from the missing assembly.</summary>
+    public sealed class TestConstructorElsewhere
+    {
+        // The constructor the harness makes it with, so the overload below is the only problem
+        public TestConstructorElsewhere()
+        {
+        }
+
+        public TestConstructorElsewhere(CoreState state)
+        {
+        }
+
+        [InGameTest]
+        public IEnumerator Test(IStepContext context)
+        {
+            yield break;
+        }
+    }
+
+    /// <summary>A C# test that takes a type from the missing assembly.</summary>
+    public sealed class TestParameterElsewhere
+    {
+        [InGameTest]
+        public IEnumerator Test(CoreState state)
+        {
+            yield break;
+        }
     }
 }

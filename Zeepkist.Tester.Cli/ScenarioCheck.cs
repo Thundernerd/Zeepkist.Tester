@@ -83,7 +83,7 @@ internal sealed class ScenarioCheck
         {
             text = File.ReadAllText(file);
             if (ScenarioFiles.IsOld(file))
-                Add(new CheckProblem(new SourceLocation(file, 1, 1), CheckSeverity.Warning, $"{ScenarioFiles.OldExtension} is the old format. Run ztest convert {file}."));
+                Add(new CheckProblem(new SourceLocation(file, 1, 1), ProblemSeverity.Warning, $"{ScenarioFiles.OldExtension} is the old format. Run ztest convert {file}."));
 
             var reading = ScenarioFiles.ReadAll(file, new StringReader(text), _steps);
             scenario = reading.Scenario;
@@ -91,11 +91,11 @@ internal sealed class ScenarioCheck
                 _brokenFiles.Add(text);
 
             foreach (var problem in reading.Problems)
-                Add(new CheckProblem(problem.Location, CheckSeverity.Error, problem.Problem));
+                Add(new CheckProblem(problem.Location, ProblemSeverity.Error, problem.Problem));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            Add(new CheckProblem(new SourceLocation(file, 1, 1), CheckSeverity.Error, $"Can't read the file: {exception.Message}"));
+            Add(new CheckProblem(new SourceLocation(file, 1, 1), ProblemSeverity.Error, $"Can't read the file: {exception.Message}"));
         }
 
         _scenarios.Add(key, scenario);
@@ -126,7 +126,7 @@ internal sealed class ScenarioCheck
         _nodesFollowed = 0;
         var level = scenario.Start.LevelPath(Path.GetDirectoryName(scenario.File));
         if (level != null && !File.Exists(level))
-            Report(scenario.Start.Location, CheckSeverity.Error, $"start: {scenario.Start.State.Name} can't find '{scenario.Start.Value}' from this file.");
+            Report(scenario.Start.Location, ProblemSeverity.Error, $"start: {scenario.Start.State.Name} can't find '{scenario.Start.Value}' from this file.");
 
         var scope = new Scope(null) { DefinesUnknownNames = mayBeGivenNames && scenario.Takes == null };
         foreach (var name in scenario.Takes ?? [])
@@ -154,7 +154,7 @@ internal sealed class ScenarioCheck
             {
                 // Each body around this one still has its next pass to get through
                 if (_nodesFollowed == MostNodesFollowed + 1)
-                    Report(node.Location, CheckSeverity.Warning, $"The loops and run: files around this come to over {MostNodesFollowed} steps, so the check stops following it here.");
+                    Report(node.Location, ProblemSeverity.Warning, $"The loops and run: files around this come to over {MostNodesFollowed} steps, so the check stops following it here.");
 
                 return;
             }
@@ -183,7 +183,7 @@ internal sealed class ScenarioCheck
     {
         var outer = scope.Find(loop.Variable);
         if (outer != null)
-            Report(loop.Location, CheckSeverity.Error, ScenarioMessages.AlreadyDefined(loop.Variable, outer.Kind));
+            Report(loop.Location, ProblemSeverity.Error, ScenarioMessages.AlreadyDefined(loop.Variable, outer.Kind));
 
         foreach (var value in loop.Values)
         {
@@ -206,13 +206,13 @@ internal sealed class ScenarioCheck
         var target = RunTarget(file, run);
         if (!File.Exists(target))
         {
-            Report(run.Location, CheckSeverity.Error, ScenarioMessages.RunFileMissing(run.File));
+            Report(run.Location, ProblemSeverity.Error, ScenarioMessages.RunFileMissing(run.File));
             return;
         }
 
         if (_running.Contains(FullPathOf(target)))
         {
-            Report(run.Location, CheckSeverity.Error, ScenarioMessages.RunAlreadyRunning(run.File));
+            Report(run.Location, ProblemSeverity.Error, ScenarioMessages.RunAlreadyRunning(run.File));
             return;
         }
 
@@ -221,7 +221,7 @@ internal sealed class ScenarioCheck
             return;
 
         foreach (var mismatch in run.Mismatches(scenario))
-            Report(mismatch.Location, CheckSeverity.Error, mismatch.Problem);
+            Report(mismatch.Location, ProblemSeverity.Error, mismatch.Problem);
 
         // A name it takes that the run leaves out is that run's mistake, which is reported there, not at each use
         foreach (var name in (scenario.Takes ?? []).Where(name => given.Find(name) == null))
@@ -250,7 +250,7 @@ internal sealed class ScenarioCheck
             var type = definition.Type;
             var defined = scope.Find(definition.Name);
             if (defined != null)
-                Report(definition.Location, CheckSeverity.Error, ScenarioMessages.AlreadyDefined(definition.Name, defined.Kind));
+                Report(definition.Location, ProblemSeverity.Error, ScenarioMessages.AlreadyDefined(definition.Name, defined.Kind));
             else
                 scope.Define(definition.Name, new NamedValue([type.ValueKind, .. type.BaseValueKinds], type.Substitute != null, null));
         }
@@ -308,9 +308,9 @@ internal sealed class ScenarioCheck
 
         var value = scope.Find(name);
         if (value == null && !scope.MayDefineUnknownNames)
-            Report(location, CheckSeverity.Error, ScenarioMessages.NotDefined(name));
+            Report(location, ProblemSeverity.Error, ScenarioMessages.NotDefined(name));
         else if (value != null && !value.Kinds.Contains(type.ValueKind))
-            Report(location, CheckSeverity.Error, ScenarioMessages.WrongKind(name, value.Kind, type.ValueKind));
+            Report(location, ProblemSeverity.Error, ScenarioMessages.WrongKind(name, value.Kind, type.ValueKind));
     }
 
     /// <summary>
@@ -325,11 +325,11 @@ internal sealed class ScenarioCheck
             if (value == null)
             {
                 if (!scope.MayDefineUnknownNames)
-                    Report(scalar.Location, CheckSeverity.Error, ScenarioMessages.NotDefined(name));
+                    Report(scalar.Location, ProblemSeverity.Error, ScenarioMessages.NotDefined(name));
             }
             else if (!value.CanBeWritten)
             {
-                Report(scalar.Location, CheckSeverity.Error, ScenarioMessages.NoSubstituteMember(name, value.Kind));
+                Report(scalar.Location, ProblemSeverity.Error, ScenarioMessages.NoSubstituteMember(name, value.Kind));
             }
 
             isKnown &= value?.CanBeWritten == true && value.Value != null;
@@ -341,7 +341,7 @@ internal sealed class ScenarioCheck
     private void FollowStates(StepNode node)
     {
         foreach (var unmet in _held.Unmet(node.Step))
-            Report(node.Location, CheckSeverity.Warning, ScenarioMessages.Needs(node.Step, unmet));
+            Report(node.Location, ProblemSeverity.Warning, ScenarioMessages.Needs(node.Step, unmet));
 
         _held.Apply(node.Step);
     }
@@ -359,7 +359,7 @@ internal sealed class ScenarioCheck
         return File.Exists(file) ? Path.GetFullPath(file) : file;
     }
 
-    private void Report(SourceLocation location, CheckSeverity severity, string message)
+    private void Report(SourceLocation location, ProblemSeverity severity, string message)
     {
         Add(new CheckProblem(location, severity, _ranFrom == null ? message : $"{message} (run from {_ranFrom})"));
     }
