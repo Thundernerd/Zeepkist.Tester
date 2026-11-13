@@ -194,6 +194,19 @@ public static class InvalidSteps
         public int Number { get; set; }
     }
 
+    [ValueKind("private-getter", Substitute = nameof(Uid))]
+    public sealed class SubstituteWithAPrivateGetter
+    {
+        public string Uid { private get; set; }
+    }
+
+    [Step("substitute-with-a-private-getter")]
+    public sealed class HasSubstituteWithAPrivateGetter : Base
+    {
+        [Arg]
+        public Name<SubstituteWithAPrivateGetter> Value { get; set; }
+    }
+
     [Step("substitute-not-a-string")]
     public sealed class HasSubstituteNotAString : Base
     {

@@ -138,6 +138,7 @@ public class StepDescriptorRuleTests
     [Theory]
     [InlineData(typeof(InvalidSteps.HasSubstituteMissing), "Missing", "SubstituteMissing")]
     [InlineData(typeof(InvalidSteps.HasSubstituteNotAString), "Number", "SubstituteNotAString")]
+    [InlineData(typeof(InvalidSteps.HasSubstituteWithAPrivateGetter), "Uid", "SubstituteWithAPrivateGetter")]
     public void Build_SubstituteThatIsNotAStringProperty_Fails(Type stepType, string member, string typeName)
     {
         AssertFails(stepType, $"Value kind Substitute '{member}' ({InvalidStepsType}+{typeName}) isn't a public string property of it.");

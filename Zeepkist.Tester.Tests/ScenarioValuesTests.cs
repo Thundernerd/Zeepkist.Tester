@@ -229,6 +229,14 @@ public class ScenarioValuesTests
     }
 
     [Fact]
+    public void Define_KindWhoseSubstituteHasAPrivateGetter_FailsTheStepNamingIt()
+    {
+        var exception = Assert.Throws<StepFailedException>(() => new ScenarioValues().Define("lamp", new InvalidSteps.SubstituteWithAPrivateGetter()));
+
+        Assert.Equal($"Value kind Substitute 'Uid' ({typeof(InvalidSteps.SubstituteWithAPrivateGetter).FullName}) isn't a public string property of it.", exception.Message);
+    }
+
+    [Fact]
     public void Get_AnotherClassOfTheSameKind_FailsTheStepNamingBothClasses()
     {
         var values = new ScenarioValues();
