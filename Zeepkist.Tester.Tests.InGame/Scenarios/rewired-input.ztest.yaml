@@ -1,9 +1,18 @@
-description: Steers the soapbox in test mode through the game's input actions, whatever keys they're bound to
+description: Undoes in the editor and steers the soapbox in test mode through the game's input actions, whatever keys they're bound to
 start: editor
 steps:
   - place-start
+  - place-block: 2448
+  - expect-block-count: 2
+  - press-action: EditorUndo
+  - expect-block-count: 1
   - test-mode
   - wait: 1
-  - sample.expect-steering: { action: Horizontal, value: -1, for: 500ms }
-  - sample.expect-steering: { action: Horizontal, value: 1, for: 500ms }
+  - sample.watch-steering
+  - hold-action: { action: Horizontal, value: -1, for: 500ms }
+  - sample.expect-steering: -1
+  - wait: 500ms
+  - sample.watch-steering
+  - hold-action: { action: Horizontal, for: 500ms }
+  - sample.expect-steering: 1
   - back-to-editor

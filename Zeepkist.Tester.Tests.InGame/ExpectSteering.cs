@@ -7,44 +7,32 @@ using UnityEngine;
 namespace TNRD.Zeepkist.Tester.Tests.InGame;
 
 /// <summary>
-/// Holds an input action with <c>context.Input</c>, and checks the soapbox steers that way while it's held.
+/// Checks the soapbox steered one way since <c>watch-steering</c>, such as while <c>hold-action</c> held its action, and
+/// stops watching.
 /// </summary>
 [Step("expect-steering")]
 [Requires(typeof(InTestMode))]
 public sealed class ExpectSteering : Step
 {
-    /// <summary>The game's input action to hold.</summary>
+    /// <summary>Which way: below 0 for left, and above it for right, as the steering action's value goes.</summary>
     [Arg(Primary = true)]
-    public required string Action { get; set; }
-
-    /// <summary>What to hold it at: below 0 steers left.</summary>
-    [Arg]
-    public required float Value { get; set; }
-
-    /// <summary>How long.</summary>
-    [Arg]
-    public required Seconds For { get; set; }
+    public required float Way { get; set; }
 
     public override IEnumerator Run(IStepContext context)
     {
         var car = Object.FindObjectOfType<New_ControlCar>();
-        if (car == null)
+        var watch = car == null ? null : car.GetComponent<SteeringWatch>();
+        if (watch == null)
         {
-            context.Fail("There's no soapbox.");
+            context.Fail("Nothing watched the soapbox steer: watch-steering comes first.");
             yield break;
         }
 
-        var hold = context.Input.HoldAction(Action, For, Value);
-        var most = 0f;
-        while (hold.MoveNext())
-        {
-            yield return hold.Current;
-            if (Mathf.Abs(car.lerpedSteering) > Mathf.Abs(most))
-                most = car.lerpedSteering;
-        }
+        var most = watch.Most;
+        Object.Destroy(watch);
 
         // The player's setting turns steering round
-        var expected = Mathf.Sign(Value) * (car.invertSteering ? -1 : 1);
+        var expected = Mathf.Sign(Way) * (car.invertSteering ? -1 : 1);
         var steersWith = ReInput.mapping.GetAction(car.GetSteerBasedOnCurrentState().ID)?.name;
         var actual = $"steering at most {most:0.00}, with the soapbox steering by {steersWith}";
         if (Mathf.Abs(most) < 0.1f || Mathf.Sign(most) != expected)

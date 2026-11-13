@@ -29,6 +29,8 @@ public class CoreStepsTests
         "back-to-editor",
         "undo",
         "redo",
+        "press-action",
+        "hold-action",
     ];
 
     public static TheoryData<string> Names => new TheoryData<string>(_names);
@@ -126,6 +128,45 @@ public class CoreStepsTests
         Assert.Equal(ArgumentKind.Ref, block.Type.Kind);
         Assert.Equal("block", name.Type.ValueKind);
         Assert.Equal("block", block.Type.ValueKind);
+    }
+
+    [Fact]
+    public void PressAction_TakesTheActionByName_AnywhereInTheGame()
+    {
+        var step = Step("press-action");
+
+        var action = Assert.Single(step.Arguments);
+        Assert.Equal("action", action.Name);
+        Assert.True(action.IsPrimary);
+        Assert.True(action.IsRequired);
+        Assert.Equal(ArgumentKind.String, action.Type.Kind);
+        Assert.Empty(step.Requires);
+        Assert.Empty(step.Enters);
+        Assert.Empty(step.Leaves);
+    }
+
+    [Fact]
+    public void HoldAction_TakesTheActionAndHowLong_AndHoldsItFullyUnlessGivenAValue()
+    {
+        var step = Step("hold-action");
+
+        Assert.Equal(["action", "for", "value"], step.Arguments.Select(argument => argument.Name));
+        var action = step.Arguments[0];
+        Assert.True(action.IsPrimary);
+        Assert.True(action.IsRequired);
+        Assert.Equal(ArgumentKind.String, action.Type.Kind);
+        var duration = step.Arguments[1];
+        Assert.True(duration.IsRequired);
+        Assert.Equal(ArgumentKind.Seconds, duration.Type.Kind);
+        var value = step.Arguments[2];
+        Assert.False(value.IsRequired);
+        Assert.Equal(ArgumentKind.Float, value.Type.Kind);
+        Assert.Equal("1", WrittenValue.DefaultText(value.Default));
+        Assert.Equal(-1, value.Minimum);
+        Assert.Equal(1, value.Maximum);
+        Assert.Empty(step.Requires);
+        Assert.Empty(step.Enters);
+        Assert.Empty(step.Leaves);
     }
 
     [Theory]
