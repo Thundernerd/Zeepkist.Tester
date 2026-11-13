@@ -29,7 +29,9 @@ internal sealed class RewiredDriver : IActionDriver
         if (actionId < 0)
             throw new StepFailedException($"The game has no input action called {action}.");
 
-        if (value != 0 && !ReInput.players.AllPlayers.Any(player => IsOn(player, actionId)))
+        // The players the game reads actions for, as the write below does, not Rewired's System player
+        var players = Resources.FindObjectsOfTypeAll<InputPlayerScriptableObject>();
+        if (value != 0 && !players.Any(player => IsOn(player.player, actionId)))
             throw new StepFailedException($"The game has {action} turned off right now.");
 
         _frames.Set(actionId, value);
