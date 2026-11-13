@@ -43,7 +43,7 @@ internal sealed class ScenarioLoader
         if (!_loaded.TryGetValue(file, out var scenario))
         {
             using var reader = new StreamReader(file);
-            scenario = ScenarioParser.Parse(file, reader, _steps);
+            scenario = ScenarioFiles.Read(file, reader, _steps);
             _loaded.Add(file, scenario);
         }
 

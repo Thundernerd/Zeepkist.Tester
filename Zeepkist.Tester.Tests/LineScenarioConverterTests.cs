@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using TNRD.Zeepkist.Tester.Cli;
@@ -92,13 +93,18 @@ public class LineScenarioConverterTests
         var yaml = LineScenarioConverter.Write(old, ZlsSteps.Registry);
         var scenario = ScenarioParser.Parse("new.ztest.yaml", new StringReader(yaml), ZlsSteps.Registry);
 
-        var expected = old.Entries.Select(entry => entry.Step).Where(step => step != null).ToList();
-        var actual = scenario.Steps.Cast<StepNode>().ToList();
+        AssertSameSteps(old.Steps, scenario.Steps.Cast<StepNode>().ToList(), yaml);
+        return yaml;
+    }
+
+    /// <summary>
+    /// Checks that both are the same steps, in order, with the same arguments, and names <paramref name="written"/>, what they were read from, when not.
+    /// </summary>
+    internal static void AssertSameSteps(IReadOnlyList<StepNode> expected, IReadOnlyList<StepNode> actual, string written)
+    {
         Assert.Equal(expected.Select(step => step.Step.FullName), actual.Select(step => step.Step.FullName));
         for (var i = 0; i < expected.Count; i++)
-            Assert.True(Same(expected[i].Arguments, actual[i].Arguments), $"Step {i + 1}, {expected[i].Step.FullName}, has other arguments in:\n{yaml}");
-
-        return yaml;
+            Assert.True(Same(expected[i].Arguments, actual[i].Arguments), $"Step {i + 1}, {expected[i].Step.FullName}, has other arguments in:\n{written}");
     }
 
     private static bool Same(ArgumentValue expected, ArgumentValue actual)

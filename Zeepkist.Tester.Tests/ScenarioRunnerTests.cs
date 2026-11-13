@@ -110,6 +110,19 @@ public sealed class ScenarioRunnerTests : IDisposable
     }
 
     [Fact]
+    public void AnOldZlstestFile_RunsFromTheEditor_AndItsFailurePointsAtItsOwnLine()
+    {
+        var path = Path.Combine(_folder.Path, "old.zlstest");
+        File.WriteAllText(path, "# Notes, then fails\nnote before\n\nfail why\nnote after\n");
+
+        Run(path);
+
+        Assert.Equal(["enter editor", "before", "screenshot old-failure"], Events);
+        Assert.Equal(["old:2 t.note pass", "old:4 t.fail FAIL"], _steps.Select(step => $"{step.Scenario}:{step.Line} {step.Name} {(step.Passed ? "pass" : "FAIL")}"));
+        Assert.Equal(path, _steps[1].File);
+    }
+
+    [Fact]
     public void TheFirstFailure_IsTheOneRecorded_AndTheStepRunsToItsEnd()
     {
         Run(Write("a", "steps:\n  - t.fail-twice\n"));
