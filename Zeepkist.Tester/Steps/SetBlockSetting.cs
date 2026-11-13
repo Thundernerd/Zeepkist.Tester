@@ -33,8 +33,7 @@ public sealed class SetBlockSetting : Step
             yield break;
 
         var block = central.GetBlock(context, Block);
-        var historyBefore = central.undoRedo.currentHistoryPosition;
-        var written = BlockEditing.ChangeSetting(block, Block.ToString(), Setting, Value);
+        var written = BlockEditing.ChangeSetting(central, block, Block.ToString(), Setting, Value, out var historyBefore);
         yield return null;
 
         var kept = BlockSettings.Of(block).Read(Setting);
