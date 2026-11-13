@@ -28,7 +28,7 @@ internal sealed class GameHost : IRunHost
         Game = game;
         _screenshots = screenshots;
         _walk = new StartWalk(game, logger, report);
-        Input_Legacy.Driver = new LegacyInputDriver(() => Time.frameCount);
+        Input_Legacy.Driver = new LegacyInputDriver(() => Time.frameCount, () => Time.unscaledDeltaTime);
         Action<Exception> logGiveBackFailure = exception => logger.LogError($"{TestRun.Marker} an input driver failed to give back: {exception}");
         var ugui = new UguiScene();
         var imui = new ImuiDriver(new ImuiBackend(ugui), () => Time.unscaledTime);
