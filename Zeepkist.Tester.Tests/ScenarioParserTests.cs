@@ -287,6 +287,16 @@ public class ScenarioParserTests
         Assert.Equal($"{Path.Combine("Scenarios", "Errors", fixture)}.ztest.yaml:{line}:{column}: {problem}", exception.Message);
     }
 
+    [Fact]
+    public void AFileWithSeveralProblems_FailsWithTheFirst()
+    {
+        var yaml = "steps:\n  - place-block: { colour: red, function: LAMP }\n  - wait: soon\n";
+
+        var exception = Assert.Throws<ScenarioException>(() => ScenarioParser.Parse("scenario.ztest.yaml", new StringReader(yaml), ScenarioSteps.Descriptors));
+
+        Assert.Equal("scenario.ztest.yaml:2:20: place-block has no argument 'colour'. It takes: function, as, how-many, offset.", exception.Message);
+    }
+
     private static StepNode StepAt(string fixture, int index)
     {
         return Assert.IsType<StepNode>(ScenarioSteps.Parse(fixture).Steps[index]);

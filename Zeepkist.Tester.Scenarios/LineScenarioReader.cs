@@ -198,7 +198,7 @@ internal sealed class LineScenarioReader
             throw new ScenarioException(location, $"{step.Name} needs the argument '{missing.Name}'.");
 
         var node = new StepNode(location, step, new ObjectArgument(location, values));
-        ValueChecks.Check(node, new Dictionary<string, IReadOnlyList<string>>());
+        ValueChecks.Check(node, new Dictionary<string, IReadOnlyList<string>>(), problem => throw problem);
         return node;
     }
 
