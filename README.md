@@ -2,7 +2,7 @@
 
 An in-game test harness for [Zeepkist](https://store.steampowered.com/app/1440670/Zeepkist/) mods. It runs scenarios inside the real game: the game starts through Steam, walks into the level editor (or the main menu, or free play), runs each scenario's steps, and reports what passed, what failed and what it logged, with screenshots. Afterwards it puts the game install and your mods' data back as they were.
 
-- **Scenarios** are YAML files, with completion and checking in VS Code, Rider and Visual Studio from a generated schema.
+- **Scenarios** are YAML files, with completion and checking in VS Code, Rider and Visual Studio from a generated schema (see [Editor support](#editor-support)).
 - **C# tests** (`[InGameTest]`) are for tests that need real logic.
 - **Steps** come from the tester itself (wait, screenshot, press, click, test mode, …) and from your mod, which registers its own in C#.
 - **Input** can be in-process and repeatable, or real OS input, the way a player's keyboard and mouse reach the game.
@@ -40,6 +40,29 @@ ztest check Scenarios/window.ztest.yaml --plugin bin/Debug/net472/MyMod.InGameTe
 ztest check                # the "scenarios" folder and "testPlugin" of the nearest zeepkist-test.json
 ztest check --registry     # states no step enters, and other smells in the steps and states themselves
 ```
+
+## Editor support
+
+Scenarios get completion, checking and hover docs from a JSON Schema of the tester's steps and your test plugin's:
+
+```sh
+ztest schema    # writes .ztest/schema.json next to the nearest zeepkist-test.json
+ztest init      # has VS Code check **/*.ztest.yaml against it, in .vscode/settings.json
+```
+
+`ztest check` rewrites the schema each time it runs under a `zeepkist-test.json`, so it keeps up with your steps. It's generated, so add `.ztest/` to `.gitignore`. A scenario can also name the schema itself, relative to its own file:
+
+```yaml
+# yaml-language-server: $schema=../.ztest/schema.json
+```
+
+| Editor | How it finds the schema | What works |
+| --- | --- | --- |
+| VS Code, with Red Hat's [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) | The `yaml.schemas` entry `ztest init` writes, or the modeline above | Not checked by hand yet. The schema is checked against this repo's in-game scenarios with ajv and the `yaml` package that extension uses. |
+| Rider | A `# $schema: ../.ztest/schema.json` comment at the top, or a mapping under *Settings → Languages & Frameworks → Schemas and DTDs → JSON Schema Mappings* | Not checked by hand yet. |
+| Visual Studio 2022 | Unverified: schema-driven YAML support from 17.1 is reported, for `.yaml` files only | Not checked by hand yet. |
+
+The schema is lenient where an editor reads YAML differently from the tester: a text value may be a number, and a mod's step may be written without its prefix whether or not `use:` lists its namespace. `ztest check` catches what it lets through.
 
 ## License
 

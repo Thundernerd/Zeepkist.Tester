@@ -2,7 +2,7 @@
 
 The typed list of steps that the YAML parser, the editor schema, the step reference docs, `ztest check`, `ztest convert` and C# tests all come from. It replaces ZeepLogicScript's `StepList` + `StepArgument` + the hand-kept step table + `StepListTests`. Background: [generic-tester.md](../research/generic-tester.md) §4 and §7, and [scenario-format.md](../research/scenario-format.md).
 
-Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4), named values (#5), the states with their runtime check (#6), the parser (#7), `ztest check` (#8), the walks to where a scenario starts (#12), the scenario runner with its context and hooks (#13), the core steps (#14) and C# tests (#21); the rest isn't, and its names are placeholders.
+Status: sketch. The attributes, argument types and descriptors are built (#3), and so are reading them offline (#4), named values (#5), the states with their runtime check (#6), the parser (#7), `ztest check` (#8), the walks to where a scenario starts (#12), the scenario runner with its context and hooks (#13), the core steps (#14), C# tests (#21) and the editor schema (#9); the rest isn't, and its names are placeholders.
 
 ## The one constraint that shapes it
 
@@ -242,7 +242,7 @@ public sealed class DragWindowEdge : Step
 - zls.drag-window-edge: { moves: [-50], sideways: true }
 ```
 
-A `Primary` list also takes a single item, and a nested class with its own `Primary` takes a scalar. So the short forms fall out of the same two rules, and the schema describes them as `oneOf`.
+A `Primary` list also takes a single item, and a nested class with its own `Primary` takes a scalar. So the short forms fall out of the same two rules, and the schema describes them as `anyOf`.
 
 ## A mod's steps
 
@@ -540,13 +540,23 @@ public sealed class WindowTests
 
 | Output | By | From |
 | --- | --- | --- |
-| `.ztest/schema.json` | `ztest schema` (also every `ztest` run) | Core + the repo's `[TestPlugin]` assemblies. Each step is a `oneOf` branch: a bare string, `{name: scalar}` for `Primary`, or `{name: {…}}` with `additionalProperties: false`. |
+| `.ztest/schema.json` | `ztest schema` (also every `ztest check` under a `zeepkist-test.json`, so it never goes stale) | Core + the repo's `[TestPlugin]` assemblies, as draft-07. Each step is a `oneOf` branch: a bare string `const` when it needs no arguments, and `{name: …}` with `additionalProperties: false` when it takes any, whose value is `{…}` or, with a `Primary`, a scalar. See *The editor schema*. |
 | `.vscode/settings.json` `yaml.schemas` entry | `ztest init` | `**/*.ztest.yaml` → the schema |
 | Step reference (Markdown) | `ztest docs` | `<summary>` docs, arguments, types, defaults, an example per step from `[Example("…")]` |
 | Offline checks | `ztest check [files or folders...] [--plugin <dll>]...`, `ztest check --registry` | The registry; reports `file:line:col: error\|warning: message`, and exits with 1 on errors |
 | `.zlstest` → YAML | `ztest convert` | The registry plus a `[LineSyntax("<function> [as <as>]")]` attribute per old step; see below |
 
 `ztest check` with no files checks the `scenarios` folder of the nearest `zeepkist-test.json`, and reads the steps of its `testPlugin`, a project or a DLL, unless `--plugin` names others. Of the files it's given, one that another runs is only followed from there, because it may need what that passes in through `with:`. It reports a file's first problem from loading, and then every problem with names and states. It stops following a scenario, with a warning, after a million steps of nested loops and `run:` files, and a value used in nested `for`s tries its first 1000 combinations.
+
+### The editor schema
+
+It's as strict as the parser wherever a schema can tell, and more lenient where it can't, so an editor never marks a scenario the parser reads:
+
+- The parser reads every scalar as text, but an editor reads a plain `2` as a number and `true` as a boolean. So a text argument (`string`, `TextBlock`, and the patterned ones: `Keys`, `FileName`, `Name`, `Ref`, `[Pattern]`) takes a number or a boolean as well, and only its text is checked against the pattern.
+- `int`, `Pixels`, `float`, `Seconds`, `bool` and enums take only their own type, or text with a `${name}` in it. `Seconds` also takes text such as `500ms`.
+- The schema can't see `use:`, so a mod's step is also taken without its prefix wherever it is, unless the tester has a step of that name. `ztest check` reports one without `use:`.
+- What only a sequence of nodes shows isn't in it: names used before they're defined, states, clashes that `use:` makes, and aliases. `ztest check` reports those.
+- Docs go in both `description` (Rider, Visual Studio) and `markdownDescription` (VS Code), with `default` from `[Arg(Default = …)]`.
 
 ## Moving ZLS's steps over
 
