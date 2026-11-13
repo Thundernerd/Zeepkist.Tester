@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using TNRD.Zeepkist.Tester.Scenarios;
@@ -84,7 +83,7 @@ internal sealed class ConvertCommand
                 errors++;
         }
 
-        _output.WriteLine($"Converted {Counted(converted, "file")}: {Counted(errors, "error")}.");
+        _output.WriteLine($"Converted {Counted.Of(converted, "file", "no")}: {Counted.Of(errors, "error", "no")}.");
         return errors == 0 ? 0 : 1;
     }
 
@@ -131,11 +130,5 @@ internal sealed class ConvertCommand
     {
         _output.WriteLine($"error: {problem}");
         return 1;
-    }
-
-    private static string Counted(int count, string what)
-    {
-        var number = count == 0 ? "no" : count.ToString(CultureInfo.InvariantCulture);
-        return $"{number} {what}{(count == 1 ? string.Empty : "s")}";
     }
 }
