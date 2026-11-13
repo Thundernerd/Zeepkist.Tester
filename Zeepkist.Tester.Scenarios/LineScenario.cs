@@ -7,13 +7,10 @@ namespace TNRD.Zeepkist.Tester.Scenarios;
 /// </summary>
 internal sealed class LineScenario
 {
-    public LineScenario(string file, IReadOnlyList<LineEntry> entries)
+    public LineScenario(IReadOnlyList<LineEntry> entries)
     {
-        File = file;
         Entries = entries;
     }
-
-    public string File { get; }
 
     /// <summary>
     /// Every line but those a step spans, in order.

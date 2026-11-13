@@ -64,7 +64,7 @@ internal sealed class LineScenarioReader
         if (!entries.Any(entry => entry.Step != null))
             throw new ScenarioException(new SourceLocation(_file, 1, 1), "The file has no steps.");
 
-        return new LineScenario(_file, entries);
+        return new LineScenario(entries);
     }
 
     /// <summary>
