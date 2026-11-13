@@ -14,9 +14,6 @@ internal sealed class ConvertCommand
 {
     public const string Usage = "  convert <files or folders> [--plugin <dll>]...    Writes each .zlstest file as a .ztest.yaml next to it";
 
-    private const string OldExtension = ".zlstest";
-    private const string NewExtension = ".ztest.yaml";
-
     private readonly TextWriter _output;
     private readonly List<string> _paths = [];
     private readonly List<string> _plugins = [];
@@ -66,9 +63,9 @@ internal sealed class ConvertCommand
                 continue;
             }
 
-            var inFolder = Directory.GetFiles(path, "*" + OldExtension, SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToList();
+            var inFolder = Directory.GetFiles(path, "*" + ScenarioFiles.OldExtension, SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToList();
             if (inFolder.Count == 0)
-                return Fail($"No {OldExtension} files in {path}.");
+                return Fail($"No {ScenarioFiles.OldExtension} files in {path}.");
 
             files.AddRange(inFolder);
         }
@@ -122,8 +119,8 @@ internal sealed class ConvertCommand
     private static string Target(string file)
     {
         var name = Path.GetFileName(file);
-        var stem = name.EndsWith(OldExtension, StringComparison.Ordinal) ? name.Substring(0, name.Length - OldExtension.Length) : Path.GetFileNameWithoutExtension(name);
-        return Path.Combine(Path.GetDirectoryName(file) ?? string.Empty, stem + NewExtension);
+        var stem = name.EndsWith(ScenarioFiles.OldExtension, StringComparison.Ordinal) ? name.Substring(0, name.Length - ScenarioFiles.OldExtension.Length) : Path.GetFileNameWithoutExtension(name);
+        return Path.Combine(Path.GetDirectoryName(file) ?? string.Empty, stem + ScenarioFiles.Extension);
     }
 
     private int Fail(string problem)
