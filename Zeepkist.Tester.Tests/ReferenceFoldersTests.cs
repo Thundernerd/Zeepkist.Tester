@@ -1,0 +1,147 @@
+using System.IO;
+using System.Text.Json;
+using TNRD.Zeepkist.Tester.Cli;
+using Xunit;
+
+namespace TNRD.Zeepkist.Tester.Tests;
+
+public class ReferenceFoldersTests
+{
+    [Fact]
+    public void For_PluginWithItsAssetsFile_TakesTheVersionItBuiltAgainst()
+    {
+        using var folder = new TemporaryFolder();
+        var cache = CacheWith(folder, "zeepkist.gamelibs", "17.32.1912", "18.10.2087");
+        var plugin = PluginBuiltWith(folder, cache, "Zeepkist.GameLibs/17.32.1912", "zeepkist.gamelibs/17.32.1912");
+
+        var folders = ReferenceFolders.For([plugin], _ => null);
+
+        Assert.Contains(Path.Combine(cache, "zeepkist.gamelibs", "17.32.1912", "lib"), folders);
+        Assert.DoesNotContain(Path.Combine(cache, "zeepkist.gamelibs", "18.10.2087", "lib"), folders);
+    }
+
+    [Fact]
+    public void For_RestoredVersionNotInTheCache_TakesTheNewest()
+    {
+        using var folder = new TemporaryFolder();
+        var cache = CacheWith(folder, "zeepkist.gamelibs", "18.7.2061", "18.10.2087");
+        var plugin = PluginBuiltWith(folder, cache, "Zeepkist.GameLibs/17.32.1912", "zeepkist.gamelibs/17.32.1912");
+
+        var folders = ReferenceFolders.For([plugin], _ => null);
+
+        Assert.Contains(Path.Combine(cache, "zeepkist.gamelibs", "18.10.2087", "lib"), folders);
+    }
+
+    [Fact]
+    public void For_RestoreFromAPackagesFolderThatIsGone_TakesTheRestoredVersionFromThisMachinesCache()
+    {
+        using var folder = new TemporaryFolder();
+        var cache = CacheWith(folder, "zeepkist.gamelibs", "17.32.1912", "18.10.2087");
+        var plugin = PluginBuiltWith(folder, Path.Combine(folder.Path, "gone"), "Zeepkist.GameLibs/17.32.1912", "zeepkist.gamelibs/17.32.1912");
+
+        var folders = ReferenceFolders.For([plugin], name => name == "NUGET_PACKAGES" ? cache : null);
+
+        Assert.Contains(Path.Combine(cache, "zeepkist.gamelibs", "17.32.1912", "lib"), folders);
+    }
+
+    [Fact]
+    public void For_NoVersionFromTheRestore_TakesTheNewestAndAStableOneOverItsPrerelease()
+    {
+        using var folder = new TemporaryFolder();
+        var cache = CacheWith(folder, "zeepsdk", "1.0.0", "1.0.0-beta", "0.9.0");
+        var plugin = PluginBuiltWith(folder, cache, "Other/1.0.0", "other/1.0.0");
+
+        var folders = ReferenceFolders.For([plugin], _ => null);
+
+        Assert.Contains(Path.Combine(cache, "zeepsdk", "1.0.0", "lib"), folders);
+        Assert.DoesNotContain(Path.Combine(cache, "zeepsdk", "1.0.0-beta", "lib"), folders);
+    }
+
+    [Fact]
+    public void For_PrereleasesOfOneVersion_TakesTheNewestByTheirNumbers()
+    {
+        using var folder = new TemporaryFolder();
+        var cache = CacheWith(folder, "zeepsdk", "1.0.0-beta.2", "1.0.0-beta.10", "1.0.0-alpha.11");
+        var plugin = PluginBuiltWith(folder, cache, "Other/1.0.0", "other/1.0.0");
+
+        var folders = ReferenceFolders.For([plugin], _ => null);
+
+        Assert.Contains(Path.Combine(cache, "zeepsdk", "1.0.0-beta.10", "lib"), folders);
+    }
+
+    [Fact]
+    public void For_NuGetConfigAboveThePlugin_TakesPackagesFromItsGlobalPackagesFolder()
+    {
+        using var folder = new TemporaryFolder();
+        var cache = CacheWith(folder, "zeepkist.gamelibs", "18.7.2061");
+        var plugin = PluginWithoutARestore(folder);
+        // Relative to the config's own folder
+        File.WriteAllText(Path.Combine(folder.Path, "nuget.config"), $"""
+            <?xml version="1.0" encoding="utf-8"?>
+            <configuration>
+              <config>
+                <add key="globalPackagesFolder" value="{Path.GetFileName(cache)}" />
+              </config>
+            </configuration>
+            """);
+
+        var folders = ReferenceFolders.For([plugin], _ => null);
+
+        Assert.Contains(Path.Combine(cache, "zeepkist.gamelibs", "18.7.2061", "lib"), folders);
+    }
+
+    [Fact]
+    public void For_NuGetPackagesSet_TakesItOverANuGetConfig()
+    {
+        using var folder = new TemporaryFolder();
+        var cache = CacheWith(folder, "zeepkist.gamelibs", "18.7.2061");
+        var plugin = PluginWithoutARestore(folder);
+        File.WriteAllText(Path.Combine(folder.Path, "nuget.config"), """
+            <configuration>
+              <config>
+                <add key="globalPackagesFolder" value="elsewhere" />
+              </config>
+            </configuration>
+            """);
+
+        var folders = ReferenceFolders.For([plugin], name => name == "NUGET_PACKAGES" ? cache : null);
+
+        Assert.Contains(Path.Combine(cache, "zeepkist.gamelibs", "18.7.2061", "lib"), folders);
+    }
+
+    private static string PluginWithoutARestore(TemporaryFolder folder)
+    {
+        var output = Directory.CreateDirectory(Path.Combine(folder.Path, "MyMod", "bin", "Debug", "net472")).FullName;
+        var plugin = Path.Combine(output, "MyMod.dll");
+        File.WriteAllBytes(plugin, []);
+        return plugin;
+    }
+
+    private static string CacheWith(TemporaryFolder folder, string package, params string[] versions)
+    {
+        var cache = Path.Combine(folder.Path, "cache");
+        foreach (var version in versions)
+            Directory.CreateDirectory(Path.Combine(cache, package, version, "lib"));
+
+        return cache;
+    }
+
+    private static string PluginBuiltWith(TemporaryFolder folder, string cache, string library, string libraryPath)
+    {
+        var plugin = PluginWithoutARestore(folder);
+        var project = Path.Combine(folder.Path, "MyMod");
+        Directory.CreateDirectory(Path.Combine(project, "obj"));
+        File.WriteAllText(Path.Combine(project, "obj", "project.assets.json"), $$"""
+            {
+              "version": 3,
+              "libraries": {
+                "{{library}}": { "type": "package", "path": "{{libraryPath}}" }
+              },
+              "packageFolders": {
+                {{JsonSerializer.Serialize(cache + Path.DirectorySeparatorChar)}}: {}
+              }
+            }
+            """);
+        return plugin;
+    }
+}
