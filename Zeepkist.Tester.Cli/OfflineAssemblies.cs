@@ -38,7 +38,7 @@ internal sealed class OfflineAssemblies : IDisposable
             if (other == null)
                 throw;
 
-            throw new UnreadableAssemblyException($"{other.Location} and {path} are both {name}. Pass only one of them.", exception);
+            throw new UnreadableAssemblyException($"{path} is another build of {name}, which is already read from {other.Location}. Only one build of an assembly can be read.", exception);
         }
     }
 

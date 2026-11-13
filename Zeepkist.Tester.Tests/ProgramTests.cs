@@ -176,7 +176,7 @@ public sealed class ProgramTests : IDisposable
         var debug = AnotherBuild.Of(_modPath, Path.Combine(_folder.Path, "Debug"));
 
         Assert.Equal(1, Run("check", file, "--plugin", _modPath, "--plugin", debug));
-        Assert.Equal([$"error: {_modPath} and {debug} are both Zeepkist.Tester.Tests.SampleMod. Pass only one of them."], Lines());
+        Assert.Equal([$"error: {debug} is another build of Zeepkist.Tester.Tests.SampleMod, which is already read from {_modPath}. Only one build of an assembly can be read."], Lines());
     }
 
     [Fact]
