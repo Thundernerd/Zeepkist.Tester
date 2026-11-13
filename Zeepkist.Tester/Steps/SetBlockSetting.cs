@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Linq;
 using TNRD.Zeepkist.Tester.Sdk;
 using TNRD.Zeepkist.Tester.States;
 
@@ -34,28 +33,8 @@ public sealed class SetBlockSetting : Step
             yield break;
 
         var block = central.GetBlock(context, Block);
-
-        var blockEdits = block.GetAllBlockEditV18sFromThisBlock();
-        if (blockEdits.Count == 0)
-        {
-            context.Fail($"{Block}, block type {block.blockID}, has no settings panel to change a setting in.");
-            yield break;
-        }
-
-        // The first one registers the undo step, once all of them hold the new value
-        blockEdits[0].RegisterUndoRedo();
-        var written = BlockSettings.Of(block).Write(Setting, Value, out var problem);
-        if (written == null)
-        {
-            context.Fail(problem);
-            yield break;
-        }
-
-        foreach (var blockEdit in blockEdits.Skip(1))
-            blockEdit.GetUpdateFromSlot_NoUndoRedo(0);
-
         var historyBefore = central.undoRedo.currentHistoryPosition;
-        blockEdits[0].GetUpdateFromSlot(0, updateSlots: true);
+        var written = BlockEditing.ChangeSetting(block, Block.ToString(), Setting, Value);
         yield return null;
 
         var kept = BlockSettings.Of(block).Read(Setting);
