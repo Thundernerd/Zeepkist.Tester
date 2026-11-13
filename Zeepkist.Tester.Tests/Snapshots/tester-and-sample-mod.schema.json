@@ -281,6 +281,77 @@
           {
             "type": "object",
             "properties": {
+              "hold-action": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ],
+                    "description": "The action, as the game's input settings name it, such as `Horizontal` for steering.",
+                    "markdownDescription": "The action, as the game's input settings name it, such as `Horizontal` for steering."
+                  },
+                  "for": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "^[0-9]+(\\.[0-9]+)?(ms|s)?$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ],
+                    "description": "How long to hold it.",
+                    "markdownDescription": "How long to hold it."
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -1,
+                        "maximum": 1
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "^[-+]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][-+]?[0-9]+)?$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ],
+                    "description": "What to hold it at: 1 for a button, and from -1 to 1 for an axis, such as below 0 to steer left with `Horizontal`.",
+                    "markdownDescription": "What to hold it at: 1 for a button, and from -1 to 1 for an axis, such as below 0 to steer left with `Horizontal`.",
+                    "default": 1
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "action",
+                  "for"
+                ],
+                "description": "Holds one of the game's input actions for a while, whatever keys the player bound it to, such as to steer the soapbox, and lets go of it when the time is up. It only works in-process, and fails on `input: os`.",
+                "markdownDescription": "Holds one of the game's input actions for a while, whatever keys the player bound it to, such as to steer the soapbox, and lets go of it when the time is up. It only works in-process, and fails on `input: os`."
+              }
+            },
+            "required": [
+              "hold-action"
+            ],
+            "additionalProperties": false,
+            "description": "Holds one of the game's input actions for a while, whatever keys the player bound it to, such as to steer the soapbox, and lets go of it when the time is up. It only works in-process, and fails on `input: os`.",
+            "markdownDescription": "Holds one of the game's input actions for a while, whatever keys the player bound it to, such as to steer the soapbox, and lets go of it when the time is up. It only works in-process, and fails on `input: os`."
+          },
+          {
+            "type": "object",
+            "properties": {
               "log": {
                 "anyOf": [
                   {
@@ -399,6 +470,50 @@
             "const": "place-start",
             "description": "Places a start block on the ground below the camera, facing the way it looks. It's one undo step, like placing it by hand.",
             "markdownDescription": "Places a start block on the ground below the camera, facing the way it looks. It's one undo step, like placing it by hand."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "press-action": {
+                "anyOf": [
+                  {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "action": {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean",
+                          "null"
+                        ],
+                        "description": "The action, as the game's input settings name it, such as `EditorUndo` or `EditorTestMap`.",
+                        "markdownDescription": "The action, as the game's input settings name it, such as `EditorUndo` or `EditorTestMap`."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "action"
+                    ]
+                  }
+                ],
+                "description": "Presses one of the game's input actions for a frame, whatever keys the player bound it to. It only works in-process, and fails on `input: os`.",
+                "markdownDescription": "Presses one of the game's input actions for a frame, whatever keys the player bound it to. It only works in-process, and fails on `input: os`."
+              }
+            },
+            "required": [
+              "press-action"
+            ],
+            "additionalProperties": false,
+            "description": "Presses one of the game's input actions for a frame, whatever keys the player bound it to. It only works in-process, and fails on `input: os`.",
+            "markdownDescription": "Presses one of the game's input actions for a frame, whatever keys the player bound it to. It only works in-process, and fails on `input: os`."
           },
           {
             "const": "redo",
