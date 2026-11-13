@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using TNRD.Zeepkist.Tester.Cli;
@@ -116,6 +117,20 @@ public class OfflineAssembliesTests
         var exception = Assert.Throws<StepDefinitionException>(() => new StepDescriptorBuilder().BuildRegistry([step], []));
 
         Assert.Equal($"{typeof(UnfoundSteps.StateBaseElsewhere).FullName} uses a type from Zeepkist.Tester.Tests.SampleCore, which can't be found.", exception.Message);
+    }
+
+    [Theory]
+    [InlineData(typeof(UnfoundSteps.TestConstructorElsewhere))]
+    [InlineData(typeof(UnfoundSteps.TestParameterElsewhere))]
+    public void BuildTest_TestWithATypeThatCantBeFound_NamesTheTestAndWhatsMissing(Type testClass)
+    {
+        using var folder = new TemporaryFolder();
+        using var assemblies = WithoutSampleCore(folder);
+        var test = LoadCopy(assemblies, folder, testClass).GetMethod("Test", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+
+        var exception = Assert.Throws<StepDefinitionException>(() => new StepDescriptorBuilder().BuildTest(test));
+
+        Assert.Equal($"{testClass.FullName}.Test uses a type from Zeepkist.Tester.Tests.SampleCore, which can't be found.", exception.Message);
     }
 
     /// <summary>

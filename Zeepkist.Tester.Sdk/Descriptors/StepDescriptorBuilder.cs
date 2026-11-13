@@ -157,6 +157,11 @@ public sealed class StepDescriptorBuilder
 
     public TestDescriptor BuildTest(MethodInfo method)
     {
+        return NamingWhatCantBeFound($"{method.DeclaringType.FullName}.{method.Name}", () => BuildTestMethod(method));
+    }
+
+    private TestDescriptor BuildTestMethod(MethodInfo method)
+    {
         var testAttribute = FindAttribute<InGameTestAttribute>(method)
             ?? throw new StepDefinitionException($"{method.DeclaringType.FullName}.{method.Name} has no [InGameTest] attribute.");
 
@@ -665,13 +670,21 @@ public sealed class StepDescriptorBuilder
     /// </summary>
     private static T NamingWhatCantBeFound<T>(Type owner, Func<T> build)
     {
+        return NamingWhatCantBeFound(owner.FullName, build);
+    }
+
+    /// <summary>
+    /// Builds something, and when a type it uses is in an assembly that can't be found, says that <paramref name="what"/> uses it and which assembly.
+    /// </summary>
+    private static T NamingWhatCantBeFound<T>(string what, Func<T> build)
+    {
         try
         {
             return build();
         }
         catch (FileNotFoundException exception)
         {
-            throw new StepDefinitionException($"{owner.FullName} uses a type from {MissingAssembly(exception)}, which can't be found.");
+            throw new StepDefinitionException($"{what} uses a type from {MissingAssembly(exception)}, which can't be found.");
         }
     }
 
