@@ -63,9 +63,12 @@ internal sealed class CheckCommand
 
     private int Run(string folder)
     {
-        var steps = PluginSteps.Read(_plugins, folder);
-        if (steps.Error != null)
-            return Fail(steps.Error);
+        var steps = ProjectSteps.Read(folder, _plugins, _output);
+        if (steps == null)
+            return 1;
+
+        if (steps.Config != null)
+            SchemaFile.WriteQuietly(steps.Config.Folder, steps.Registry, _output);
 
         return _checkRegistry ? CheckRegistry(steps.Registry) : CheckScenarios(steps.Registry, steps.Config);
     }

@@ -12,7 +12,7 @@ namespace TNRD.Zeepkist.Tester.Cli;
 /// </summary>
 internal sealed class ConvertCommand
 {
-    public const string Usage = "  convert <files or folders...> [--plugin <dll>]...   Writes each .zlstest file as a .ztest.yaml next to it";
+    public const string Usage = "  convert <files or folders> [--plugin <dll>]...    Writes each .zlstest file as a .ztest.yaml next to it";
 
     private const string OldExtension = ".zlstest";
     private const string NewExtension = ".ztest.yaml";
@@ -53,9 +53,9 @@ internal sealed class ConvertCommand
 
     private int Run(string folder)
     {
-        var steps = PluginSteps.Read(_plugins, folder);
-        if (steps.Error != null)
-            return Fail(steps.Error);
+        var steps = ProjectSteps.Read(folder, _plugins, _output);
+        if (steps == null)
+            return 1;
 
         var files = new List<string>();
         foreach (var path in _paths)
