@@ -42,6 +42,14 @@ internal sealed class OfflineAssemblies : IDisposable
         }
     }
 
+    /// <summary>
+    /// Where the assembly with a name was read from, or null when none of that name is read yet.
+    /// </summary>
+    public string Locate(string assemblyName)
+    {
+        return _context.GetAssemblies().FirstOrDefault(assembly => assembly.GetName().Name == assemblyName)?.Location;
+    }
+
     public void Dispose()
     {
         _context.Dispose();

@@ -67,6 +67,16 @@ public class OfflineRegistryTests
     }
 
     [Fact]
+    public void Read_StateFromAReferencedAssemblyThatIsntPassed_HasItsDocs()
+    {
+        // With the tester next to the CLI, SampleCore is only referenced by the mod: neither the tester nor a test plugin
+        var registry = OfflineRegistry.Read([_modPath]);
+
+        var coreState = registry.States.Single(state => state.FullName == "core.core-state");
+        Assert.Equal("A state in an assembly a mod references, for its states to nest in. It has a namespace because this isn't always the tester in the tests.", coreState.Documentation);
+    }
+
+    [Fact]
     public void Read_NamedValues_RecordsWhichArgumentsDefineAndUseThem()
     {
         var step = OfflineRegistry.Read([_modPath], _sampleTesterPath).Steps.Single(descriptor => descriptor.Name == "named-values");

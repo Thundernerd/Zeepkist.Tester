@@ -29,7 +29,7 @@ internal static class OfflineRegistry
         var builder = new StepDescriptorBuilder
         {
             TesterAssemblyName = tester.GetName().Name,
-            Summaries = XmlDocs.Read(withSteps.Select(assembly => assembly.Location)),
+            Summaries = XmlDocs.ReadWhenAsked(assemblies.Locate),
         };
 
         return builder.BuildRegistry(
