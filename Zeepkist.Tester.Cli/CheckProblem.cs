@@ -7,7 +7,7 @@ namespace TNRD.Zeepkist.Tester.Cli;
 /// </summary>
 internal sealed class CheckProblem
 {
-    public CheckProblem(SourceLocation location, CheckSeverity severity, string message)
+    public CheckProblem(SourceLocation location, ProblemSeverity severity, string message)
     {
         Location = location;
         Severity = severity;
@@ -16,7 +16,7 @@ internal sealed class CheckProblem
 
     public SourceLocation Location { get; }
 
-    public CheckSeverity Severity { get; }
+    public ProblemSeverity Severity { get; }
 
     public string Message { get; }
 

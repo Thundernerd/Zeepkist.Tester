@@ -11,17 +11,17 @@ internal static class CommandOutput
 {
     public static void WriteError(this TextWriter output, string problem)
     {
-        output.WriteLine(Line(null, CheckSeverity.Error, problem));
+        output.WriteLine(Line(null, ProblemSeverity.Error, problem));
     }
 
     public static void WriteError(this TextWriter output, SourceLocation location, string problem)
     {
-        output.WriteLine(Line(location, CheckSeverity.Error, problem));
+        output.WriteLine(Line(location, ProblemSeverity.Error, problem));
     }
 
     public static void WriteWarning(this TextWriter output, string problem)
     {
-        output.WriteLine(Line(null, CheckSeverity.Warning, problem));
+        output.WriteLine(Line(null, ProblemSeverity.Warning, problem));
     }
 
     /// <summary>
@@ -37,9 +37,9 @@ internal static class CommandOutput
     /// <summary>
     /// The line for a problem, null <paramref name="location"/> when it isn't in a file.
     /// </summary>
-    public static string Line(SourceLocation location, CheckSeverity severity, string problem)
+    public static string Line(SourceLocation location, ProblemSeverity severity, string problem)
     {
-        var label = severity == CheckSeverity.Error ? "error" : "warning";
+        var label = severity == ProblemSeverity.Error ? "error" : "warning";
         return location == null ? $"{label}: {problem}" : $"{location}: {label}: {problem}";
     }
 }

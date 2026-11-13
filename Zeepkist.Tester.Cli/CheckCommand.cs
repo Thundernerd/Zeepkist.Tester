@@ -118,7 +118,7 @@ internal sealed class CheckCommand
         foreach (var error in testErrors)
             _output.WriteError(error);
 
-        var warnings = problems.Count(problem => problem.Severity == CheckSeverity.Warning);
+        var warnings = problems.Count(problem => problem.Severity == ProblemSeverity.Warning);
         var errors = problems.Count - warnings + testErrors.Count;
         _output.WriteLine($"Checked {Counted.Of(files.Count, "file")}: {Counted.Of(errors, "error", "no")}, {Counted.Of(warnings, "warning", "no")}.");
         return errors == 0 ? 0 : 1;

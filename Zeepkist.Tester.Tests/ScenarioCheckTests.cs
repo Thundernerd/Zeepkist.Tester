@@ -276,7 +276,7 @@ public class ScenarioCheckTests
         var problems = await Task.Run(() => ScenarioCheck.Run([file], CheckSteps.Registry));
 
         var problem = Assert.Single(problems);
-        Assert.Equal(CheckSeverity.Warning, problem.Severity);
+        Assert.Equal(ProblemSeverity.Warning, problem.Severity);
         Assert.Contains("stops following it here", problem.Message);
     }
 
@@ -300,7 +300,7 @@ public class ScenarioCheckTests
 
         var problem = Assert.Single(ScenarioCheck.Run([file], CheckSteps.Registry));
 
-        Assert.Equal(CheckSeverity.Error, problem.Severity);
+        Assert.Equal(ProblemSeverity.Error, problem.Severity);
         Assert.StartsWith($"{file}:1:1: error: Can't read the file:", problem.ToString());
     }
 
