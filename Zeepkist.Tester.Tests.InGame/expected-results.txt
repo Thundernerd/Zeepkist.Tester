@@ -168,6 +168,17 @@ hold-action | rewired-input | pass
 sample.expect-steering | rewired-input | pass
 back-to-editor | rewired-input | pass
 main menu |  | pass
+new level |  | pass
+place-start | rewired-input-off | pass
+sample.turn-off-input | rewired-input-off | pass
+undo | rewired-input-off | FAIL
+main menu |  | pass
+new level |  | pass
+place-start | rewired-input-back-on | pass
+sample.turn-off-input | rewired-input-back-on | pass
+sample.turn-on-input | rewired-input-back-on | pass
+undo | rewired-input-back-on | pass
+main menu |  | pass
 sample.hover-level-editor-button | ugui-input | pass
 sample.show-ugui-button | ugui-input | pass
 sample.click-ugui-button | ugui-input | pass
