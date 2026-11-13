@@ -85,6 +85,46 @@ public sealed class ProgramTests : IDisposable
     }
 
     [Fact]
+    public void Check_AnOldFile_WarnsToConvertIt_AndSucceeds()
+    {
+        var file = Write("a.zlstest", "compile lamp\nwait 2\n");
+
+        Assert.Equal(0, Run("check", file, "--plugin", _modPath));
+        Assert.Equal([$"{file}:1:1: warning: .zlstest is the old format. Run ztest convert {file}.", "Checked 1 file: no errors, 1 warning."], Lines());
+    }
+
+    [Fact]
+    public void Check_AnOldFile_IsFollowedLikeYaml_WithItsOwnLineNumbers()
+    {
+        var file = Write("a.zlstest", "# Swaps\nwait 2\nswap-panel\n");
+
+        Assert.Equal(0, Run("check", file, "--plugin", _modPath));
+        Assert.Equal($"{file}:3:1: warning: sample.swap-panel needs core.core-state: Add core-step first.", Lines()[1]);
+        Assert.Equal("Checked 1 file: no errors, 2 warnings.", Lines()[2]);
+    }
+
+    [Fact]
+    public void Check_AnOldFileThatCantBeRead_IsAnErrorAtItsLine_AfterTheWarning()
+    {
+        var file = Write("a.zlstest", "compile lamp\nnope\n");
+
+        Assert.Equal(1, Run("check", file, "--plugin", _modPath));
+        Assert.Equal(
+            [$"{file}:1:1: warning: .zlstest is the old format. Run ztest convert {file}.", $"{file}:2:1: error: There's no step 'nope'.", "Checked 1 file: 1 error, 1 warning."],
+            Lines());
+    }
+
+    [Fact]
+    public void Check_AFolder_ChecksBothFormats()
+    {
+        var old = Write("a.zlstest", "compile lamp\n");
+        Write(Path.Combine("more", "b.ztest.yaml"), "steps:\n  - sample.compile: lamp\n");
+
+        Assert.Equal(0, Run("check", _folder.Path, "--plugin", _modPath));
+        Assert.Equal([$"{old}:1:1: warning: .zlstest is the old format. Run ztest convert {old}.", "Checked 2 files: no errors, 1 warning."], Lines());
+    }
+
+    [Fact]
     public void Check_NoFiles_UsesTheConfiguredFolderAndPlugin_FromAboveTheCurrentFolder()
     {
         Write("zeepkist-test.json", $$"""{ "scenarios": "tests", "testPlugin": {{System.Text.Json.JsonSerializer.Serialize(_modPath)}} }""");

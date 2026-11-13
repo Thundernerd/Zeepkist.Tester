@@ -15,8 +15,6 @@ internal sealed class CheckCommand
     public const string Usage = "  check [files or folders...] [--plugin <dll>]...   Checks scenarios offline, against the tester's steps and the plugins'\n"
         + "  check --registry [--plugin <dll>]...              Lists states no step enters, and other registry smells";
 
-    private const string ScenarioPattern = "*.ztest.yaml";
-
     private readonly TextWriter _output;
     private readonly List<string> _paths = [];
     private readonly List<string> _plugins = [];
@@ -104,9 +102,13 @@ internal sealed class CheckCommand
                 continue;
             }
 
-            var inFolder = Directory.GetFiles(path, ScenarioPattern, SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToList();
+            // .zlstest files too, for the one release both formats are read
+            var inFolder = new[] { ScenarioFiles.Extension, ScenarioFiles.OldExtension }
+                .SelectMany(extension => Directory.GetFiles(path, "*" + extension, SearchOption.AllDirectories))
+                .Order(StringComparer.Ordinal)
+                .ToList();
             if (inFolder.Count == 0)
-                return Fail($"No {ScenarioPattern.TrimStart('*')} files in {path}.");
+                return Fail($"No {ScenarioFiles.Extension} files in {path}.");
 
             files.AddRange(inFolder);
         }

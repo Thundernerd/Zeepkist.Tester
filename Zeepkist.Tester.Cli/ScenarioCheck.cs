@@ -82,7 +82,10 @@ internal sealed class ScenarioCheck
         try
         {
             text = File.ReadAllText(file);
-            var reading = ScenarioParser.ParseAll(file, new StringReader(text), _steps);
+            if (ScenarioFiles.IsOld(file))
+                Add(new CheckProblem(new SourceLocation(file, 1, 1), CheckSeverity.Warning, $"{ScenarioFiles.OldExtension} is the old format. Run ztest convert {file}."));
+
+            var reading = ScenarioFiles.ReadAll(file, new StringReader(text), _steps);
             scenario = reading.Scenario;
             if (scenario == null)
                 _brokenFiles.Add(text);
