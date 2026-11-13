@@ -238,7 +238,10 @@ internal static class ReferenceFolders
             if (!_packagePaths.TryGetValue(package, out var path))
                 return null;
 
-            return PackageFolders.Append(cache).Select(packageFolder => Path.Combine(packageFolder, path)).FirstOrDefault(Directory.Exists);
+            // The assets file writes the path with forward slashes, on Windows too
+            return PackageFolders.Append(cache)
+                .Select(packageFolder => Path.GetFullPath(Path.Combine(packageFolder, path)))
+                .FirstOrDefault(Directory.Exists);
         }
 
         private static Restore Read(string assetsFile)
