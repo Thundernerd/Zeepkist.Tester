@@ -41,6 +41,16 @@ ztest check                # the "scenarios" folder and "testPlugin" of the near
 ztest check --registry     # states no step enters, and other smells in the steps and states themselves
 ```
 
+## Converting `.zlstest` files
+
+`ztest convert` writes each of ZeepLogicScript's old `.zlstest` files as a `.ztest.yaml` next to it, and leaves the old file where it is. It won't write over a `.ztest.yaml` that's already there.
+
+```sh
+ztest convert Scenarios --plugin bin/Debug/net472/MyMod.InGameTests.dll
+```
+
+Each line becomes a step in its shortest YAML form, read by the step's `[LineSyntax("<function> [as <as>]")]`: `<name>` is one word of an argument, `<name...>` one or more, `[ … ]` can be left out, and other words are written as they are. A step without one takes the rest of the line as its primary argument. `set-text … end` becomes a `set-text: |-` block, `drag-window-edge … then …` a list of moves (`drag-window-edge-sideways` is `sideways: true`), `expect-error <line>:<column> <text>` a `{ line, column, message }` map, and `{uid:x}` a `${x}`. Comments stay where they were, and a mod's steps are listed under `use:`, or written with their namespace where the tester has a step of that name too.
+
 ## License
 
 [MIT](LICENSE)
