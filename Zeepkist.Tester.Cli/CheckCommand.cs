@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using TNRD.Zeepkist.Tester.Sdk;
 
 namespace TNRD.Zeepkist.Tester.Cli;
@@ -65,40 +64,14 @@ internal sealed class CheckCommand
 
     private int Run(string folder)
     {
-        TestConfig config;
-        try
-        {
-            config = TestConfig.Find(folder);
-        }
-        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
-        {
-            return Fail($"Can't read {TestConfig.FileName}: {exception.Message}");
-        }
+        var steps = ProjectSteps.Read(folder, _plugins, _output);
+        if (steps == null)
+            return 1;
 
-        if (_plugins.Count == 0 && config?.TestPlugin != null)
-        {
-            var plugin = config.FindTestPluginDll();
-            if (plugin == null)
-                return Fail($"Build {config.TestPlugin} first, or pass --plugin.");
+        if (steps.Config != null)
+            SchemaFile.WriteQuietly(steps.Config.Folder, steps.Registry, _output);
 
-            _plugins.Add(plugin);
-        }
-
-        StepRegistry registry;
-        try
-        {
-            registry = OfflineRegistry.Read(_plugins);
-        }
-        catch (StepDefinitionException exception)
-        {
-            return Fail(exception.Message);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or BadImageFormatException or TypeLoadException)
-        {
-            return Fail($"Can't read the plugins: {exception.Message}");
-        }
-
-        return _checkRegistry ? CheckRegistry(registry) : CheckScenarios(registry, config);
+        return _checkRegistry ? CheckRegistry(steps.Registry) : CheckScenarios(steps.Registry, steps.Config);
     }
 
     private int CheckRegistry(StepRegistry registry)

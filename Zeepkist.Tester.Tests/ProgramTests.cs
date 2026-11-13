@@ -182,6 +182,59 @@ public sealed class ProgramTests : IDisposable
         Assert.Contains("warning: No step enters the state 'core.core-state', so the offline check never sees it hold.", Lines());
     }
 
+    [Fact]
+    public void Schema_WritesItNextToTheConfig_WithTheConfiguredPluginsSteps()
+    {
+        WriteConfig();
+        var current = Directory.CreateDirectory(Path.Combine(_folder.Path, "deep", "down")).FullName;
+
+        Assert.Equal(0, RunIn(current, "schema"));
+        var schema = Path.Combine(_folder.Path, ".ztest", "schema.json");
+        Assert.Contains("\"sample.compile\"", File.ReadAllText(schema));
+        Assert.Equal($"Wrote {schema}.", Lines()[0]);
+    }
+
+    [Fact]
+    public void Schema_NoConfig_WritesItInTheCurrentFolder_WithThePluginsGiven()
+    {
+        Assert.Equal(0, RunIn(_folder.Path, "schema", "--plugin", _modPath));
+        Assert.Contains("\"sample.compile\"", File.ReadAllText(Path.Combine(_folder.Path, ".ztest", "schema.json")));
+    }
+
+    [Fact]
+    public void Schema_APluginThatCantBeRead_FailsAndWritesNothing()
+    {
+        Assert.Equal(1, RunIn(_folder.Path, "schema", "--plugin", Path.Combine(_folder.Path, "nope.dll")));
+        Assert.StartsWith("error: Can't read the plugins:", _output.ToString());
+        Assert.False(Directory.Exists(Path.Combine(_folder.Path, ".ztest")));
+    }
+
+    [Fact]
+    public void Schema_ABadOption_PrintsUsageAndFails()
+    {
+        Assert.Equal(1, Run("schema", "--nope"));
+        Assert.Contains("Usage: ztest", _output.ToString());
+    }
+
+    [Fact]
+    public void Check_WithAConfig_AlsoWritesTheSchema_SoItNeverGoesStale()
+    {
+        WriteConfig();
+        Write(Path.Combine("tests", "a.ztest.yaml"), "steps:\n  - sample.compile: lamp\n");
+
+        Assert.Equal(0, RunIn(_folder.Path, "check"));
+        Assert.Contains("\"sample.compile\"", File.ReadAllText(Path.Combine(_folder.Path, ".ztest", "schema.json")));
+    }
+
+    [Fact]
+    public void Check_WithoutAConfig_WritesNoSchema()
+    {
+        var file = Write("a.ztest.yaml", "steps:\n  - sample.compile: lamp\n");
+
+        Assert.Equal(0, RunIn(_folder.Path, "check", file, "--plugin", _modPath));
+        Assert.False(Directory.Exists(Path.Combine(_folder.Path, ".ztest")));
+    }
+
     private int Run(params string[] arguments)
     {
         return RunIn(Environment.CurrentDirectory, arguments);
@@ -190,6 +243,11 @@ public sealed class ProgramTests : IDisposable
     private int RunIn(string folder, params string[] arguments)
     {
         return Program.Run(arguments, _output, folder);
+    }
+
+    private void WriteConfig()
+    {
+        Write("zeepkist-test.json", $$"""{ "scenarios": "tests", "testPlugin": {{System.Text.Json.JsonSerializer.Serialize(_modPath)}} }""");
     }
 
     private string Write(string file, string text)
