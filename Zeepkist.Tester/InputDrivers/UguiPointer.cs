@@ -19,6 +19,13 @@ internal sealed class UguiPointer<TNode> : IInputDriver
     private readonly PointerState<TNode> _state = new PointerState<TNode>();
 
     /// <summary>
+    /// What took each held button's press, and where the pointer was then, as Unity's input module keeps a
+    /// <c>PointerEventData</c> per button: one button going down or up while another is held doesn't touch the other's.
+    /// In the order the input module goes through them.
+    /// </summary>
+    private readonly SortedDictionary<MouseButton, Press> _held = [];
+
+    /// <summary>
     /// What the pointer is in, from the object it's over up to the top.
     /// </summary>
     private readonly List<TNode> _entered = [];
@@ -71,13 +78,12 @@ internal sealed class UguiPointer<TNode> : IInputDriver
             return false;
 
         FindHit();
-        _state.Button = button;
-        _state.PressPosition = _state.Position;
-        _state.Pressed = Handler(_state.Hit, PointerEvent.Down);
-        if (_state.Pressed != null)
-            _scene.Send(_state.Pressed, PointerEvent.Down, _state);
-        else
-            _state.Pressed = Handler(_state.Hit, PointerEvent.Click);
+        var pressed = Handler(_state.Hit, PointerEvent.Down);
+        var press = new Press(pressed ?? Handler(_state.Hit, PointerEvent.Click), _state.Position);
+        _held[button] = press;
+        Use(button, press);
+        if (pressed != null)
+            _scene.Send(pressed, PointerEvent.Down, _state);
 
         EnterHit();
         return true;
@@ -95,13 +101,17 @@ internal sealed class UguiPointer<TNode> : IInputDriver
             return false;
 
         FindHit();
-        _state.Button = button;
-        var pressed = _state.Pressed;
-        if (pressed != null)
+        if (_held.TryGetValue(button, out var press))
         {
-            SendIfHandled(pressed, PointerEvent.Up);
-            if (Equals(Handler(_state.Hit, PointerEvent.Click), pressed))
-                _scene.Send(pressed, PointerEvent.Click, _state);
+            _held.Remove(button);
+            Use(button, press);
+            var pressed = press.Pressed;
+            if (pressed != null)
+            {
+                SendIfHandled(pressed, PointerEvent.Up);
+                if (Equals(Handler(_state.Hit, PointerEvent.Click), pressed))
+                    _scene.Send(pressed, PointerEvent.Click, _state);
+            }
         }
 
         _state.Pressed = null;
@@ -110,14 +120,22 @@ internal sealed class UguiPointer<TNode> : IInputDriver
     }
 
     /// <summary>
-    /// A held button goes up where it is, with no click, because the call that pressed it didn't finish. The pointer then
+    /// Each held button goes up where it is, with no click, because the call that pressed it didn't finish. The pointer then
     /// leaves what it's in, so nothing stays hovered for the player's mouse to find.
     /// </summary>
     public void GiveBack()
     {
-        if (_state.Pressed != null && Active)
-            SendIfHandled(_state.Pressed, PointerEvent.Up);
+        if (Active)
+        {
+            foreach (var held in _held)
+            {
+                Use(held.Key, held.Value);
+                if (held.Value.Pressed != null)
+                    SendIfHandled(held.Value.Pressed, PointerEvent.Up);
+            }
+        }
 
+        _held.Clear();
         _state.Pressed = null;
         _state.Hit = null;
         _placed = false;
@@ -125,6 +143,16 @@ internal sealed class UguiPointer<TNode> : IInputDriver
             EnterHit();
         else
             _entered.Clear();
+    }
+
+    /// <summary>
+    /// Has the events that follow carry the button and what took its press.
+    /// </summary>
+    private void Use(MouseButton button, Press press)
+    {
+        _state.Button = button;
+        _state.Pressed = press.Pressed;
+        _state.PressPosition = press.Position;
     }
 
     /// <summary>
@@ -186,4 +214,9 @@ internal sealed class UguiPointer<TNode> : IInputDriver
         _entered.Clear();
         _entered.AddRange(now);
     }
+
+    /// <summary>
+    /// A held button: what took its press, or null when nothing did, and where the pointer was as it went down.
+    /// </summary>
+    private readonly record struct Press(TNode Pressed, Vector2 Position);
 }

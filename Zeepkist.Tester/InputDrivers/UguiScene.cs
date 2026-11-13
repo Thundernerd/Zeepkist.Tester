@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Imui.IO.UGUI;
+using TNRD.Zeepkist.Tester.Sdk;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -20,9 +21,9 @@ internal sealed class UguiScene : IUguiScene<GameObject>
     private RaycastResult _lastHit;
 
     /// <summary>
-    /// What the pointer was over as its button last went down.
+    /// What the pointer was over as each button last went down.
     /// </summary>
-    private RaycastResult _pressHit;
+    private readonly Dictionary<MouseButton, RaycastResult> _pressHits = [];
 
     public bool Ready => EventSystem.current != null;
 
@@ -90,7 +91,9 @@ internal sealed class UguiScene : IUguiScene<GameObject>
             return;
 
         if (pointerEvent == PointerEvent.Down)
-            _pressHit = _lastHit;
+            _pressHits[state.Button] = _lastHit;
+
+        _pressHits.TryGetValue(state.Button, out var pressHit);
 
         var data = new PointerEventData(EventSystem.current)
         {
@@ -101,7 +104,7 @@ internal sealed class UguiScene : IUguiScene<GameObject>
             pointerPress = state.Pressed,
             rawPointerPress = state.Pressed,
             pressPosition = state.PressPosition,
-            pointerPressRaycast = _pressHit,
+            pointerPressRaycast = pressHit,
             eligibleForClick = state.Pressed != null,
             clickCount = 1,
             clickTime = Time.unscaledTime,

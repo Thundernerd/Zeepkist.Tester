@@ -59,6 +59,49 @@ public class UguiPointerTests
     }
 
     [Fact]
+    public void TwoButtonsHeldAtOnce_EachGoUpOnWhatTookTheirOwnPress_WithAClickOnlyWhereReleasedOverThat()
+    {
+        _pointer.MoveMouse(_onButton);
+        _pointer.PressButton(MouseButton.Left);
+        _pointer.DragMouse(Delta(_onButton, _onOther), MouseButton.Left);
+        _pointer.PressButton(MouseButton.Right);
+        _pointer.ReleaseButton(MouseButton.Right);
+        _scene.Sent.Clear();
+
+        _pointer.ReleaseButton(MouseButton.Left);
+
+        Assert.Equal(["Up menu/button Left"], _scene.Sent);
+    }
+
+    [Fact]
+    public void ASecondButtonPressedAndReleasedWhileTheFirstIsHeld_ClicksWhatItPressed()
+    {
+        _pointer.MoveMouse(_onButton);
+        _pointer.PressButton(MouseButton.Left);
+        _pointer.DragMouse(Delta(_onButton, _onOther), MouseButton.Left);
+        _scene.Sent.Clear();
+
+        _pointer.PressButton(MouseButton.Right);
+        _pointer.ReleaseButton(MouseButton.Right);
+
+        Assert.Equal(["Down menu/other Right", "Up menu/other Right", "Click menu/other Right"], _scene.Sent);
+    }
+
+    [Fact]
+    public void GiveBack_LetsGoOfEveryHeldButton()
+    {
+        _pointer.MoveMouse(_onButton);
+        _pointer.PressButton(MouseButton.Left);
+        _pointer.DragMouse(Delta(_onButton, _onOther), MouseButton.Left);
+        _pointer.PressButton(MouseButton.Right);
+        _scene.Sent.Clear();
+
+        _pointer.GiveBack();
+
+        Assert.Equal(["Up menu/button Left", "Up menu/other Right", "Exit menu/other"], _scene.Sent);
+    }
+
+    [Fact]
     public void MovingToSomethingElse_LeavesWhatItWasIn_AndEntersWhatItNowIs_ButNotWhatBothShare()
     {
         _scene.Handlers["menu"] = [PointerEvent.Enter, PointerEvent.Exit];
