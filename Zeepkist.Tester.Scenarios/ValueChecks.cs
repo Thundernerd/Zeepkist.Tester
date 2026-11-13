@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using TNRD.Zeepkist.Tester.Sdk;
@@ -15,18 +16,20 @@ internal sealed class ValueChecks
     private const int MostCombinations = 1000;
 
     private readonly IReadOnlyDictionary<string, IReadOnlyList<string>> _loopValues;
+    private readonly Action<ScenarioException> _report;
 
-    private ValueChecks(IReadOnlyDictionary<string, IReadOnlyList<string>> loopValues)
+    private ValueChecks(IReadOnlyDictionary<string, IReadOnlyList<string>> loopValues, Action<ScenarioException> report)
     {
         _loopValues = loopValues;
+        _report = report;
     }
 
     /// <param name="node">The step to check.</param>
     /// <param name="loopValues">The values of each <c>for</c> variable around the step.</param>
-    /// <exception cref="ScenarioException">A value doesn't fit its argument.</exception>
-    public static void Check(StepNode node, IReadOnlyDictionary<string, IReadOnlyList<string>> loopValues)
+    /// <param name="report">Takes each value that doesn't fit its argument, in the order they're written. It may throw to stop at the first.</param>
+    public static void Check(StepNode node, IReadOnlyDictionary<string, IReadOnlyList<string>> loopValues, Action<ScenarioException> report)
     {
-        new ValueChecks(loopValues).CheckArguments(node.Step.FullName, node.Step.Arguments, node.Arguments);
+        new ValueChecks(loopValues, report).CheckArguments(node.Step.FullName, node.Step.Arguments, node.Arguments);
     }
 
     /// <exception cref="ScenarioException">A <c>${</c> has no name and <c>}</c> after it.</exception>
@@ -50,7 +53,7 @@ internal sealed class ValueChecks
         {
             case ListArgument list:
                 if (list.Items.Count < argument.MinItems)
-                    throw new ScenarioException(list.Location, $"{what} needs at least {argument.MinItems} item{(argument.MinItems == 1 ? string.Empty : "s")}, not {list.Items.Count}.");
+                    _report(new ScenarioException(list.Location, $"{what} needs at least {argument.MinItems} item{(argument.MinItems == 1 ? string.Empty : "s")}, not {list.Items.Count}."));
 
                 foreach (var item in list.Items)
                     CheckValue(argument, type.ItemType, item, what);
@@ -65,14 +68,24 @@ internal sealed class ValueChecks
         }
     }
 
+    /// <summary>
+    /// Reports the first problem with a scalar, as one value written wrongly would be the same mistake for each value of a <c>for</c>.
+    /// </summary>
     private void CheckScalar(ArgumentDescriptor argument, ArgumentType type, ScalarArgument scalar, string what)
     {
-        var names = NamesIn(scalar).Distinct().ToList();
-        if (!names.All(_loopValues.ContainsKey))
-            return;
+        try
+        {
+            var names = NamesIn(scalar).Distinct().ToList();
+            if (!names.All(_loopValues.ContainsKey))
+                return;
 
-        foreach (var values in Combinations(names).Take(MostCombinations))
-            new WrittenValue(argument, type, Substitution.Replace(scalar.Text, name => values[name]), scalar.Location, what).Read();
+            foreach (var values in Combinations(names).Take(MostCombinations))
+                new WrittenValue(argument, type, Substitution.Replace(scalar.Text, name => values[name]), scalar.Location, what).Read();
+        }
+        catch (ScenarioException exception)
+        {
+            _report(exception);
+        }
     }
 
     /// <summary>
