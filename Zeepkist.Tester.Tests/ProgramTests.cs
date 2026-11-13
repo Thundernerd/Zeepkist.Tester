@@ -226,6 +226,15 @@ public sealed class ProgramTests : IDisposable
         Assert.Equal("Converted 2 files: no errors.", Lines()[^1]);
     }
 
+    [Fact]
+    public void Convert_AFolderWithoutOldFiles_Fails()
+    {
+        Write("a.ztest.yaml", "steps:\n  - undo\n");
+
+        Assert.Equal(1, Run("convert", _folder.Path));
+        Assert.Equal($"error: No .zlstest files in {_folder.Path}.", Lines()[0]);
+    }
+
     [Theory]
     [InlineData]
     [InlineData("--nope")]

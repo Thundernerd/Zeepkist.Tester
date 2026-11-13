@@ -61,10 +61,17 @@ internal sealed class ConvertCommand
         var files = new List<string>();
         foreach (var path in _paths)
         {
-            if (Directory.Exists(path))
-                files.AddRange(Directory.GetFiles(path, "*" + OldExtension, SearchOption.AllDirectories).Order(StringComparer.Ordinal));
-            else
+            if (!Directory.Exists(path))
+            {
                 files.Add(path);
+                continue;
+            }
+
+            var inFolder = Directory.GetFiles(path, "*" + OldExtension, SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToList();
+            if (inFolder.Count == 0)
+                return Fail($"No {OldExtension} files in {path}.");
+
+            files.AddRange(inFolder);
         }
 
         var errors = 0;
