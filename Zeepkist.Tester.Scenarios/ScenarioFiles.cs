@@ -15,6 +15,11 @@ internal static class ScenarioFiles
     public const string OldExtension = ".zlstest";
 
     /// <summary>
+    /// Both formats' extensions, the current one first.
+    /// </summary>
+    public static readonly IReadOnlyList<string> Extensions = [Extension, OldExtension];
+
+    /// <summary>
     /// Whether it's a <c>.zlstest</c>, read line by line.
     /// </summary>
     public static bool IsOld(string file)
@@ -27,7 +32,7 @@ internal static class ScenarioFiles
     /// </summary>
     public static string WithoutExtension(string name)
     {
-        foreach (var extension in new[] { Extension, OldExtension })
+        foreach (var extension in Extensions)
         {
             if (name.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
                 return name.Substring(0, name.Length - extension.Length);

@@ -115,9 +115,9 @@ public sealed class ProgramTests : IDisposable
     }
 
     [Fact]
-    public void Check_AFolder_ChecksBothFormats()
+    public void Check_AFolder_ChecksBothFormats_WhateverTheExtensionsCase()
     {
-        var old = Write("a.zlstest", "compile lamp\n");
+        var old = Write("a.ZLSTEST", "compile lamp\n");
         Write(Path.Combine("more", "b.ztest.yaml"), "steps:\n  - sample.compile: lamp\n");
 
         Assert.Equal(0, Run("check", _folder.Path, "--plugin", _modPath));
@@ -208,7 +208,7 @@ public sealed class ProgramTests : IDisposable
     public void Check_AFolderWithNoScenarios_Fails()
     {
         Assert.Equal(1, Run("check", _folder.Path));
-        Assert.Contains($"error: No .ztest.yaml files in {_folder.Path}.", _output.ToString());
+        Assert.Contains($"error: No .ztest.yaml or .zlstest files in {_folder.Path}.", _output.ToString());
     }
 
     [Fact]

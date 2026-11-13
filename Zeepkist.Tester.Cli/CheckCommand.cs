@@ -15,6 +15,15 @@ internal sealed class CheckCommand
     public const string Usage = "  check [files or folders...] [--plugin <dll>]...   Checks scenarios offline, against the tester's steps and the plugins'\n"
         + "  check --registry [--plugin <dll>]...              Lists states no step enters, and other registry smells";
 
+    // As SearchOption.AllDirectories, which skips nothing and fails on a folder it can't read, but in any case
+    private static readonly EnumerationOptions _anyCaseInSubfolders = new EnumerationOptions
+    {
+        RecurseSubdirectories = true,
+        MatchCasing = MatchCasing.CaseInsensitive,
+        AttributesToSkip = 0,
+        IgnoreInaccessible = false,
+    };
+
     private readonly TextWriter _output;
     private readonly List<string> _paths = [];
     private readonly List<string> _plugins = [];
@@ -103,12 +112,12 @@ internal sealed class CheckCommand
             }
 
             // .zlstest files too, for the one release both formats are read
-            var inFolder = new[] { ScenarioFiles.Extension, ScenarioFiles.OldExtension }
-                .SelectMany(extension => Directory.GetFiles(path, "*" + extension, SearchOption.AllDirectories))
+            var inFolder = ScenarioFiles.Extensions
+                .SelectMany(extension => Directory.GetFiles(path, "*" + extension, _anyCaseInSubfolders))
                 .Order(StringComparer.Ordinal)
                 .ToList();
             if (inFolder.Count == 0)
-                return Fail($"No {ScenarioFiles.Extension} files in {path}.");
+                return Fail($"No {string.Join(" or ", ScenarioFiles.Extensions)} files in {path}.");
 
             files.AddRange(inFolder);
         }
