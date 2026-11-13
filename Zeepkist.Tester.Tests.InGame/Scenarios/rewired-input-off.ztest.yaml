@@ -1,0 +1,7 @@
+description: An input action the game has turned off isn't sent, so undo fails while ZeepSDK has the level editor's input off, as a player's key would
+start: editor
+steps:
+  - place-start
+  - sample.turn-off-input: LevelEditor
+  # Fails on purpose: the game has EditorUndo turned off right now
+  - undo

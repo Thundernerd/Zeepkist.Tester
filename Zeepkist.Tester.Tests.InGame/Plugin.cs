@@ -22,6 +22,8 @@ public class Plugin : BaseUnityPlugin
             .Service(new HookCounts())
             .Service(_window)
             .Service(new UguiButton())
-            .Hooks(new CountingHooks());
+            .Service(new InputOff())
+            .Hooks(new CountingHooks())
+            .Hooks(new InputOffHooks());
     }
 }
