@@ -1,0 +1,30 @@
+# The showcase's Script: does placed(...) still find the lamp after test mode, once the window has rechecked?
+open-window
+new-library timingx
+set-text
+    function edge(x) -> rising
+        prev = delay(x, ticks: 1)
+        rising = x & !prev
+    end
+end
+new-script Lights
+place-block lamp as lamp
+set-text
+    p = player_input()
+    t = simple_telemetry()
+    power_display(t.speed)
+    toggler(timingx.edge(p.horn), targets: placed("{uid:lamp}"))
+end
+expect-no-errors
+compile
+expect-result Placed
+place-start
+test-mode
+wait 2
+back-to-editor
+open-window
+select-script Lights
+screenshot right-away
+wait 3
+screenshot after-wait
+expect-no-errors

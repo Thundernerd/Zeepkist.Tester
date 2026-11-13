@@ -1,0 +1,24 @@
+# The Libraries tab's libraries.json warning keeps the list and its footer in view, and goes again
+open-window
+new-library laps
+new-library timing
+new-library gates
+show-tab libraries
+
+# The warning is pinned above the list
+library-read-failed on
+screenshot warning
+expect-footer-in-view
+open-new
+expect-footer-in-view
+press-prompt cancel
+
+# Libraries still work with it showing
+new-library boosts
+select-library laps
+expect-footer-in-view
+
+library-read-failed off
+expect-footer-in-view
+screenshot no-warning
+expect-no-exceptions

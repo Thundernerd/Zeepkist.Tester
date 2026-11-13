@@ -1,0 +1,82 @@
+# The footer's prompts, result line and New stay in view, on both tabs and in a short window
+open-window
+new-script Horn booster
+new-script Gate timer
+new-script Last lap
+new-script Split one
+new-script Split two
+new-script Split three
+new-script Boost pad
+new-script Brake light
+new-script Finish flag
+new-script Lap counter
+new-script Start lamp
+new-script Checkpoint one
+new-script Checkpoint two
+new-script Speed gauge
+new-script Door left
+new-script Door right
+new-script Ramp up
+new-script Ramp down
+new-script Fan one
+new-script Fan two
+
+# New: the name prompt, a taken name, then a good one
+open-new
+expect-prompt new
+expect-footer-in-view
+type-name Gate timer
+press-prompt ok
+expect-prompt new
+expect-footer-in-view
+screenshot name-taken
+type-name Pit stop
+press-prompt ok
+expect-prompt none
+
+# Rename from the top row, then cancel
+open-rename Horn booster
+expect-prompt rename
+expect-footer-in-view
+press-prompt cancel
+expect-prompt none
+
+# Delete a compiled Script, keeping its blocks
+select-script Horn booster
+set-text
+power_display(1 & 1)
+end
+compile
+expect-blocks 3
+open-delete Horn booster
+expect-footer-in-view
+press-prompt keep-blocks
+expect-list-result kept its 3 blocks
+expect-blocks 3
+expect-footer-in-view
+screenshot deleted
+
+# Select group puts its result line in the footer
+select-group Last lap
+expect-list-result has no blocks in the level
+
+# A short window keeps two rows and New, with a prompt open
+set-window-height 300
+open-delete Gate timer
+expect-footer-in-view
+screenshot short-window
+press-prompt cancel
+
+# The Libraries tab works the same way
+show-tab libraries
+open-new
+type-name laps
+press-prompt ok
+open-rename laps
+expect-footer-in-view
+press-prompt cancel
+open-delete laps
+press-prompt delete
+expect-list-result Deleted "laps"
+screenshot libraries
+expect-no-exceptions

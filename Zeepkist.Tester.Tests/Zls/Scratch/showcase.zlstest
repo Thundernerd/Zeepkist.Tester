@@ -1,0 +1,61 @@
+# Screenshots that show the mod's work: a Library, completion, call help, an error, a Compile and test mode
+open-window
+set-window-size 1600 900
+center-window
+
+new-library timing
+set-text
+    function edge(x) -> rising
+        prev = delay(x, ticks: 1)
+        rising = x & !prev
+    end
+end
+expect-no-errors
+screenshot library
+
+new-script Lights
+set-text
+    t = simple_telemetry()
+    power_display(t.
+end
+caret-at-end
+complete
+expect-completion speed
+screenshot completion
+
+set-text
+    p = player_input()
+    x = logic(p.horn, p.brake,
+end
+caret-at-end
+press space
+expect-call-help logic(
+expect-call-help-active op_in
+screenshot call-help
+
+set-text
+    p = player_input()
+    power_display(timing.edgee(p.horn))
+end
+expect-errors 1
+screenshot error
+
+place-block lamp as lamp
+set-text
+    p = player_input()
+    t = simple_telemetry()
+    power_display(t.speed)
+    toggler(timing.edge(p.horn), targets: placed("{uid:lamp}"))
+end
+expect-no-errors
+compile
+expect-result Placed
+caret-at-start
+screenshot compiled
+
+place-start
+test-mode
+wait 2
+screenshot test-mode
+back-to-editor
+expect-no-exceptions

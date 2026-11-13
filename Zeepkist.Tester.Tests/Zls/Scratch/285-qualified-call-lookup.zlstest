@@ -1,0 +1,145 @@
+# Call help and named inputs keep working, and a qualified call borrows none of them (#285)
+
+# A Block Function call: call help and its named inputs
+open-window
+new-script Lookup
+set-text
+x = logic(1,
+end
+caret-at-end
+expect-call-help logic(a, b, op_in, op:
+expect-call-help-active b
+press space
+complete
+expect-completion b: input
+expect-completion op:
+screenshot block-function
+
+# A Block Function's Setting values after its colon
+set-text
+x = logic(1, 2, op:
+end
+caret-at-end
+press space
+complete
+expect-completion or
+screenshot block-function-values
+
+# A call to the Script's own Function: call help and its named inputs
+set-text
+    function edge(a, b) -> c
+        c = a & b
+    end
+    x = edge(1,
+end
+caret-at-end
+expect-call-help edge(a, b)
+expect-call-help-active b
+press space
+complete
+expect-completion b: input
+screenshot script-function
+
+# A Placed Block Reference: call help and its named inputs, without Settings
+place-block logic as gate
+set-text
+g = placed("{uid:gate}")
+x = g(1,
+end
+caret-at-end
+expect-call-help g(a, b, op_in)
+expect-call-help-active b
+press space
+complete
+expect-completion b: input
+expect-completion-missing op:
+screenshot placed-reference
+
+# A Library's edge, called qualified, gets none of the Script's edge's help or inputs
+show-tab libraries
+new-library timing
+set-text
+    function edge(x) -> y
+        y = x
+    end
+end
+show-tab scripts
+select-script Lookup
+set-text
+    function edge(a, b) -> c
+        c = a & b
+    end
+    x = timing.edge(
+end
+caret-at-end
+expect-no-call-help
+complete
+expect-completion logic
+expect-completion-missing a:
+expect-completion-missing b:
+screenshot qualified-function
+
+# Nor the Placed Block Reference's by the same name
+set-text
+g = placed("{uid:gate}")
+x = timing.g(
+end
+caret-at-end
+expect-no-call-help
+complete
+expect-completion logic
+expect-completion-missing a:
+expect-completion-missing op_in:
+screenshot qualified-placed
+
+# Nor the Block Function's inputs, Settings or Setting values
+set-text
+x = timing.logic(
+end
+caret-at-end
+expect-no-call-help
+complete
+expect-completion logic
+expect-completion-missing a:
+expect-completion-missing op:
+screenshot qualified-block-function
+set-text
+x = timing.logic(a, op:
+end
+caret-at-end
+press space
+complete
+expect-completion logic
+expect-completion-missing and
+expect-completion-missing or
+screenshot qualified-values
+
+# A Delay's call offers names defined below it, a qualified delay( doesn't
+set-text
+x = delay(
+a = 1
+end
+caret-at-start
+press end
+complete
+expect-completion a
+screenshot delay-ahead
+set-text
+x = timing.delay(
+a = 1
+end
+caret-at-start
+press end
+complete
+expect-completion logic
+expect-completion-missing a
+screenshot qualified-delay
+
+# The help of the call around a qualified one still shows
+set-text
+x = logic(timing.edge(
+end
+caret-at-end
+expect-call-help logic(a, b
+screenshot enclosing-call
+expect-no-exceptions

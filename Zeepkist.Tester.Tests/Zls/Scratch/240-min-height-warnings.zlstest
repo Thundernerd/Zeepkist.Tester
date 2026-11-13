@@ -1,0 +1,35 @@
+# #240: at the window's smallest height with a warning showing, the editor keeps three rows and the error panel's header
+open-window
+new-script Horn booster
+
+# A Script with text that was never compiled shows its storage warning under the name row
+set-text
+power_display(1 & 1)
+end
+set-window-height 64
+expect-editor-in-view
+expect-footer-in-view
+screenshot storage-warning-smallest
+
+# The startup check's warnings too, above the name row
+startup-warning on
+set-window-height 64
+expect-editor-in-view
+expect-footer-in-view
+screenshot both-warnings-smallest
+
+# Only the startup check's, once the Script is stored
+compile
+expect-result Placed
+set-window-height 64
+expect-editor-in-view
+screenshot startup-warning-smallest
+startup-warning off
+
+# Room for them all again at the default height
+set-window-height 640
+expect-editor-in-view
+screenshot default-height
+
+# Put back what the next Scenario starts with
+expect-no-exceptions

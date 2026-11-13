@@ -1,0 +1,121 @@
+# #280: a Function's body ends at end, at the next function line and at the end of the Script, each with its
+# error from the window's check, a Compile that refuses to place with it, and the completion of its outputs, as before the refactor
+
+open-window
+new-script BodyEndReason
+
+# A finished Function: outputs on the dot, its input by name, call help, and its input in its body
+set-text
+    function f(zq) -> hi, lo
+        hi = zq
+        lo = !zq
+    end
+    r = f(1)
+    power_display(r.hi)
+end
+expect-no-errors
+compile
+expect-result Placed
+caret-at-end
+press enter
+type x = r.
+expect-completion hi output
+expect-completion lo output
+press escape
+press enter
+type f(zq
+expect-call-help f(zq)
+complete
+expect-completion zq: input
+screenshot finished
+press escape
+set-text
+    function f(zq) -> hi, lo
+        hi =
+    end
+end
+caret-at-start
+press down
+press end
+press space
+complete
+expect-completion zq input
+screenshot finished-body
+
+# A Function still being typed, with no end yet: the same, from a call above it
+set-text
+    r = f(1)
+    function f(zq) -> hi, lo
+        hi = zq
+        lo = !zq
+end
+expect-errors 1
+expect-error 2:1 Function 'f' has no end
+compile
+expect-result Fix the errors first
+caret-at-start
+press end
+press enter
+type x = r.
+expect-completion hi output
+expect-completion lo output
+press escape
+press enter
+type f(zq
+expect-call-help f(zq)
+complete
+expect-completion zq: input
+screenshot no-end
+press escape
+caret-at-end
+press enter
+type lo =
+press space
+complete
+expect-completion zq input
+screenshot no-end-body
+
+# A Function followed by another function line before its end: the same
+set-text
+    r = f(1)
+    function f(zq) -> hi, lo
+        hi = zq
+        lo = !zq
+    function g()
+    end
+end
+expect-errors 1
+expect-error 5:1 Function 'f' has no end before this one
+compile
+expect-result Fix the errors first
+caret-at-start
+press end
+press enter
+type x = r.
+expect-completion hi output
+expect-completion lo output
+press escape
+press enter
+type f(zq
+expect-call-help f(zq)
+complete
+expect-completion zq: input
+screenshot next-function
+press escape
+set-text
+    function f(zq) -> hi, lo
+        hi = zq
+        lo =
+    function g()
+    end
+end
+caret-at-start
+press down
+press down
+press end
+press space
+complete
+expect-completion zq input
+screenshot next-function-body
+
+expect-no-exceptions

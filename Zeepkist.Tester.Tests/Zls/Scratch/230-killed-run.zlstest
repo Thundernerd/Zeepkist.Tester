@@ -1,0 +1,16 @@
+# #230: run by a script that kill -9s tools/ingame-test.sh once the game has started, lets the game quit, and runs it
+# again. Test mode and the trip back to the editor write Autosaves and Backups and the run saves the mod's config, so
+# the killed run leaves all three changed for the next run to put back.
+open-window
+new-script Lights
+set-text
+power_display(1 & 1)
+end
+compile
+expect-result Placed 3 blocks
+place-start
+test-mode
+wait 2
+back-to-editor
+expect-blocks 3
+screenshot back-in-editor

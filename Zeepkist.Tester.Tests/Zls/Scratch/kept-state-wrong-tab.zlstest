@@ -1,0 +1,3 @@
+# expect-tab sees the wrong tab
+open-window
+expect-tab libraries

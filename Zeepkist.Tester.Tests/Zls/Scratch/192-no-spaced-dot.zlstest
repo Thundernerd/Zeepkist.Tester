@@ -1,0 +1,29 @@
+# A spaced dot is an error at the dot, and the touching dot compiles
+open-window
+new-script Dots
+set-text
+t = simple_telemetry()
+power_display(t .speed)
+end
+expect-errors 1
+expect-error 2:17 Write the dot right after 't', without a space
+caret-at-end
+screenshot spaced-dot
+compile
+expect-blocks 0
+set-text
+t = simple_telemetry()
+power_display(t. speed)
+end
+expect-errors 1
+expect-error 2:16 Write 'speed' right after the dot, without a space
+set-text
+t = simple_telemetry()
+power_display(t.speed)
+end
+expect-no-errors
+compile
+expect-result Placed
+expect-blocks 2
+screenshot touching-dot
+expect-no-exceptions

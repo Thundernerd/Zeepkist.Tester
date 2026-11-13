@@ -1,0 +1,106 @@
+# Outputs after a placed(...) or Library Function call's dot (#191)
+
+# A Library with a Function of two outputs
+open-window
+new-library timing191
+set-text
+    function edge(a) -> lo, hi
+        lo = a
+        hi = !a
+    end
+end
+
+# A qualified call to it: the dot offers the Function's outputs, in the order its first line writes them
+new-script Dots191
+set-text
+x = timing191.edge(1).
+end
+caret-at-end
+complete
+expect-completion lo output
+expect-completion hi output
+screenshot library-outputs
+
+# A distance sensor in the level: placed("UID"). offers its outputs, without naming it first
+place-block distance_sensor as sensor
+set-text
+x = placed("{uid:sensor}").
+end
+caret-at-end
+complete
+expect-completion distance output
+expect-completion z output
+screenshot placed-outputs
+
+# A telemetry block in the level: the dot follows its mode there, and a mode changed in the level
+place-block simple_telemetry as telemetry
+set-text
+x = placed("{uid:telemetry}").
+end
+caret-at-end
+complete
+expect-completion speed output
+screenshot placed-basic-mode
+set-block-setting telemetry mode global_velocity
+caret-at-end
+complete
+expect-completion heading output
+screenshot placed-changed-mode
+
+# A lamp has no outputs, so placed("UID"). offers none
+place-block lamp as lamp
+set-text
+x = placed("{uid:lamp}").
+end
+caret-at-end
+complete
+expect-no-completion
+screenshot lamp-no-outputs
+
+# Typing the dot opens the list too
+set-text
+x = timing191.edge(1)
+end
+caret-at-end
+type .
+expect-completion lo output
+screenshot typed-dot
+
+# Accepting an output writes it after the dot
+press enter
+expect-text x = timing191.edge(1).lo
+expect-no-completion
+screenshot accepted-output
+
+# An error anywhere in the Library: the compiler rejects every call into it, so the dot offers nothing
+select-library timing191
+set-text
+    function edge(a) -> lo, hi
+        lo = a
+        hi = !a
+    end
+    x = 1
+end
+select-script Dots191
+set-text
+x = timing191.edge(1).
+end
+caret-at-end
+complete
+expect-no-completion
+screenshot library-error
+
+# With the error fixed, the outputs come back
+select-library timing191
+set-text
+    function edge(a) -> lo, hi
+        lo = a
+        hi = !a
+    end
+end
+select-script Dots191
+caret-at-end
+complete
+expect-completion hi output
+screenshot library-fixed
+expect-no-exceptions

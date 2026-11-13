@@ -1,0 +1,48 @@
+# The hover box tells about the name or error underline the mouse rests on
+
+open-window
+new-script Hover
+set-text
+x = logic(1, 2, op: or)
+y = logic(x, b: 3)
+power_display(nope)
+end
+expect-errors 1
+
+# A Block Function's name is its Reference entry
+hover logic(1
+expect-hover logic
+expect-hover inputs a, b
+screenshot function
+
+# A named argument is the row of the input or Setting it names
+hover b: 3
+expect-hover b input
+hover op: or
+expect-hover op and, or, nand
+screenshot setting
+
+# A defined name is the line that defines it
+hover x, b
+expect-hover 1: x = logic(1, 2, op: or)
+
+# An error underline is its message
+hover nope
+expect-hover 'nope' isn't defined
+screenshot error
+
+# A number has nothing to tell
+hover 2, op
+expect-no-hover
+
+# In a Library's editor too
+new-library timing
+set-text
+    function edge(a, b) -> lo
+        lo = logic(b, a)
+    end
+end
+hover a)
+expect-hover 1: function edge(a, b) -> lo
+
+expect-no-exceptions

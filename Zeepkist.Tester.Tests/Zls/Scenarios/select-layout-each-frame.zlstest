@@ -1,0 +1,24 @@
+# Clicking a Script whose storage warning shows, at the window's smallest height, keeps the editor and the error
+# panel's header in view in every frame, the one the warning first shows in too: the warning waits for a frame whose
+# minimum height counts it, rather than showing with the editor a warning row short.
+open-window
+
+# The startup check's warnings too, so the center sets the window's minimum height rather than the Scripts side
+startup-warning on
+
+# Never compiled, so it shows the storage warning
+new-script Horn booster
+set-text
+power_display(1 & 1)
+end
+
+# No text, so no warning
+new-script Empty
+set-window-height 64
+expect-editor-in-view
+
+# The warning shows from the frame after the one the click lands in, frame 0
+select-script Horn booster
+expect-editor-in-view-each-frame 5
+screenshot selected-smallest
+expect-no-exceptions

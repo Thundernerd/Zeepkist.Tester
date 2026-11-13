@@ -1,0 +1,21 @@
+# A Script drives a block in test mode, and is still in the window, with its blocks, back in the editor
+open-window
+new-script Lights
+set-text
+power_display(1 & 1)
+end
+compile
+expect-result Placed 3 blocks
+expect-blocks 3
+place-start
+test-mode
+wait 2
+screenshot running
+back-to-editor
+expect-blocks 3
+open-window
+select-script Lights
+expect-text power_display(1 & 1)
+expect-no-errors
+screenshot back-in-editor
+expect-no-exceptions

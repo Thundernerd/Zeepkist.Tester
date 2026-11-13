@@ -1,0 +1,16 @@
+# A Script compiles, places its blocks, and one undo removes them
+open-window
+new-script Lights
+set-text
+power_display(1 & 1)
+end
+expect-no-errors
+compile
+expect-result Placed 3 blocks
+expect-blocks 3
+screenshot compiled
+undo
+expect-blocks 0
+redo
+expect-blocks 3
+expect-no-exceptions

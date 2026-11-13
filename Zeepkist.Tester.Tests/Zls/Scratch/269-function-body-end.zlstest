@@ -1,0 +1,89 @@
+# #269: completion and call help find where a Function's body ends the way the parser does
+
+open-window
+new-script BodyEnd
+
+# A finished Function: outputs on the dot, its input by name, call help, and its input in its body
+set-text
+    function f(zq) -> hi, lo
+        hi = zq
+        lo = !zq
+    end
+    r = f(1)
+end
+expect-no-errors
+caret-at-end
+press enter
+type x = r.
+expect-completion hi output
+expect-completion lo output
+press escape
+press enter
+type f(zq
+expect-call-help f(zq)
+complete
+expect-completion zq: input
+screenshot finished
+set-text
+    function f(zq) -> hi, lo
+        hi =
+end
+caret-at-end
+complete
+expect-completion zq input
+
+# A Function still being typed, with no end yet: the same, from a call above it
+set-text
+    r = f(1)
+    function f(zq) -> hi, lo
+        hi = zq
+        lo = !zq
+end
+expect-error 2:1 Function 'f' has no end
+caret-at-start
+press end
+press enter
+type x = r.
+expect-completion hi output
+expect-completion lo output
+press escape
+press enter
+type f(zq
+expect-call-help f(zq)
+complete
+expect-completion zq: input
+screenshot no-end
+press escape
+caret-at-end
+press enter
+type lo =
+press space
+complete
+expect-completion zq input
+screenshot no-end-body
+
+# A Function followed by another function line before its end: the same
+set-text
+    r = f(1)
+    function f(zq) -> hi, lo
+        hi = zq
+        lo = !zq
+    function g()
+    end
+end
+expect-error 5:1 Function 'f' has no end before this one
+caret-at-start
+press end
+press enter
+type x = r.
+expect-completion hi output
+expect-completion lo output
+press escape
+press enter
+type f(zq
+expect-call-help f(zq)
+complete
+expect-completion zq: input
+screenshot next-function
+
+expect-no-exceptions

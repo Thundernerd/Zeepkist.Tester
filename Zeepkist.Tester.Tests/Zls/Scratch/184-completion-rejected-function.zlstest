@@ -1,0 +1,137 @@
+# Completion offers nothing from a Function whose first line the compiler rejects (#184)
+
+open-window
+new-script Rejected
+
+# A good first line: the dot offers the outputs, and the call its input by name
+set-text
+    function f(zq) -> hi, lo
+        hi = zq
+        lo = !zq
+    end
+    r = f(1)
+end
+expect-no-errors
+caret-at-end
+press enter
+type r.
+expect-completion hi output
+expect-completion lo output
+press escape
+press enter
+type f(zq
+complete
+expect-completion zq: input
+screenshot good-first-line
+press escape
+
+# A duplicate output: the compiler rejects the first line, and the dot offers nothing
+set-text
+    function f(zq) -> hi, hi
+        hi = zq
+    end
+    r = f(1)
+end
+expect-error 1:23 'hi' is already an output
+caret-at-end
+press enter
+type r.
+expect-no-completion
+screenshot duplicate-output-dot
+press enter
+type f(1).
+expect-no-completion
+press enter
+type f(zq
+complete
+expect-no-completion
+screenshot duplicate-output-call
+
+# An output with an input's name
+set-text
+    function f(zq) -> hi, zq
+        hi = zq
+    end
+    r = f(1)
+end
+expect-error 1:23 'zq' is an input
+caret-at-end
+press enter
+type r.
+expect-no-completion
+press enter
+type f(zq
+complete
+expect-no-completion
+screenshot output-named-as-input
+
+# Names after a syntax error on the first line
+set-text
+    function f(zq) -> hi, lo extra
+        hi = zq
+        lo = zq
+    end
+    r = f(1)
+end
+expect-error 1:26 Expected ','
+caret-at-end
+press enter
+type r.
+expect-no-completion
+press enter
+type f(zq
+complete
+expect-no-completion
+screenshot syntax-error
+
+# Fixing the first line brings the outputs back, without a Compile
+set-text
+    function f(zq) -> hi, lo
+        hi = zq
+        lo = zq
+    end
+    r = f(1)
+end
+caret-at-end
+press enter
+type r.
+expect-completion hi output
+expect-completion lo output
+screenshot fixed-first-line
+press escape
+
+# An input written twice: the call offers no inputs by name
+set-text
+    function f(zq, zq) -> hi, lo
+        hi = zq
+        lo = zq
+    end
+end
+expect-error 1:16 'zq' is already an input
+caret-at-end
+press enter
+type f(zq
+complete
+expect-no-completion
+screenshot duplicate-input
+
+# An output named after a Function defined below it
+set-text
+    function f(zq) -> hi, g
+        hi = zq
+    end
+    function g()
+    end
+    r = f(1)
+end
+expect-error 1:23 'g' is a function
+caret-at-end
+press enter
+type r.
+expect-no-completion
+press enter
+type f(zq
+complete
+expect-no-completion
+screenshot later-function-name
+expect-no-exceptions

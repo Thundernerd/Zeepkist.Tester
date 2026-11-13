@@ -1,0 +1,11 @@
+# expect-completion-missing fails when the completion list is closed: the last line must FAIL
+
+open-window
+new-script MissingClosed
+
+set-text
+v = logic(a,
+end
+caret-at-end
+expect-no-completion
+expect-completion-missing a:

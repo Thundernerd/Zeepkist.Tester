@@ -1,0 +1,28 @@
+# expect-completion-missing passes for a row the open completion list leaves out
+
+open-window
+new-script Missing
+
+# At an expression, Block Functions are offered but not a call's named arguments
+set-text
+x =
+end
+caret-at-end
+press space
+complete
+expect-completion logic
+expect-completion-missing op:
+screenshot expression
+
+# Inside a call, an input a positional argument gives isn't offered by name again
+set-text
+v = logic(a,
+end
+caret-at-end
+press space
+complete
+expect-completion b: input
+expect-completion-missing a:
+screenshot call
+
+expect-no-exceptions

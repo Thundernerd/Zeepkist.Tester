@@ -1,0 +1,52 @@
+# #214: at the window's smallest height, both tabs keep two list rows, a row of the open prompt, and New
+open-window
+new-script Horn booster
+new-script Gate timer
+new-script Last lap
+new-script Split one
+new-script Split two
+new-script Split three
+
+# Far below the minimum, which the window holds at
+set-window-height 64
+expect-footer-in-view
+screenshot scripts-smallest
+
+# A prompt open at the smallest height gets a row, the rest scrolls
+open-delete Gate timer
+expect-prompt delete
+expect-footer-in-view
+screenshot scripts-delete-prompt
+press-prompt cancel
+open-new
+expect-footer-in-view
+press-prompt cancel
+
+# The Libraries tab, at the same height
+show-tab libraries
+new-library laps
+new-library timing
+new-library gates
+expect-footer-in-view
+open-new
+expect-prompt new
+expect-footer-in-view
+screenshot libraries-new-prompt
+press-prompt cancel
+
+# The libraries.json warning showing raises the minimum by a row, which the warning scrolls in
+library-read-failed on
+set-window-height 64
+expect-footer-in-view
+screenshot libraries-warning
+open-new
+expect-prompt new
+expect-footer-in-view
+screenshot libraries-warning-new-prompt
+press-prompt cancel
+library-read-failed off
+
+# Put back what the next Scenario starts with
+show-tab scripts
+set-window-height 640
+expect-no-exceptions

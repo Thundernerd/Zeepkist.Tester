@@ -1,0 +1,41 @@
+# A placed(...) to a block in another Script's Block Group, or to a block whose style is turned off, is an error, and
+# so is a Script that places a turned-off style. turned-off-back-on, run after it, checks the styles are on again.
+open-window
+new-script Lights
+set-text
+power_display(1 & 1)
+end
+compile
+expect-result Placed 3 blocks
+
+# A Block Group's block, by name
+name-group-block Lights logic as gate
+new-script Gate
+set-text
+g = placed("{uid:gate}")
+end
+expect-errors 1
+expect-error 1:12 is in a Block Group
+
+# A placed-only type, turned off before the check sees it
+turn-off-style lamp
+place-block lamp as l
+new-script Lamp
+set-text
+l1 = placed("{uid:l}")
+end
+expect-errors 1
+expect-error 1:6 'lamp' doesn't match this game version and is turned off
+
+# A style a Script places, which the startup warnings list
+turn-off-style power_display
+new-script Display
+set-text
+power_display(1)
+end
+expect-error 1:1 'power_display style normal' doesn't match this game version and is turned off
+compile
+expect-result Fix the errors first
+expect-startup-warning on
+screenshot turned-off
+expect-no-exceptions

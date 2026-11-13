@@ -1,0 +1,2 @@
+# Never opens the window, so the run has no start rect yet, and the next Scenario gets the window's first size and place
+expect-blocks 0

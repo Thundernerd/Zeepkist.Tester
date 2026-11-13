@@ -1,0 +1,35 @@
+# The Blocks side's tabs switch, and the Reference tab's filter shows only the headings with a match, open: a Library's
+# Function under Libraries. It leaves the Reference tab shown with a filter typed, for the run to put back.
+open-window
+expect-blocks-tab placed
+show-blocks-tab reference
+expect-blocks-tab reference
+expect-reference-headings Inputs Operators Outputs Movers
+screenshot reference
+
+new-library timing
+set-text
+    function edge(x) -> rising
+        prev = delay(x, ticks: 1)
+        rising = x & !prev
+    end
+end
+expect-no-errors
+expect-reference-headings Inputs Operators Outputs Movers Libraries
+set-reference-filter timing.edge
+expect-reference-headings Libraries
+screenshot filtered
+
+set-reference-filter nothing-matches-this
+expect-reference-headings none
+
+set-reference-filter
+expect-reference-headings Inputs Operators Outputs Movers Libraries
+screenshot cleared
+
+show-blocks-tab placed
+expect-blocks-tab placed
+show-blocks-tab reference
+set-reference-filter timing.edge
+expect-blocks-tab reference
+expect-no-exceptions

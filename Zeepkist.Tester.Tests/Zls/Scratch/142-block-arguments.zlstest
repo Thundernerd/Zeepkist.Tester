@@ -1,0 +1,99 @@
+# A Block Function's arguments in call help, named-argument completion and the completion hint (#142)
+# Call help lists inputs, then Settings, then style:, then hide:. The hint leaves hide: out.
+open-window
+new-script Args142
+
+# logic: inputs and a Setting
+set-text
+x = logic(
+end
+caret-at-end
+expect-call-help logic(a, b, op_in, op:, hide:)
+screenshot logic-call-help
+complete
+expect-completion a: input
+expect-completion op_in: input
+expect-completion op: and, or, nand, nor, xor, xnor
+expect-completion hide: true, false
+expect-completion-missing style:
+screenshot logic-arguments
+press escape
+
+# delay: a required Number Setting
+set-text
+x = delay(
+end
+caret-at-end
+expect-call-help delay(x, ticks:, hide:)
+complete
+expect-completion x: input
+expect-completion ticks: number, at least 1 (required)
+expect-completion hide: true, false
+screenshot delay-arguments
+press escape
+
+# simple_telemetry: Settings only, no inputs
+set-text
+x = simple_telemetry(
+end
+caret-at-end
+expect-call-help simple_telemetry(player:, mode:, hide:)
+complete
+expect-completion player: 1, 2, 3, 4
+expect-completion mode: basic, local_velocity, global_velocity
+expect-completion hide: true, false
+screenshot telemetry-arguments
+press escape
+
+# power_display: style: comes before hide:
+set-text
+x = power_display(
+end
+caret-at-end
+expect-call-help power_display(x, style:, hide:)
+complete
+expect-completion x: input
+expect-completion style: normal, compact
+expect-completion hide: true, false
+screenshot power-display-arguments
+press escape
+
+# Given arguments drop out of the completions
+set-text
+x = power_display(style: compact, hide: true,
+end
+caret-at-end
+press space
+complete
+expect-completion x: input
+expect-completion-missing style:
+expect-completion-missing hide:
+press escape
+
+# The completion hint next to each Block Function: inputs, Settings and style:, without hide:
+set-text
+x =
+end
+caret-at-end
+complete
+expect-completion logic (a, b, op_in, op:)
+expect-completion delay (x, ticks:)
+expect-completion simple_telemetry (player:, mode:)
+expect-completion power_display (x, style:)
+expect-completion passthrough (x, style:)
+expect-completion mux multiplexer(in1, in2, in3, in4, select)
+screenshot hints
+press escape
+
+# After default, hide: is the one Setting offered
+set-text
+default
+end
+caret-at-end
+press space
+complete
+expect-completion hide: true, false
+expect-completion-missing op:
+screenshot default
+press escape
+close-window

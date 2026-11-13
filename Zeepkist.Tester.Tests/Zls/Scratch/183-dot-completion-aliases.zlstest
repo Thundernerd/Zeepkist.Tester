@@ -1,0 +1,108 @@
+# Dot completion follows a parenthesized value and an alias (#183)
+
+open-window
+new-script Aliases
+
+# A Function call in parentheses: the dot offers the Function's outputs
+set-text
+    function f(a) -> lo, hi
+        lo = a
+        hi = a
+    end
+    r = (f(1))
+    r.
+end
+caret-at-end
+complete
+expect-completion lo output
+expect-completion hi output
+screenshot paren-function
+
+# A name set to another name that calls the Function
+set-text
+    function f(a) -> lo, hi
+        lo = a
+        hi = a
+    end
+    r = f(1)
+    s = r
+    s.
+end
+caret-at-end
+complete
+expect-completion lo output
+expect-completion hi output
+screenshot alias-function
+
+# A Block Function call in parentheses: the dot offers the block's outputs
+set-text
+t = (simple_telemetry())
+t.
+end
+caret-at-end
+complete
+expect-completion speed output
+expect-completion state output
+screenshot paren-block
+
+# A name set to another name for a block, in its written mode
+set-text
+t = simple_telemetry(mode: global_velocity)
+u = t
+u.
+end
+caret-at-end
+complete
+expect-completion heading output
+screenshot alias-block
+
+# An alias compiles the way completion reads it
+set-text
+t = (simple_telemetry())
+u = t
+power_display(u.speed)
+end
+expect-no-errors
+expect-no-exceptions
+
+# Typing the dot opens the list on its own, for a name defined as another
+set-text
+    function f(a) -> lo, hi
+        lo = a
+        hi = a
+    end
+    r = (f(1))
+    s = r
+end
+caret-at-end
+press enter
+type s.
+expect-completion lo output
+expect-completion hi output
+screenshot typed-dot
+press escape
+
+# A name defined as a placed(...) name takes the block's inputs in its call
+place-block lamp as lamp
+set-text
+p = placed("{uid:lamp}")
+q = p
+end
+caret-at-end
+press enter
+type q(
+expect-call-help q(intensity, red, green, blue, range, angle)
+expect-completion intensity: input
+screenshot placed-alias-call
+press escape
+
+# A name defined as an operator has no outputs to list
+set-text
+t = simple_telemetry()
+w = t & 1
+end
+caret-at-end
+press enter
+type w.
+expect-no-completion
+expect-no-exceptions

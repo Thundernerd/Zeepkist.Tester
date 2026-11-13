@@ -1,0 +1,6 @@
+# The last Scenario's Libraries are gone, so the same name is free again
+open-window
+new-library shared
+new-library a
+screenshot libraries
+expect-no-exceptions

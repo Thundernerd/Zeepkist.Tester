@@ -1,0 +1,13 @@
+# Run after group-block-turned-off: the styles it turned off are on again in the next Scenario
+open-window
+expect-startup-warning off
+place-block lamp as l
+new-script Lamp
+set-text
+l1 = placed("{uid:l}")
+power_display(1)
+end
+expect-no-errors
+compile
+expect-result Placed
+expect-no-exceptions

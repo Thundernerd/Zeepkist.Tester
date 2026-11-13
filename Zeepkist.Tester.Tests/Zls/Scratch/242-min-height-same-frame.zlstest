@@ -1,0 +1,81 @@
+# #242: at the window's smallest height, the frame a storage warning first shows already has the editor's three rows
+# and the error panel's header. Needs select-script to select while the list draws, as a click does, and
+# expect-editor-in-view-each-frame.
+open-window
+
+# The startup check's warnings too, so the center, not the Scripts side, sets the window's minimum height
+startup-warning on
+
+# Never compiled, with text: it shows the storage warning
+new-script Horn booster
+set-text
+power_display(1 & 1)
+end
+
+# Empty: no warning, so the smallest window has no row for one
+new-script Quiet
+set-window-height 64
+
+# No wait: check the frame the click lands in and each one after, through the one the warning first shows in
+select-script Horn booster
+expect-editor-in-view-each-frame 5
+screenshot storage-warning-smallest
+
+# Back to the one without: no frame draws the other's warning above it (the result says which frames had one)
+select-script Quiet
+expect-editor-in-view-each-frame 3
+
+# Compile clearing the warning keeps the layout in every frame
+select-script Horn booster
+expect-editor-in-view-each-frame 3
+compile
+expect-result Placed
+expect-editor-in-view-each-frame 3
+
+# A Script with the warning again, to drag with
+new-script Siren
+set-text
+power_display(0 | 1)
+end
+
+# Dragging the edge with the mouse, from the default height far past the minimum: every frame of the drag keeps the
+# editor in view, and the window no shorter than its minimum
+set-window-height 640
+drag-window-edge -1000 over 10
+screenshot dragged-smallest
+
+# Still at the smallest height, a drag further down holds there
+drag-window-edge -200 over 4
+
+# Clicking between them at the smallest height, after the drag
+select-script Quiet
+expect-editor-in-view-each-frame 3
+select-script Siren
+expect-editor-in-view-each-frame 3
+
+# The window comes back where it was left, laid out from its first frame, after closing it and after test mode
+remember-window-rect
+close-window
+open-window
+expect-window-rect
+expect-editor-in-view-each-frame 3
+place-start
+test-mode
+back-to-editor
+open-window
+expect-window-rect
+expect-editor-in-view-each-frame 3
+
+# At the default height too, clicking between them keeps every frame in view; the results say which frames drew the
+# warning
+set-window-height 640
+select-script Quiet
+expect-editor-in-view-each-frame 3
+select-script Siren
+expect-editor-in-view-each-frame 3
+screenshot default-height
+
+# Put back what the next Scenario starts with
+startup-warning off
+set-window-height 640
+expect-no-exceptions
