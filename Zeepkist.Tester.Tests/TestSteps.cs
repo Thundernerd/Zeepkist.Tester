@@ -136,7 +136,7 @@ public static class TestSteps
 
     /// <summary>A block placed by a step, by its UID.</summary>
     [ValueKind("block", Substitute = nameof(Uid))]
-    public sealed class BlockValue
+    public sealed class PlacedBlock
     {
         public string Uid { get; set; }
     }
@@ -152,13 +152,13 @@ public static class TestSteps
     public sealed class Named : Step
     {
         [Arg]
-        public Name<BlockValue> Defines { get; set; }
+        public Name<PlacedBlock> Defines { get; set; }
 
         [Arg]
         public Name<WindowValue>? MaybeDefines { get; set; }
 
         [Arg]
-        public Ref<BlockValue> Uses { get; set; }
+        public Ref<PlacedBlock> Uses { get; set; }
 
         [Arg]
         public List<Ref<WindowValue>> UsesEach { get; set; }
@@ -214,10 +214,10 @@ public static class TestSteps
         public Keys Keys { get; set; }
 
         [Arg]
-        public Name<BlockValue> Defines { get; set; }
+        public Name<PlacedBlock> Defines { get; set; }
 
         [Arg]
-        public Ref<BlockValue> Uses { get; set; }
+        public Ref<PlacedBlock> Uses { get; set; }
 
         [Arg]
         public int GetOnly => 1;
