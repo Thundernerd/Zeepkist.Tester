@@ -271,7 +271,7 @@ public class LegacyInputDriverTests
     }
 
     [Fact]
-    public void GiveBack_LetsGoOfWhatsHeld_AndHandsBackThePlayersMouse()
+    public void GiveBack_LetsGoOfWhatsHeld_AndHandsBackThePlayersMouse_FromTheNextFrame()
     {
         _driver.PressKeys([Key(KeyCode.A, EventModifiers.Control), Key(KeyCode.A)]);
         _driver.MoveMouse(Point(100, 200));
@@ -279,6 +279,7 @@ public class LegacyInputDriverTests
         _frame = 11;
 
         _driver.GiveBack();
+        Assert.Equal((100f, 200f, 0f), Coordinates(_driver.MousePosition));
 
         _frame = 12;
         Assert.False(_driver.AnyKey);

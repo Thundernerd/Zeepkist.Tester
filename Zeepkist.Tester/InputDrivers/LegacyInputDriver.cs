@@ -69,11 +69,11 @@ internal sealed class LegacyInputDriver : IInputDriver
     private (int Frame, float X, float Y) _mouseDelta;
 
     /// <summary>
-    /// Where the game sees the mouse until <see cref="_movedFrame"/>, and where from then.
+    /// Where the game sees the mouse until <see cref="_movedFrame"/>, and where from then, null for the player's.
     /// </summary>
     private Vector3? _seenMouse;
     private Vector3? _movedMouse;
-    private int _movedFrame;
+    private int _movedFrame = int.MaxValue;
 
     /// <param name="frame">Unity's <c>Time.frameCount</c>.</param>
     /// <param name="deltaTime">Seconds since the frame before, for how far a key axis ramps in this one.</param>
@@ -156,8 +156,7 @@ internal sealed class LegacyInputDriver : IInputDriver
         }
 
         _mouseDelta = default;
-        _seenMouse = null;
-        _movedMouse = null;
+        MoveTo(null);
     }
 
     /// <summary>
@@ -169,10 +168,10 @@ internal sealed class LegacyInputDriver : IInputDriver
 
     /// <summary>
     /// Where the mouse is, in screen pixels counted from the bottom left, or null while it's the player's. A move is seen
-    /// from the frame after, with a drag's delta and the buttons pressed alongside it. Giving back hands the player the
-    /// mouse at once.
+    /// from the frame after, with a drag's delta and the buttons pressed alongside it, and so is giving it back to the
+    /// player, with the buttons going up.
     /// </summary>
-    public Vector3? MousePosition => _movedMouse != null && _frame() >= _movedFrame ? _movedMouse : _seenMouse;
+    public Vector3? MousePosition => _frame() >= _movedFrame ? _movedMouse : _seenMouse;
 
     /// <param name="button">0 for the left button, as Unity counts them.</param>
     public bool GetMouseButton(int button)
@@ -445,7 +444,7 @@ internal sealed class LegacyInputDriver : IInputDriver
         return strokes[strokes.Count - 1];
     }
 
-    private void MoveTo(Vector3 position)
+    private void MoveTo(Vector3? position)
     {
         _seenMouse = MousePosition;
         _movedMouse = position;
