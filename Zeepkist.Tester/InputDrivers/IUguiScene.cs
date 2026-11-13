@@ -21,6 +21,21 @@ internal interface IUguiScene<TNode>
     public bool ModuleReadsUnityInput { get; }
 
     /// <summary>
+    /// The event system's selected object, such as a focused input field, or null.
+    /// </summary>
+    public TNode Selected { get; }
+
+    /// <summary>
+    /// Whether the object can be selected, which is having a handler for being selected.
+    /// </summary>
+    public bool CanSelect(TNode node);
+
+    /// <summary>
+    /// Has the event system select nothing, which tells what was selected that it no longer is.
+    /// </summary>
+    public void Deselect();
+
+    /// <summary>
     /// The topmost object at the point, or null over none.
     /// </summary>
     /// <param name="screenPoint">In Unity's screen pixels, counted from the bottom left.</param>

@@ -78,6 +78,7 @@ internal sealed class UguiPointer<TNode> : IInputDriver
             return false;
 
         FindHit();
+        DeselectIfElsewhere();
         var pressed = Handler(_state.Hit, PointerEvent.Down);
         var press = new Press(pressed ?? Handler(_state.Hit, PointerEvent.Click), _state.Position);
         _held[button] = press;
@@ -143,6 +144,22 @@ internal sealed class UguiPointer<TNode> : IInputDriver
             EnterHit();
         else
             _entered.Clear();
+    }
+
+    /// <summary>
+    /// Selects nothing when the press isn't on what's selected, or on something in it, as the input module's
+    /// <c>DeselectIfSelectionChanged</c> does before a press goes down: a click elsewhere takes the focus from an input
+    /// field. Whatever the press lands on can then select itself.
+    /// </summary>
+    private void DeselectIfElsewhere()
+    {
+        var selected = _scene.Selected;
+        if (selected == null)
+            return;
+
+        var selectable = SelfAndAbove(_state.Hit).FirstOrDefault(_scene.CanSelect);
+        if (!Equals(selectable, selected))
+            _scene.Deselect();
     }
 
     /// <summary>

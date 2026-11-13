@@ -36,6 +36,19 @@ internal sealed class UguiScene : IUguiScene<GameObject>
         && module.input != null
         && module.input.GetType() == typeof(BaseInput);
 
+    public GameObject Selected => EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+
+    public bool CanSelect(GameObject node)
+    {
+        return node != null && ExecuteEvents.CanHandleEvent<ISelectHandler>(node);
+    }
+
+    public void Deselect()
+    {
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null, new BaseEventData(EventSystem.current));
+    }
+
     public GameObject HitAt(Vector2 screenPoint)
     {
         _results.Clear();

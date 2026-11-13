@@ -102,6 +102,32 @@ public class UguiPointerTests
     }
 
     [Fact]
+    public void APressOverSomethingElse_DeselectsWhatIsSelected_BeforeThePressGoesDown()
+    {
+        _scene.Selectable.Add("menu/field");
+        _scene.Selected = "menu/field";
+        _pointer.MoveMouse(_onButton);
+        _scene.Sent.Clear();
+
+        _pointer.PressButton(MouseButton.Left);
+
+        Assert.Null(_scene.Selected);
+        Assert.Equal(["Deselect menu/field", "Down menu/button Left"], _scene.Sent);
+    }
+
+    [Fact]
+    public void APressOverWhatIsSelected_KeepsItSelected()
+    {
+        _scene.Selectable.Add("menu/button");
+        _scene.Selected = "menu/button";
+        _pointer.MoveMouse(_onButton);
+
+        _pointer.PressButton(MouseButton.Left);
+
+        Assert.Equal("menu/button", _scene.Selected);
+    }
+
+    [Fact]
     public void MovingToSomethingElse_LeavesWhatItWasIn_AndEntersWhatItNowIs_ButNotWhatBothShare()
     {
         _scene.Handlers["menu"] = [PointerEvent.Enter, PointerEvent.Exit];
@@ -204,6 +230,10 @@ public class UguiPointerTests
 
         public bool ModuleReadsUnityInput { get; set; }
 
+        public HashSet<string> Selectable { get; } = [];
+
+        public string Selected { get; set; }
+
         public void Hit(Vector2 screenPoint, string node)
         {
             _hits[(screenPoint.x, screenPoint.y)] = node;
@@ -223,6 +253,17 @@ public class UguiPointerTests
         public bool Handles(string node, PointerEvent pointerEvent)
         {
             return Handlers.TryGetValue(node, out var events) && events.Contains(pointerEvent);
+        }
+
+        public bool CanSelect(string node)
+        {
+            return Selectable.Contains(node);
+        }
+
+        public void Deselect()
+        {
+            Sent.Add($"Deselect {Selected}");
+            Selected = null;
         }
 
         public void Send(string node, PointerEvent pointerEvent, PointerState<string> state)
