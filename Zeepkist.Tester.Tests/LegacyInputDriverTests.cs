@@ -11,13 +11,13 @@ namespace TNRD.Zeepkist.Tester.Tests;
 /// </summary>
 public class LegacyInputDriverTests
 {
+    private const float DeltaTime = 0.1f;
     private readonly LegacyInputDriver _driver;
     private int _frame = 10;
-    private readonly float _deltaTime = 0.1f;
 
     public LegacyInputDriverTests()
     {
-        _driver = new LegacyInputDriver(() => _frame, () => _deltaTime);
+        _driver = new LegacyInputDriver(() => _frame, () => DeltaTime);
     }
 
     [Fact]

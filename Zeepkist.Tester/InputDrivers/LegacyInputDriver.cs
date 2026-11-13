@@ -13,6 +13,16 @@ namespace TNRD.Zeepkist.Tester.InputDrivers;
 /// </summary>
 internal sealed class LegacyInputDriver : IInputDriver
 {
+    /// <summary>
+    /// How far a key axis moves in a second, towards where its keys push and back to 0, in the game's Input Manager.
+    /// </summary>
+    private const float KeyAxisSpeed = 3;
+
+    /// <summary>
+    /// How many strokes of a key it keeps, for a key axis read again after frames it wasn't.
+    /// </summary>
+    private const int KeptStrokes = 8;
+
     private static readonly (EventModifiers Modifier, KeyCode Key)[] _modifierKeys =
     [
         (EventModifiers.Shift, KeyCode.LeftShift),
@@ -27,7 +37,8 @@ internal sealed class LegacyInputDriver : IInputDriver
     private static readonly Dictionary<string, KeyCode> _names = NameKeys();
 
     /// <summary>
-    /// The game's Input Manager's axes that keys push, by name. Each has a gravity and a sensitivity of 3, and snaps.
+    /// The game's Input Manager's axes that keys push, by name. Each has a gravity and a sensitivity of
+    /// <see cref="KeyAxisSpeed"/>, and snaps.
     /// </summary>
     private static readonly Dictionary<string, (KeyCode[] Positive, KeyCode[] Negative)> _keyAxes = new Dictionary<string, (KeyCode[] Positive, KeyCode[] Negative)>
     {
@@ -46,19 +57,9 @@ internal sealed class LegacyInputDriver : IInputDriver
         ["Mouse Y"] = (false, 0.1f),
     };
 
-    /// <summary>
-    /// How far a key axis moves in a second, towards where its keys push and back to 0, in the game's Input Manager.
-    /// </summary>
-    private const float KeyAxisSpeed = 3;
-
     private readonly Func<int> _frame;
     private readonly Func<float> _deltaTime;
     private readonly Dictionary<string, (int Frame, float Value)> _ramps = [];
-    /// <summary>
-    /// How many strokes of a key it keeps, for a key axis read again after frames it wasn't.
-    /// </summary>
-    private const int KeptStrokes = 8;
-
     private readonly Dictionary<KeyCode, int> _heldKeys = [];
 
     /// <summary>
@@ -218,7 +219,7 @@ internal sealed class LegacyInputDriver : IInputDriver
         if (!_keyAxes.ContainsKey(name))
             return AxisRaw(name, player);
 
-        return Math.Max(-1, Math.Min(1, player + Ramp(name)));
+        return WithinOne(player + Ramp(name));
     }
 
     /// <summary>
@@ -230,7 +231,7 @@ internal sealed class LegacyInputDriver : IInputDriver
     {
         name ??= string.Empty;
         if (_keyAxes.ContainsKey(name))
-            return Math.Max(-1, Math.Min(1, player + Pushed(name, _frame())));
+            return WithinOne(player + Pushed(name, _frame()));
 
         if (!_mouseAxes.TryGetValue(name, out var mouse) || _mouseDelta.Frame != _frame())
             return player;
@@ -382,6 +383,11 @@ internal sealed class LegacyInputDriver : IInputDriver
     {
         var (positive, negative) = _keyAxes[axis];
         return positive.Concat(negative).SelectMany(StrokesOf).Select(stroke => stroke.Down).DefaultIfEmpty(int.MaxValue).Min();
+    }
+
+    private static float WithinOne(float value)
+    {
+        return Math.Max(-1, Math.Min(1, value));
     }
 
     private static float MoveTowards(float from, float to, float by)
