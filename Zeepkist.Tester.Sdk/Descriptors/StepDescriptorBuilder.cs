@@ -24,9 +24,6 @@ public sealed class StepDescriptorBuilder
 
     private static readonly Regex _kebabCase = new Regex("^[a-z0-9]+(-[a-z0-9]+)*$");
 
-    // A scenario reads these as control nodes, so a step with one of these names would be hidden when it's written unprefixed
-    private static readonly string[] _controlNodes = ["for", "repeat", "run"];
-
     private static readonly Dictionary<string, ArgumentType> _scalarTypes = new Dictionary<string, ArgumentType>()
     {
         [typeof(string).FullName] = new ArgumentType { Kind = ArgumentKind.String },
@@ -102,8 +99,8 @@ public sealed class StepDescriptorBuilder
             throw new StepDefinitionException($"{stepType.FullName} has [Step] but doesn't derive from Step.");
 
         var (name, stepNamespace) = ReadName(stepAttribute, stepType, "Step");
-        if (_controlNodes.Contains(name))
-            throw new StepDefinitionException($"Step name '{name}' ({stepType.FullName}) is reserved for a scenario's control nodes: for, repeat and run.");
+        if (ControlNodes.All.Contains(name))
+            throw new StepDefinitionException($"Step name '{name}' ({stepType.FullName}) is reserved for a scenario's control nodes: {string.Join(", ", ControlNodes.All.Take(ControlNodes.All.Count - 1))} and {ControlNodes.All.Last()}.");
 
         var arguments = BuildArguments(stepType, [stepType]);
         var lineSyntax = ConstructorValue<string>(FindAttribute<LineSyntaxAttribute>(stepType));
