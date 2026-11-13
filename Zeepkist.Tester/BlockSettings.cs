@@ -11,18 +11,37 @@ namespace TNRD.Zeepkist.Tester;
 /// </summary>
 internal sealed class BlockSettings
 {
-    private readonly Dictionary<string, int> _whole;
-    private readonly Dictionary<string, float> _decimals;
-    private readonly Dictionary<string, string> _text;
+    private readonly IReadOnlyList<ISettings> _types;
 
     /// <summary>
     /// Any of them can be null, as a block's are when it has no setting of that type.
     /// </summary>
     public BlockSettings(Dictionary<string, int> whole, Dictionary<string, float> decimals, Dictionary<string, string> text)
     {
-        _whole = whole;
-        _decimals = decimals;
-        _text = text;
+        _types =
+        [
+            new Settings<int>(whole, TryReadWhole, number => number.ToString(CultureInfo.InvariantCulture), "a whole number, true or false"),
+            new Settings<float>(decimals, TryReadDecimal, number => number.ToString("R", CultureInfo.InvariantCulture), "a number"),
+            new Settings<string>(text, TryReadText, text => text, takes: null),
+        ];
+    }
+
+    /// <summary>
+    /// The settings of one type: their values, how text becomes one and back, and what the type takes, for a value that
+    /// doesn't fit it.
+    /// </summary>
+    private interface ISettings
+    {
+        public IEnumerable<string> Keys { get; }
+
+        public bool Has(string key);
+
+        /// <summary>
+        /// Writes <paramref name="value"/> under <paramref name="key"/> when it fits, or gives why it doesn't.
+        /// </summary>
+        public string Write(string key, string value);
+
+        public string Read(string key);
     }
 
     public static BlockSettings Of(BlockProperties block)
@@ -37,39 +56,16 @@ internal sealed class BlockSettings
     /// </summary>
     public string Write(string key, string value, out string problem)
     {
-        problem = null;
-        if (_whole?.ContainsKey(key) == true)
+        var type = _types.FirstOrDefault(settings => settings.Has(key));
+        if (type == null)
         {
-            if (TryReadWhole(value, out var whole))
-            {
-                _whole[key] = whole;
-                return Read(key);
-            }
-
-            problem = $"{key} takes a whole number, true or false, not '{value}'";
-        }
-        else if (_decimals?.ContainsKey(key) == true)
-        {
-            if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
-            {
-                _decimals[key] = number;
-                return Read(key);
-            }
-
-            problem = $"{key} takes a number, not '{value}'";
-        }
-        else if (_text?.ContainsKey(key) == true)
-        {
-            _text[key] = value;
-            return value;
-        }
-        else
-        {
-            var keys = Keys(_whole).Concat(Keys(_decimals)).Concat(Keys(_text)).OrderBy(name => name, StringComparer.Ordinal).ToList();
+            var keys = _types.SelectMany(settings => settings.Keys).OrderBy(name => name, StringComparer.Ordinal).ToList();
             problem = $"The block has no setting '{key}'. It has {(keys.Count == 0 ? "none" : string.Join(", ", keys))}.";
+            return null;
         }
 
-        return null;
+        problem = type.Write(key, value);
+        return problem == null ? type.Read(key) : null;
     }
 
     /// <summary>
@@ -77,13 +73,7 @@ internal sealed class BlockSettings
     /// </summary>
     public string Read(string key)
     {
-        if (_whole != null && _whole.TryGetValue(key, out var whole))
-            return whole.ToString(CultureInfo.InvariantCulture);
-
-        if (_decimals != null && _decimals.TryGetValue(key, out var number))
-            return number.ToString("R", CultureInfo.InvariantCulture);
-
-        return _text != null && _text.TryGetValue(key, out var text) ? text : null;
+        return _types.FirstOrDefault(settings => settings.Has(key))?.Read(key);
     }
 
     private static bool TryReadWhole(string value, out int whole)
@@ -101,8 +91,53 @@ internal sealed class BlockSettings
         }
     }
 
-    private static IEnumerable<string> Keys<T>(Dictionary<string, T> dictionary)
+    private static bool TryReadDecimal(string value, out float number)
     {
-        return dictionary?.Keys ?? Enumerable.Empty<string>();
+        return float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out number);
+    }
+
+    private static bool TryReadText(string value, out string text)
+    {
+        text = value;
+        return true;
+    }
+
+    private delegate bool TryRead<T>(string value, out T read);
+
+    private sealed class Settings<T> : ISettings
+    {
+        private readonly Dictionary<string, T> _values;
+        private readonly TryRead<T> _tryRead;
+        private readonly Func<T, string> _write;
+        private readonly string _takes;
+
+        public Settings(Dictionary<string, T> values, TryRead<T> tryRead, Func<T, string> write, string takes)
+        {
+            _values = values;
+            _tryRead = tryRead;
+            _write = write;
+            _takes = takes;
+        }
+
+        public IEnumerable<string> Keys => _values?.Keys ?? Enumerable.Empty<string>();
+
+        public bool Has(string key)
+        {
+            return _values?.ContainsKey(key) == true;
+        }
+
+        public string Write(string key, string value)
+        {
+            if (!_tryRead(value, out var read))
+                return $"{key} takes {_takes}, not '{value}'";
+
+            _values[key] = read;
+            return null;
+        }
+
+        public string Read(string key)
+        {
+            return _write(_values[key]);
+        }
     }
 }
