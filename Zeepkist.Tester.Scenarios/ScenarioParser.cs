@@ -83,7 +83,7 @@ internal sealed class ScenarioParser
         if (root is not YamlMappingNode header)
             throw Fail(root, $"A scenario is a map with a steps: key, not {Describe(root)}.");
 
-        var entries = ReadKeys(header, "A scenario", "description", "use", "start", "input", "steps");
+        var entries = ReadKeys(header, "A scenario", "description", "use", "start", "input", "with", "steps");
         if (!entries.TryGetValue("steps", out var steps) && !_mapsWithUnknownKeys.Contains(header))
             _report(Fail(header, "A scenario needs steps:."));
 
@@ -92,10 +92,11 @@ internal sealed class ScenarioParser
         var start = entries.TryGetValue("start", out var startWritten) ? Attempt(() => ReadStart(startWritten)) : ScenarioStart.Default;
         var input = entries.TryGetValue("input", out var inputWritten) ? Attempt(() => ReadInput(inputWritten)) : InputRoute.InProcess;
         var use = entries.TryGetValue("use", out var useWritten) ? Attempt(() => ReadUse(useWritten)) ?? [] : [];
+        var takes = entries.TryGetValue("with", out var takesWritten) ? Attempt(() => ReadTakes(takesWritten)) : null;
         if (steps == null)
             return null;
 
-        return new Scenario(_file, description, use, start, input, ReadBody(steps, use));
+        return new Scenario(_file, description, use, start, input, takes, ReadBody(steps, use));
     }
 
     private List<string> ReadUse(YamlNode written)
@@ -113,6 +114,31 @@ internal sealed class ScenarioParser
             throw Fail(item, $"use: lists '{space}', but no step has that namespace.");
 
         return space;
+    }
+
+    /// <summary>
+    /// The header's <c>with:</c>: the names a <c>run:</c> of this file passes in.
+    /// </summary>
+    private List<string> ReadTakes(YamlNode written)
+    {
+        if (written is not YamlSequenceNode list)
+            throw Fail(written, "with: takes a list of the names a run: of this file passes in, such as [block, time].");
+
+        var names = new List<string>();
+        foreach (var item in list)
+        {
+            var name = Attempt(() => ReadTakenName(item, names));
+            if (name != null)
+                names.Add(name);
+        }
+
+        return names;
+    }
+
+    private string ReadTakenName(YamlNode item, List<string> names)
+    {
+        var name = ReadName(item, "a name");
+        return names.Contains(name) ? throw Fail(item, $"with: has the name '{name}' twice.") : name;
     }
 
     private ScenarioStart ReadStart(YamlNode written)

@@ -34,6 +34,8 @@ public class StepSchemaTests
     [InlineData("steps:\n  - every-type: { bool: \"true\", float: \"1.5\", axis: \"horizontal\" }\n")]
     [InlineData("steps:\n  - wait: \"2\"\n")]
     [InlineData("steps:\n  - repeat: \"2\"\n    steps:\n      - undo\n")]
+    [InlineData("with: [block, time]\nsteps:\n  - wait: ${time}\n")]
+    [InlineData("with: []\nsteps:\n  - undo\n")]
     [InlineData("description: ~\nsteps:\n  - written: { string: null }\n  - for: { h: [null] }\n    steps:\n      - undo\n")]
     public void Valid_AsTheParserReadsIt(string yaml)
     {
@@ -95,6 +97,9 @@ public class StepSchemaTests
     [InlineData("for-value-is-a-list")]
     [InlineData("for-value-is-an-expression")]
     [InlineData("for-values-are-a-scalar")]
+    [InlineData("header-with-bad-name")]
+    [InlineData("header-with-is-a-map")]
+    [InlineData("header-with-twice")]
     [InlineData("input-unknown")]
     [InlineData("list-for-a-single-value")]
     [InlineData("map-for-a-single-value")]

@@ -39,6 +39,16 @@ internal static class ScenarioMessages
         return $"run: '{file}' is already running here, so it would never end.";
     }
 
+    public static string RunWithMissing(string file, string name)
+    {
+        return $"run: '{file}' takes '{name}', but with: doesn't pass it.";
+    }
+
+    public static string RunWithUnknown(string file, string name, IReadOnlyList<string> takes)
+    {
+        return takes.Count == 0 ? $"run: '{file}' takes no '{name}'. It takes none." : $"run: '{file}' takes no '{name}'. It takes: {string.Join(", ", takes)}.";
+    }
+
     /// <summary>
     /// When the states a step needs don't hold.
     /// </summary>

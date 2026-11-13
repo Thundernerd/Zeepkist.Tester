@@ -190,6 +190,57 @@ public class ScenarioCheckTests
         Assert.Equal($"{called}:2:37: error: The name 'typo' {NotDefined} (run from {caller}:3:5)", problem.ToString());
     }
 
+    [Fact]
+    public void ARunFileCheckedAlone_KnowsTheNamesItsWithHeaderTakes_AndNoOthers()
+    {
+        using var folder = new TemporaryFolder();
+        var file = Write(folder, "shared.ztest.yaml", "with: [block, time]\nsteps:\n  - wait: ${time}\n  - place-block: \"${block}\"\n  - place-block: \"${lamp}\"\n");
+
+        var problem = Assert.Single(ScenarioCheck.Run([file], CheckSteps.Registry));
+
+        Assert.Equal($"{file}:5:18: error: The name 'lamp' {NotDefined}", problem.ToString());
+    }
+
+    [Fact]
+    public void ARunFileCheckedAlone_StartsWhereverItsCallerLeavesIt_SoOnlyWhatItLeavesItselfIsWarnedAbout()
+    {
+        using var folder = new TemporaryFolder();
+        var file = Write(folder, "shared.ztest.yaml", "with: []\nsteps:\n  - compile\n  - close-window\n  - new-script\n");
+
+        var problem = Assert.Single(ScenarioCheck.Run([file], CheckSteps.Registry));
+
+        Assert.Equal($"{file}:5:5: warning: new-script needs zls.window-open: Add open-window first.", problem.ToString());
+    }
+
+    [Fact]
+    public void ACallersWith_IsCheckedAgainstTheNamesTheFileTakes()
+    {
+        using var folder = new TemporaryFolder();
+        var caller = Write(folder, "a.ztest.yaml", "steps:\n  - run: b.ztest.yaml\n    with: { block: lamp, tiem: 1 }\n");
+        Write(folder, "b.ztest.yaml", "with: [block, time]\nsteps:\n  - wait: 1\n");
+
+        var problems = ScenarioCheck.Run([caller], CheckSteps.Registry).Select(problem => problem.ToString());
+
+        Assert.Equal(
+            [
+                $"{caller}:2:5: error: run: 'b.ztest.yaml' takes 'time', but with: doesn't pass it.",
+                $"{caller}:3:32: error: run: 'b.ztest.yaml' takes no 'tiem'. It takes: block, time.",
+            ],
+            problems);
+    }
+
+    [Fact]
+    public void ANameACallerLeavesOut_IsOnlyReportedAtTheCaller()
+    {
+        using var folder = new TemporaryFolder();
+        var caller = Write(folder, "a.ztest.yaml", "steps:\n  - run: b.ztest.yaml\n");
+        Write(folder, "b.ztest.yaml", "with: [time]\nsteps:\n  - wait: ${time}\n");
+
+        var problem = Assert.Single(ScenarioCheck.Run([caller], CheckSteps.Registry));
+
+        Assert.Equal($"{caller}:2:5: error: run: 'b.ztest.yaml' takes 'time', but with: doesn't pass it.", problem.ToString());
+    }
+
     [Fact(Timeout = 60000)]
     public async Task ManyNestedRepeats_StopBeingFollowed_AndSaySo()
     {
@@ -285,6 +336,22 @@ public class ScenarioCheckTests
     }
 
     [Fact]
+    public void ABadNameInAWithHeader_IsReported_AndTheOthersItTakesStillCount()
+    {
+        using var folder = new TemporaryFolder();
+        var file = Write(folder, "shared.ztest.yaml", "with: [time, \"b c\", time]\nsteps:\n  - wait: ${time}\n");
+
+        var problems = ScenarioCheck.Run([file], CheckSteps.Registry).Select(problem => problem.ToString());
+
+        Assert.Equal(
+            [
+                $"{file}:1:14: error: 'b c' can't be a name: it has to match ^[A-Za-z0-9_-]+$.",
+                $"{file}:1:21: error: with: has the name 'time' twice.",
+            ],
+            problems);
+    }
+
+    [Fact]
     public void AStepWithSeveralBadValues_ReportsEach()
     {
         using var folder = new TemporaryFolder();
@@ -346,7 +413,7 @@ public class ScenarioCheckTests
 
     [Theory]
     [InlineData("steps:\n  - place-block: { functoin: lamp }\n", "2:20: error: place-block has no argument 'functoin'. It takes: function, as, how-many, offset.")]
-    [InlineData("stepz:\n  - undo\n", "1:1: error: A scenario has no key 'stepz'. It takes: description, use, start, input, steps.")]
+    [InlineData("stepz:\n  - undo\n", "1:1: error: A scenario has no key 'stepz'. It takes: description, use, start, input, with, steps.")]
     public void AMisspelledKey_IsntAlsoReportedAsMissing(string yaml, string problem)
     {
         using var folder = new TemporaryFolder();
