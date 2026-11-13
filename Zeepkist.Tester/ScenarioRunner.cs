@@ -58,8 +58,8 @@ internal sealed class ScenarioRunner
         }
 
         var run = new RunContext(_host.Logger, Services());
-        var units = LoadAll(files).Select(scenario => RunningScenario.Of(scenario, new ScenarioContext(run, ScenarioName(scenario.File)), RunScenarioSteps))
-            .Concat(SelectTests(tests).Select(test => RunningScenario.Of(test, new ScenarioContext(run, test.Descriptor.Name), RunTest)))
+        var units = LoadAll(files).Select(scenario => RunUnit.Of(scenario, new ScenarioContext(run, ScenarioName(scenario.File)), RunScenarioSteps))
+            .Concat(SelectTests(tests).Select(test => RunUnit.Of(test, new ScenarioContext(run, test.Descriptor.Name), RunTest)))
             .ToList();
         if (units.Count == 0)
             yield break;
@@ -73,7 +73,7 @@ internal sealed class ScenarioRunner
         for (var i = 0; i < units.Count; i++)
         {
             var unit = units[i];
-            yield return RunScenario(unit, isFirst: i == 0);
+            yield return RunOne(unit, isFirst: i == 0);
             if (unit.StartFailed)
             {
                 ReportNotRun(units.Skip(i + 1), $"{unit.Name} couldn't get to where it starts, so the game is somewhere unknown.");
@@ -168,39 +168,39 @@ internal sealed class ScenarioRunner
         return true;
     }
 
-    private void ReportNotRun(IEnumerable<RunningScenario> scenarios, string why)
+    private void ReportNotRun(IEnumerable<RunUnit> units, string why)
     {
-        foreach (var scenario in scenarios)
-            _report(new RunStep { Name = "not run", Scenario = scenario.Name, File = scenario.File, Detail = why });
+        foreach (var unit in units)
+            _report(new RunStep { Name = "not run", Scenario = unit.Name, File = unit.File, Detail = why });
     }
 
-    private IEnumerator RunScenario(RunningScenario scenario, bool isFirst)
+    private IEnumerator RunOne(RunUnit unit, bool isFirst)
     {
-        _host.Logger.LogInfo($"{TestRun.Marker} scenario {scenario.Name}");
-        _exceptions.StartScenario(scenario.Name);
-        _host.Input.Route = scenario.InputRoute;
+        _host.Logger.LogInfo($"{TestRun.Marker} scenario {unit.Name}");
+        _exceptions.StartScenario(unit.Name);
+        _host.Input.Route = unit.InputRoute;
 
         var ready = true;
         if (!isFirst)
         {
             foreach (var hooks in Hooks)
-                yield return RunHook(scenario, hooks, nameof(IScenarioHooks.BeforeScenario), () => hooks.BeforeScenario(scenario.Context), () => ready = false);
+                yield return RunHook(unit, hooks, nameof(IScenarioHooks.BeforeScenario), () => hooks.BeforeScenario(unit.Context), () => ready = false);
         }
 
         if (ready)
         {
-            yield return EnterStart(scenario);
-            if (!scenario.StartFailed)
-                yield return scenario.RunBody();
+            yield return EnterStart(unit);
+            if (!unit.StartFailed)
+                yield return unit.RunBody();
         }
 
         foreach (var hooks in Hooks)
-            yield return RunHook(scenario, hooks, nameof(IScenarioHooks.AfterScenario), () => hooks.AfterScenario(scenario.Context), null);
+            yield return RunHook(unit, hooks, nameof(IScenarioHooks.AfterScenario), () => hooks.AfterScenario(unit.Context), null);
 
         _host.Input.GiveBack();
     }
 
-    private IEnumerator RunHook(RunningScenario scenario, IScenarioHooks hooks, string hook, Func<IEnumerator> routine, Action failed)
+    private IEnumerator RunHook(RunUnit unit, IScenarioHooks hooks, string hook, Func<IEnumerator> routine, Action failed)
     {
         Exception error = null;
         yield return GuardedRoutine.Run(Called(routine), exception => error = exception);
@@ -208,7 +208,7 @@ internal sealed class ScenarioRunner
             yield break;
 
         LogError(error);
-        _report(new RunStep { Name = $"{hooks.GetType().Name}.{hook}", Scenario = scenario.Name, File = scenario.File, Detail = Describe(error) });
+        _report(new RunStep { Name = $"{hooks.GetType().Name}.{hook}", Scenario = unit.Name, File = unit.File, Detail = Describe(error) });
         failed?.Invoke();
     }
 
@@ -220,34 +220,34 @@ internal sealed class ScenarioRunner
         yield return routine();
     }
 
-    private IEnumerator EnterStart(RunningScenario scenario)
+    private IEnumerator EnterStart(RunUnit unit)
     {
-        var start = scenario.Start;
+        var start = unit.Start;
         Exception error = null;
         var startedAt = _host.Now;
-        yield return GuardedRoutine.Run(_host.EnterStart(start, scenario.File), exception => error = exception);
+        yield return GuardedRoutine.Run(_host.EnterStart(start, unit.File), exception => error = exception);
         if (error == null)
             yield break;
 
-        scenario.StartFailed = true;
+        unit.StartFailed = true;
         if (error is not StartFailedException)
             LogError(error);
 
         _report(new RunStep
         {
             Name = $"start: {start.State.Name}",
-            Scenario = scenario.Name,
-            File = scenario.File,
+            Scenario = unit.Name,
+            File = unit.File,
             Line = (int)(start.Location?.Line ?? 0),
             Detail = error is StartFailedException ? error.Message : Describe(error),
             Seconds = Seconds(startedAt),
         });
-        yield return FailureScreenshot(scenario);
+        yield return FailureScreenshot(unit);
     }
 
-    private IEnumerator RunScenarioSteps(RunningScenario scenario, Scenario file)
+    private IEnumerator RunScenarioSteps(RunUnit unit, Scenario file)
     {
-        return RunNodes(scenario, file.Steps, Frame.Top(file.File));
+        return RunNodes(unit, file.Steps, Frame.Top(file.File));
     }
 
     /// <summary>
@@ -255,70 +255,70 @@ internal sealed class ScenarioRunner
     /// there when the test failed outside a step, recorded a check of its own, or ran no step, so every test shows. A failed step
     /// that stops the test doesn't hide what the test recorded before it.
     /// </summary>
-    private IEnumerator RunTest(RunningScenario scenario, InGameTest test)
+    private IEnumerator RunTest(RunUnit unit, InGameTest test)
     {
         var values = new ScenarioValues();
         var stepsRun = 0;
         var stopped = false;
-        var context = scenario.Context.ForStep(_host, _exceptions, values, step => RunTestStep(scenario, values, step, () => stepsRun++, () => stopped = true));
+        var context = unit.Context.ForTest(_host, _exceptions, values, step => RunTestStep(unit, values, step, () => stepsRun++, () => stopped = true));
         RunStep recorded = null;
         yield return RunRecorded(context, Called(() => test.Run(context)), step => recorded = step, error => error is TestStoppedException);
         if (!context.Failed && stepsRun > 0 && context.Detail.Length == 0 && context.Expected == null)
             yield break;
 
         recorded.Name = "test";
-        recorded.Scenario = scenario.Name;
+        recorded.Scenario = unit.Name;
         _report(recorded);
 
         // The step that stopped it took one already
         if (context.Failed && !stopped)
-            yield return FailureScreenshot(scenario);
+            yield return FailureScreenshot(unit);
     }
 
     /// <exception cref="TestStoppedException">The step failed, which stops the test that ran it.</exception>
-    private IEnumerator RunTestStep(RunningScenario scenario, ScenarioValues values, Step step, Action ran, Action stopping)
+    private IEnumerator RunTestStep(RunUnit unit, ScenarioValues values, Step step, Action ran, Action stopping)
     {
-        var context = scenario.Context.ForStep(_host, _exceptions, values);
+        var context = unit.Context.ForStep(_host, _exceptions, values);
         RunStep recorded = null;
         yield return RunRecorded(context, StepPreconditions.Run(step, context), result => recorded = result);
         ran();
         recorded.Name = step == null ? "null" : _steps.NameOf(step.GetType());
-        recorded.Scenario = scenario.Name;
+        recorded.Scenario = unit.Name;
         _report(recorded);
         if (!context.Failed)
             yield break;
 
-        yield return FailureScreenshot(scenario);
+        yield return FailureScreenshot(unit);
         stopping();
         throw new TestStoppedException();
     }
 
-    private IEnumerator RunNodes(RunningScenario scenario, IReadOnlyList<ScenarioNode> nodes, Frame frame)
+    private IEnumerator RunNodes(RunUnit unit, IReadOnlyList<ScenarioNode> nodes, Frame frame)
     {
         foreach (var node in nodes)
         {
             switch (node)
             {
                 case StepNode step:
-                    yield return RunStepNode(scenario, step, frame);
+                    yield return RunStepNode(unit, step, frame);
                     break;
                 case ForNode loop:
-                    yield return RunFor(scenario, loop, frame);
+                    yield return RunFor(unit, loop, frame);
                     break;
                 case RepeatNode repeat:
-                    yield return RunRepeat(scenario, repeat, frame);
+                    yield return RunRepeat(unit, repeat, frame);
                     break;
                 case RunNode run:
-                    yield return RunFile(scenario, run, frame);
+                    yield return RunFile(unit, run, frame);
                     break;
             }
 
-            if (scenario.Stopped)
+            if (unit.Stopped)
                 yield break;
         }
     }
 
-    private IEnumerator RunFor(RunningScenario scenario, ForNode loop, Frame frame)
+    private IEnumerator RunFor(RunUnit unit, ForNode loop, Frame frame)
     {
         foreach (var value in loop.Values)
         {
@@ -326,27 +326,27 @@ internal sealed class ScenarioRunner
             var problem = ProblemDefining(() => values.Define(loop.Variable, new TextValue(value)));
             if (problem != null)
             {
-                yield return FailNode(scenario, frame, ControlNodes.For, loop.Location, problem);
+                yield return FailNode(unit, frame, ControlNodes.For, loop.Location, problem);
                 yield break;
             }
 
-            yield return RunNodes(scenario, loop.Steps, frame.Pass(values, $"{loop.Variable}={value}"));
-            if (scenario.Stopped)
+            yield return RunNodes(unit, loop.Steps, frame.Pass(values, $"{loop.Variable}={value}"));
+            if (unit.Stopped)
                 yield break;
         }
     }
 
-    private IEnumerator RunRepeat(RunningScenario scenario, RepeatNode repeat, Frame frame)
+    private IEnumerator RunRepeat(RunUnit unit, RepeatNode repeat, Frame frame)
     {
         for (var pass = 1; pass <= repeat.Count; pass++)
         {
-            yield return RunNodes(scenario, repeat.Steps, frame.Pass(frame.Values.NewScope(), $"repeat {pass}/{repeat.Count}"));
-            if (scenario.Stopped)
+            yield return RunNodes(unit, repeat.Steps, frame.Pass(frame.Values.NewScope(), $"repeat {pass}/{repeat.Count}"));
+            if (unit.Stopped)
                 yield break;
         }
     }
 
-    private IEnumerator RunFile(RunningScenario scenario, RunNode run, Frame frame)
+    private IEnumerator RunFile(RunUnit unit, RunNode run, Frame frame)
     {
         var values = new ScenarioValues();
         var problem = ProblemDefining(() =>
@@ -356,12 +356,12 @@ internal sealed class ScenarioRunner
         });
         if (problem != null)
         {
-            yield return FailNode(scenario, frame, ControlNodes.Run, run.Location, problem);
+            yield return FailNode(unit, frame, ControlNodes.Run, run.Location, problem);
             yield break;
         }
 
         var file = _loader.Loaded(ScenarioPaths.FromScenario(frame.File, run.File));
-        yield return RunNodes(scenario, file.Steps, frame.Into(file.File, values, run.Location));
+        yield return RunNodes(unit, file.Steps, frame.Into(file.File, values, run.Location));
     }
 
     /// <summary>
@@ -380,11 +380,11 @@ internal sealed class ScenarioRunner
         }
     }
 
-    private IEnumerator FailNode(RunningScenario scenario, Frame frame, string name, SourceLocation location, string problem)
+    private IEnumerator FailNode(RunUnit unit, Frame frame, string name, SourceLocation location, string problem)
     {
-        scenario.Stopped = true;
-        _report(frame.Failed(name, location, scenario.Name, problem));
-        yield return FailureScreenshot(scenario);
+        unit.Stopped = true;
+        _report(frame.Failed(name, location, unit.Name, problem));
+        yield return FailureScreenshot(unit);
     }
 
     private static string WithNamesWritten(ScalarArgument value, ScenarioValues values)
@@ -399,13 +399,13 @@ internal sealed class ScenarioRunner
         }
     }
 
-    private IEnumerator RunStepNode(RunningScenario scenario, StepNode node, Frame frame)
+    private IEnumerator RunStepNode(RunUnit unit, StepNode node, Frame frame)
     {
-        var context = scenario.Context.ForStep(_host, _exceptions, frame.Values);
+        var context = unit.Context.ForStep(_host, _exceptions, frame.Values);
         RunStep recorded = null;
         yield return RunRecorded(context, BindAndRun(node, context, frame), step => recorded = step);
         recorded.Name = node.Step.FullName;
-        recorded.Scenario = scenario.Name;
+        recorded.Scenario = unit.Name;
         recorded.File = frame.File;
         recorded.Line = (int)node.Location.Line;
         recorded.RanFrom = frame.RanFrom;
@@ -414,8 +414,8 @@ internal sealed class ScenarioRunner
 
         if (context.Failed)
         {
-            scenario.Stopped = true;
-            yield return FailureScreenshot(scenario);
+            unit.Stopped = true;
+            yield return FailureScreenshot(unit);
         }
     }
 
@@ -459,9 +459,9 @@ internal sealed class ScenarioRunner
     /// <summary>
     /// Not being able to take one shouldn't change what the run found.
     /// </summary>
-    private IEnumerator FailureScreenshot(RunningScenario scenario)
+    private IEnumerator FailureScreenshot(RunUnit unit)
     {
-        yield return GuardedRoutine.Run(_host.Screenshot(ScreenshotNames.For(scenario.Name, "failure")), LogError);
+        yield return GuardedRoutine.Run(_host.Screenshot(ScreenshotNames.For(unit.Name, "failure")), LogError);
     }
 
     private void LogError(Exception exception)
@@ -477,11 +477,11 @@ internal sealed class ScenarioRunner
     /// <summary>
     /// A scenario or a C# test, which run alike: hooks around them, from where they start, and their steps.
     /// </summary>
-    private sealed class RunningScenario
+    private sealed class RunUnit
     {
-        private readonly Func<RunningScenario, IEnumerator> _body;
+        private readonly Func<RunUnit, IEnumerator> _body;
 
-        private RunningScenario(ScenarioContext context, string file, ScenarioStart start, InputRoute inputRoute, Func<RunningScenario, IEnumerator> body)
+        private RunUnit(ScenarioContext context, string file, ScenarioStart start, InputRoute inputRoute, Func<RunUnit, IEnumerator> body)
         {
             Context = context;
             File = file;
@@ -507,15 +507,15 @@ internal sealed class ScenarioRunner
 
         public bool StartFailed { get; set; }
 
-        public static RunningScenario Of(Scenario scenario, ScenarioContext context, Func<RunningScenario, Scenario, IEnumerator> run)
+        public static RunUnit Of(Scenario scenario, ScenarioContext context, Func<RunUnit, Scenario, IEnumerator> run)
         {
-            return new RunningScenario(context, scenario.File, scenario.Start, scenario.Input, running => run(running, scenario));
+            return new RunUnit(context, scenario.File, scenario.Start, scenario.Input, running => run(running, scenario));
         }
 
-        public static RunningScenario Of(InGameTest test, ScenarioContext context, Func<RunningScenario, InGameTest, IEnumerator> run)
+        public static RunUnit Of(InGameTest test, ScenarioContext context, Func<RunUnit, InGameTest, IEnumerator> run)
         {
             var start = new ScenarioStart(StartState.All.Single(state => state.Name == test.Descriptor.Start), new Dictionary<string, string>());
-            return new RunningScenario(context, string.Empty, start, InputRoute.InProcess, running => run(running, test));
+            return new RunUnit(context, string.Empty, start, InputRoute.InProcess, running => run(running, test));
         }
 
         public IEnumerator RunBody()
