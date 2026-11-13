@@ -28,18 +28,6 @@ public sealed class SetBlockSetting : Step
 
     public override IEnumerator Run(IStepContext context)
     {
-        var central = context.RequireEditor();
-        if (central == null)
-            yield break;
-
-        var block = central.GetBlock(context, Block);
-        var written = BlockEditing.ChangeSetting(central, block, Block.ToString(), Setting, Value, out var historyBefore);
-        yield return null;
-
-        var kept = BlockSettings.Of(block).Read(Setting);
-        if (kept != written)
-            context.Fail($"The block didn't keep {Setting} {Value}.", written, kept);
-        else
-            context.Detail = $"{Block}: {Setting} = {kept}, history position {historyBefore} → {central.undoRedo.currentHistoryPosition}";
+        return context.Blocks.SetSetting(Block, Setting, Value);
     }
 }

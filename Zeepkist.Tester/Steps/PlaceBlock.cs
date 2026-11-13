@@ -25,24 +25,7 @@ public sealed class PlaceBlock : Step
 
     public override IEnumerator Run(IStepContext context)
     {
-        var central = context.RequireEditor();
-        if (central == null)
-            yield break;
-
-        var types = central.BlockTypes();
-        if (Type < 0 || Type >= types.Count || types[Type] == null)
-        {
-            context.Fail($"The game has no block type {Type}.");
-            yield break;
-        }
-
-        // Before placing, so a name that's already taken places nothing
-        var uid = BlockPlacing.NewUid(Type);
-        As?.Set(context, new BlockValue(uid));
-
-        var placed = BlockPlacing.Place(central, Type, uid, yaw: 0, cellsToTheSide: 1, "Test: place block");
-        BlockPlacing.Select(central, placed);
-        context.Detail = $"Block type {Type}, UID \"{uid}\" at {placed.transform.position}";
+        context.Blocks.Place(Type, As);
         yield return null;
     }
 }

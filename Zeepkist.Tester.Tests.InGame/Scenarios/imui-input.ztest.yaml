@@ -15,6 +15,10 @@ steps:
   - sample.expect-field: aB
   - sample.hold-keys: { keys: c, for: 200ms }
   - sample.expect-field: aBc
+  - sample.type-text: " two"
+  - sample.expect-field-selection
+  - sample.double-click-field
+  - sample.expect-field-selection: aBc
   - sample.drag-slider
   - sample.give-back-mouse
   - sample.hide-input-window

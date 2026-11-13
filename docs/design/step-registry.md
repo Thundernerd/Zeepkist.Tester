@@ -145,6 +145,7 @@ public interface IStepContext : IScenarioContext
     IInput Input { get; }          // see below
     IGameEvents Game { get; }      // counts of scene loads, editor entries, test mode entries, round starts, level loads
     IExceptionLog Exceptions { get; }
+    IEditorBlocks Blocks { get; }   // see Blocks below
     string LastScreenshotBlankColor { get; }   // the color when every pixel of the last one was the same, or null
     IEnumerator Screenshot(FileName name, bool covered = false);   // covered fills the frame with one color first, for expect-blank-screenshot
     LEV_LevelEditorCentral RequireEditor();   // fails the step and returns null outside the editor
@@ -201,10 +202,33 @@ public enum InputRoute
 - The game's event system uses Unity's `StandaloneInputModule`, which reads the mouse from `Input`, so the legacy `Input` driver already moves its pointer and the game's own module sends the pointer events. The uGUI driver stands down while the module reads `Input`, so a click doesn't land twice, and only sends them for a module that reads its own mouse, such as Rewired's.
 - The game's own `GenericButton`, which most of its menus use, takes the pointer's enter and exit from uGUI and reads the press from `Input` itself.
 - A point, and a `DragMove`'s pixels, are in Unity's screen pixels, with a point counted from the bottom left. The Imui driver turns them into Imui's own pixels with its backend's scale, so a step that got its point from an `ImRect` scales it back first.
-- The mouse stays where a call left it until `GiveBack`, so a step can check what's under it. `GiveBack` can't fail: it works with nothing held, on any route and without an Imui backend. The runner calls it after the `AfterScenario` hooks of each scenario and each C# test, also after a failed one or a failed start (#62), so the next one and the player get the mouse back.
+- The mouse stays where a call left it until `GiveBack`, so a step can check what's under it. `GiveBack` can't fail: it works with nothing held, on any route and without an Imui backend. A driver that throws from its own `GiveBack` anyway has what it threw logged, and every other driver still lets go (#72). The runner calls it after the `AfterScenario` hooks of each scenario and each C# test, also after a failed one or a failed start (#62), so the next one and the player get the mouse back.
 - Until the OS driver (#19) exists, `input: os` loads and `ztest check` accepts it, and every `IInput` call that sends input on that route fails its step, saying so. `Route` and `GiveBack` still work there, and a scenario on that route with no input step passes.
 
 Core steps (`press`, `type`, `hold`, `click`, `move-mouse`, `drag`) are thin wrappers over this. A mod's step uses it the same way: ZLS's `hover` and `drag-window-edge` would find where to point from its window driver, then call `context.Input`.
+
+### Blocks
+
+```csharp
+public interface IEditorBlocks
+{
+    BlockValue Place(int type, Name<BlockValue>? name = null);   // a cell to the side, selected, one undo step
+    int TypeOf(Ref<BlockValue> block);   // its ID in the game's block list
+    IEnumerator SetSetting(Ref<BlockValue> block, string key, string value);   // through the block's editor, one undo step
+}
+```
+
+`place-block` and `set-block-setting` are thin wrappers over this, as the input steps are over `context.Input`. Each fails the step with a `StepFailedException` outside the editor or when the game won't take the change, unlike `RequireEditor`, which fails it and returns null. A block that didn't keep a setting fails the step with `Fail` after the change. `Place` and `SetSetting` write what they did to `Detail`, which the calling step can add to.
+
+The tester only knows a block by its type ID and a setting by the key a level file stores it under. A mod that names them, as ZeepLogicScript names Block Functions and Settings, keeps its own steps with those names and looks them up in its own manifest before calling `context.Blocks` (#68):
+
+| `.zlstest` line | Becomes | What the mod's step does |
+| --- | --- | --- |
+| `place-block lamp as lamp` | `zls.place-block: { function: lamp, as: lamp }` | Finds the Block Function's type, then `Place(type, As)` |
+| `set-block-setting t mode global_velocity` | `zls.set-block-setting: { block: t, setting: mode, value: global_velocity }` | Finds the Setting's key for the block's `TypeOf`, and the number an option is stored as, then `SetSetting(Block, key, value)` |
+| `expect-blocks 2` | `expect-blocks: 2`, under `use: [zls]` | Counts the Logic Blocks itself, as `expect-block-count` can only count one type |
+
+`ztest convert` writes the first two with their namespace, as the tester has steps of those names too. The in-game test plugin's `place-named-block` and `set-named-setting` do the same with a list of two blocks, in `named-blocks.ztest.yaml`.
 
 ## Nested arguments: `drag-window-edge`
 
