@@ -5,3 +5,7 @@ steps:
   - sample.show-ugui-button
   - sample.click-ugui-button
   - sample.hide-ugui-button
+
+  # Ends in the editor, so it goes last
+  - sample.click-level-editor-button
+  - sample.expect-editor

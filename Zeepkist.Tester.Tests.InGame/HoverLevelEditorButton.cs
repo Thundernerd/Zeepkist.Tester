@@ -6,7 +6,7 @@ namespace TNRD.Zeepkist.Tester.Tests.InGame;
 
 /// <summary>
 /// Opens the main menu's Level Editor page as its button does, moves the mouse onto the page's Level Editor button, which
-/// should take it as hovered, then gives the mouse back, which should leave it. Clicking it is #81's.
+/// should take it as hovered, then gives the mouse back, which should leave it. Clicking it is <see cref="ClickLevelEditorButton"/>'s.
 /// </summary>
 [Step("hover-level-editor-button")]
 public sealed class HoverLevelEditorButton : Step
@@ -25,7 +25,7 @@ public sealed class HoverLevelEditorButton : Step
         // The page lays out as it draws
         yield return null;
         yield return null;
-        var button = FindLevelEditorButton(menu);
+        var button = LevelEditorButton.Find(menu);
         if (button == null)
         {
             context.Fail("The main menu has no Level Editor button");
@@ -45,20 +45,5 @@ public sealed class HoverLevelEditorButton : Step
             context.Fail("Giving the mouse back didn't leave the Level Editor button", "not hovered", "hovered");
 
         menu.Close(true);
-    }
-
-    private static GenericButton FindLevelEditorButton(LevelEditorUI menu)
-    {
-        foreach (var button in Object.FindObjectsOfType<GenericButton>())
-        {
-            for (var i = 0; i < button.onClick.GetPersistentEventCount(); i++)
-            {
-                if (button.onClick.GetPersistentTarget(i) == menu
-                    && button.onClick.GetPersistentMethodName(i) == nameof(LevelEditorUI.StartLevelEditor))
-                    return button;
-            }
-        }
-
-        return null;
     }
 }

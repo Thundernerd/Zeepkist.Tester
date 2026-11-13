@@ -162,6 +162,8 @@ sample.hover-level-editor-button | ugui-input | pass
 sample.show-ugui-button | ugui-input | pass
 sample.click-ugui-button | ugui-input | pass
 sample.hide-ugui-button | ugui-input | pass
+sample.click-level-editor-button | ugui-input | pass
+sample.expect-editor | ugui-input | pass
 main menu |  | pass
 new level |  | pass
 sample.show-input-window | mouse-held | pass
