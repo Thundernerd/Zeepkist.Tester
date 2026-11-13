@@ -16,7 +16,7 @@ public sealed class ExpectSteering : Step
 {
     /// <summary>Which way: below 0 for left, and above it for right, as the steering action's value goes.</summary>
     [Arg(Primary = true)]
-    public required float Way { get; set; }
+    public required float Direction { get; set; }
 
     public override IEnumerator Run(IStepContext context)
     {
@@ -32,7 +32,7 @@ public sealed class ExpectSteering : Step
         Object.Destroy(watch);
 
         // The player's setting turns steering round
-        var expected = Mathf.Sign(Way) * (car.invertSteering ? -1 : 1);
+        var expected = Mathf.Sign(Direction) * (car.invertSteering ? -1 : 1);
         var steersWith = ReInput.mapping.GetAction(car.GetSteerBasedOnCurrentState().ID)?.name;
         var actual = $"steering at most {most:0.00}, with the soapbox steering by {steersWith}";
         if (Mathf.Abs(most) < 0.1f || Mathf.Sign(most) != expected)

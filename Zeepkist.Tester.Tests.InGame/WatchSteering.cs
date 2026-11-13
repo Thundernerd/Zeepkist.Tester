@@ -21,6 +21,7 @@ public sealed class WatchSteering : Step
             yield break;
         }
 
+        // Gone now, not at the end of the frame, so it isn't the one expect-steering finds
         var old = car.GetComponent<SteeringWatch>();
         if (old != null)
             Object.DestroyImmediate(old);
