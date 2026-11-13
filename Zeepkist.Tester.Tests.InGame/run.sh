@@ -144,14 +144,12 @@ else
     jq -r '.Steps[] | "\(.Name) | \(.Scenario) | \(if .Passed then "pass" else "FAIL" end)"' "$results" >"$out/actual-results.txt"
     diff "$expected" "$out/actual-results.txt" || failed=1
 fi
-if [[ -z "$mode" ]]; then
-    # It fails for the action being off, not for anything else that leaves the history where it was
-    jq -e '[.Steps[] | select(.Scenario == "rewired-input-off" and .Name == "undo") | .Detail] == ["The game has EditorUndo turned off right now."]' "$results" >/dev/null || { log "rewired-input-off's undo didn't fail for its action being off"; failed=1; }
-fi
 if [[ "$mode" == --start-states ]]; then
     jq -e '(.Exceptions // []) | length == 0' "$results" >/dev/null || { log "the game logged exceptions"; failed=1; }
 elif [[ -z "$mode" ]]; then
     jq -e '(.Screenshots | index("a-step-fails-failure.png")) and (.Screenshots | index("CSharpTests-AStepFails-failure.png")) and (.Screenshots | index("control-nodes-height-64.png")) and (.BlankScreenshots | keys == ["screenshots-covered.png"])' "$results" >/dev/null || { log "the screenshots aren't what they should be"; failed=1; }
+    # It fails for the action being off, not for anything else that leaves the history where it was
+    jq -e '[.Steps[] | select(.Scenario == "rewired-input-off" and .Name == "undo") | .Detail] == ["The game has EditorUndo turned off right now."]' "$results" >/dev/null || { log "rewired-input-off's undo didn't fail for its action being off"; failed=1; }
 fi
 
 ((failed == 0)) || { log "not what this run should do"; exit 1; }
