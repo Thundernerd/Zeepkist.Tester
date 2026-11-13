@@ -60,6 +60,10 @@ internal sealed class LineScenarioReader
             }
         }
 
+        // A scenario needs steps:, and the old format had no file without them either
+        if (!entries.Any(entry => entry.Step != null))
+            throw new ScenarioException(new SourceLocation(_file, 1, 1), "The file has no steps.");
+
         return new LineScenario(_file, entries);
     }
 
