@@ -144,8 +144,8 @@ internal sealed class TesterInput : IInput
     /// </summary>
     public void GiveBack()
     {
-        Guarded(_inProcess.GiveBack);
-        Guarded(_actions.GiveBack);
+        GuardedGiveBack.Run(_inProcess.GiveBack, _logGiveBackFailure);
+        GuardedGiveBack.Run(_actions.GiveBack, _logGiveBackFailure);
     }
 
     /// <summary>
@@ -159,18 +159,6 @@ internal sealed class TesterInput : IInput
         {
             var pixels = (float)(Math.Round((double)move.By.Value * frame / move.Over) - Math.Round((double)move.By.Value * (frame - 1) / move.Over));
             yield return move.Sideways ? new Vector2 { x = pixels } : new Vector2 { y = -pixels };
-        }
-    }
-
-    private void Guarded(Action giveBack)
-    {
-        try
-        {
-            giveBack();
-        }
-        catch (Exception exception)
-        {
-            _logGiveBackFailure(exception);
         }
     }
 

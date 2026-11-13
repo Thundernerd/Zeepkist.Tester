@@ -60,16 +60,7 @@ internal sealed class InProcessDrivers : IInputDriver
     public void GiveBack()
     {
         foreach (var driver in _drivers)
-        {
-            try
-            {
-                driver.GiveBack();
-            }
-            catch (Exception exception)
-            {
-                _logGiveBackFailure(exception);
-            }
-        }
+            GuardedGiveBack.Run(driver.GiveBack, _logGiveBackFailure);
     }
 
     /// <summary>
