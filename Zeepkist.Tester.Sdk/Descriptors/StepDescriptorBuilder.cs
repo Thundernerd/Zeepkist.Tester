@@ -20,7 +20,7 @@ public sealed class StepDescriptorBuilder
     // Also a different type on each runtime: the BCL's on .NET, the SDK's polyfill on net472
     private const string RequiredMemberAttributeName = "System.Runtime.CompilerServices.RequiredMemberAttribute";
 
-    private static readonly Regex _quoted = new Regex("'([^']+)'");
+    private static readonly Regex _quotedAssemblyName = new Regex("'([^']+)'");
 
     private static readonly Regex _kebabCase = new Regex("^[a-z0-9]+(-[a-z0-9]+)*$");
 
@@ -90,7 +90,7 @@ public sealed class StepDescriptorBuilder
 
     public StepDescriptor Build(Type stepType)
     {
-        return NamingWhatsMissing(stepType, () => BuildStep(stepType));
+        return NamingWhatCantBeFound(stepType, () => BuildStep(stepType));
     }
 
     private StepDescriptor BuildStep(Type stepType)
@@ -116,7 +116,7 @@ public sealed class StepDescriptorBuilder
             ],
             Enters = StateNames(DeclaredStates<EntersAttribute>(stepType).SelectMany(states => states)),
             Leaves = StateNames(DeclaredStates<LeavesAttribute>(stepType).SelectMany(states => states)),
-            Documentation = Summary(stepType, $"T:{DocName(stepType)}"),
+            Documentation = Summary('T', stepType),
             Examples = [.. FindAttributes(stepType, typeof(ExampleAttribute).FullName).Select(ConstructorValue<string>)],
             Arguments = BuildArguments(stepType, [stepType]),
         };
@@ -164,7 +164,7 @@ public sealed class StepDescriptorBuilder
             MethodName = method.Name,
             TypeName = owner.FullName,
             Start = start.Count == 0 ? ToKebabCase(nameof(Start.Editor)) : ToKebabCase(EnumMemberName(start[0])),
-            Documentation = Summary(owner, $"M:{DocName(owner)}.{method.Name}({typeof(IStepContext).FullName})"),
+            Documentation = Summary('M', owner, $".{method.Name}({typeof(IStepContext).FullName})"),
         };
     }
 
@@ -190,7 +190,7 @@ public sealed class StepDescriptorBuilder
 
     public StateDescriptor BuildState(Type stateType)
     {
-        return NamingWhatsMissing(stateType, () => BuildState(stateType, []));
+        return NamingWhatCantBeFound(stateType, () => BuildState(stateType, []));
     }
 
     /// <summary>
@@ -254,7 +254,7 @@ public sealed class StepDescriptorBuilder
             Namespace = stateNamespace,
             Within = within == null ? null : BuildState(within, [.. inner, stateType]).FullName,
             Hint = NamedValue<string>(stateAttribute, nameof(StateAttribute.Hint)),
-            Documentation = Summary(stateType, $"T:{DocName(stateType)}"),
+            Documentation = Summary('T', stateType),
         };
     }
 
@@ -344,7 +344,7 @@ public sealed class StepDescriptorBuilder
                 Name = name,
                 PropertyName = property.Name,
                 Type = type,
-                Documentation = Summary(property.DeclaringType, $"P:{DocName(property.DeclaringType)}.{property.Name}"),
+                Documentation = Summary('P', property.DeclaringType, $".{property.Name}"),
                 IsPrimary = NamedValue<bool>(argAttribute, nameof(ArgAttribute.Primary)),
                 IsRequired = FindAttribute(property, RequiredMemberAttributeName) != null,
                 Default = WrittenDefault(argAttribute),
@@ -403,7 +403,7 @@ public sealed class StepDescriptorBuilder
         return new ArgumentType
         {
             Kind = ArgumentKind.Object,
-            Documentation = Summary(type, $"T:{DocName(type)}"),
+            Documentation = Summary('T', type),
             Arguments = BuildArguments(type, [.. enclosing, type]),
         };
     }
@@ -516,11 +516,16 @@ public sealed class StepDescriptorBuilder
         return member?.Name ?? value.Value.ToString();
     }
 
-    /// <param name="owner">The type that declares the member, which says whose docs to look in.</param>
-    /// <param name="id">The member's XML doc id, such as <c>T:Mod.Compile</c>.</param>
-    private string Summary(Type owner, string id)
+    /// <summary>
+    /// A member's summary, by its XML doc id: such as <c>T:Mod.Compile</c> for <c>'T'</c> and the type, or <c>P:Mod.Compile.Function</c>
+    /// for <c>'P'</c>, the type that declares the property, and <c>.Function</c>.
+    /// </summary>
+    /// <param name="kind">The id's prefix: <c>T</c>, <c>P</c> or <c>M</c>.</param>
+    /// <param name="owner">The type, or the type that declares the member, which also says whose docs to look in.</param>
+    /// <param name="member">What follows the type in the id, if it's a member's.</param>
+    private string Summary(char kind, Type owner, string member = "")
     {
-        return Summaries(owner.Assembly.GetName().Name, id);
+        return Summaries(owner.Assembly.GetName().Name, $"{kind}:{DocName(owner)}{member}");
     }
 
     private static string DocName(Type type)
@@ -577,7 +582,7 @@ public sealed class StepDescriptorBuilder
     /// <summary>
     /// Builds a step or state, and when a type it uses is in an assembly that can't be found, says which step or state and which assembly.
     /// </summary>
-    private static T NamingWhatsMissing<T>(Type owner, Func<T> build)
+    private static T NamingWhatCantBeFound<T>(Type owner, Func<T> build)
     {
         try
         {
@@ -597,7 +602,7 @@ public sealed class StepDescriptorBuilder
     /// </remarks>
     private static string MissingAssembly(FileNotFoundException exception)
     {
-        var fullName = exception.FileName ?? _quoted.Match(exception.Message).Groups[1].Value;
+        var fullName = exception.FileName ?? _quotedAssemblyName.Match(exception.Message).Groups[1].Value;
         try
         {
             return new AssemblyName(fullName).Name;
