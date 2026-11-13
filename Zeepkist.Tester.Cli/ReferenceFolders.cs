@@ -27,7 +27,7 @@ internal static class ReferenceFolders
     /// a restore beside it built against, and at the newest version in the cache otherwise.
     /// </remarks>
     /// <param name="assemblyPaths">The assemblies to read, test plugins first.</param>
-    /// <param name="environmentVariable">Reads an environment variable. Defaults to this process's.</param>
+    /// <param name="environmentVariable">Reads <c>NUGET_PACKAGES</c>. Defaults to this process's environment.</param>
     public static IEnumerable<string> For(IEnumerable<string> assemblyPaths, Func<string, string> environmentVariable = null)
     {
         environmentVariable ??= Environment.GetEnvironmentVariable;

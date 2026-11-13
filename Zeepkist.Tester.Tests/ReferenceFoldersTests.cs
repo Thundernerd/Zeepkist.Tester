@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.Json;
 using TNRD.Zeepkist.Tester.Cli;
 using Xunit;
 
@@ -13,7 +14,7 @@ public class ReferenceFoldersTests
         var cache = CacheWith(folder, "zeepkist.gamelibs", "17.32.1912", "18.10.2087");
         var plugin = PluginBuiltWith(folder, cache, "Zeepkist.GameLibs/17.32.1912", "zeepkist.gamelibs/17.32.1912");
 
-        var folders = ReferenceFolders.For([plugin]);
+        var folders = ReferenceFolders.For([plugin], _ => null);
 
         Assert.Contains(Path.Combine(cache, "zeepkist.gamelibs", "17.32.1912", "lib"), folders);
         Assert.DoesNotContain(Path.Combine(cache, "zeepkist.gamelibs", "18.10.2087", "lib"), folders);
@@ -50,7 +51,7 @@ public class ReferenceFoldersTests
         var cache = CacheWith(folder, "zeepsdk", "1.0.0", "1.0.0-beta", "0.9.0");
         var plugin = PluginBuiltWith(folder, cache, "Other/1.0.0", "other/1.0.0");
 
-        var folders = ReferenceFolders.For([plugin]);
+        var folders = ReferenceFolders.For([plugin], _ => null);
 
         Assert.Contains(Path.Combine(cache, "zeepsdk", "1.0.0", "lib"), folders);
         Assert.DoesNotContain(Path.Combine(cache, "zeepsdk", "1.0.0-beta", "lib"), folders);
@@ -74,11 +75,12 @@ public class ReferenceFoldersTests
         using var folder = new TemporaryFolder();
         var cache = CacheWith(folder, "zeepkist.gamelibs", "18.7.2061");
         var plugin = PluginWithoutARestore(folder);
-        File.WriteAllText(Path.Combine(folder.Path, "nuget.config"), """
+        // Relative to the config's own folder
+        File.WriteAllText(Path.Combine(folder.Path, "nuget.config"), $"""
             <?xml version="1.0" encoding="utf-8"?>
             <configuration>
               <config>
-                <add key="globalPackagesFolder" value="cache" />
+                <add key="globalPackagesFolder" value="{Path.GetFileName(cache)}" />
               </config>
             </configuration>
             """);
@@ -126,11 +128,8 @@ public class ReferenceFoldersTests
 
     private static string PluginBuiltWith(TemporaryFolder folder, string cache, string library, string libraryPath)
     {
+        var plugin = PluginWithoutARestore(folder);
         var project = Path.Combine(folder.Path, "MyMod");
-        var output = Directory.CreateDirectory(Path.Combine(project, "bin", "Debug", "net472")).FullName;
-        var plugin = Path.Combine(output, "MyMod.dll");
-        File.WriteAllBytes(plugin, []);
-
         Directory.CreateDirectory(Path.Combine(project, "obj"));
         File.WriteAllText(Path.Combine(project, "obj", "project.assets.json"), $$"""
             {
@@ -139,7 +138,7 @@ public class ReferenceFoldersTests
                 "{{library}}": { "type": "package", "path": "{{libraryPath}}" }
               },
               "packageFolders": {
-                {{System.Text.Json.JsonSerializer.Serialize(cache + Path.DirectorySeparatorChar)}}: {}
+                {{JsonSerializer.Serialize(cache + Path.DirectorySeparatorChar)}}: {}
               }
             }
             """);
