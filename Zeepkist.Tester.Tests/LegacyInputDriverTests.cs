@@ -11,12 +11,13 @@ namespace TNRD.Zeepkist.Tester.Tests;
 /// </summary>
 public class LegacyInputDriverTests
 {
+    private const float DeltaTime = 0.1f;
     private readonly LegacyInputDriver _driver;
     private int _frame = 10;
 
     public LegacyInputDriverTests()
     {
-        _driver = new LegacyInputDriver(() => _frame);
+        _driver = new LegacyInputDriver(() => _frame, () => DeltaTime);
     }
 
     [Fact]
@@ -66,6 +67,76 @@ public class LegacyInputDriverTests
     }
 
     [Fact]
+    public void PressKeys_InTheFrameOfItsRelease_IsUpInOneFrame_AndDownInTheNext_AsTypingADoubledLetterIs()
+    {
+        _driver.PressKeys([Key(KeyCode.A)]);
+        _frame = 11;
+        _driver.ReleaseKeys([Key(KeyCode.A)]);
+        _driver.PressKeys([Key(KeyCode.A)]);
+        Assert.True(_driver.GetKey(KeyCode.A));
+        Assert.True(_driver.GetKeyDown(KeyCode.A));
+
+        _frame = 12;
+        Assert.True(_driver.GetKeyUp(KeyCode.A));
+        Assert.False(_driver.GetKeyDown(KeyCode.A));
+        Assert.False(_driver.GetKey(KeyCode.A));
+
+        _frame = 13;
+        Assert.True(_driver.GetKeyDown(KeyCode.A));
+        Assert.False(_driver.GetKeyUp(KeyCode.A));
+        Assert.True(_driver.GetKey(KeyCode.A));
+    }
+
+    [Fact]
+    public void ReleaseKeys_OfAKeyPutDownLater_KeepsItHeldAsLongAsItWasPressed()
+    {
+        _driver.PressKeys([Key(KeyCode.A)]);
+        _frame = 11;
+        _driver.ReleaseKeys([Key(KeyCode.A)]);
+        _driver.PressKeys([Key(KeyCode.A)]);
+        _frame = 12;
+        _driver.ReleaseKeys([Key(KeyCode.A)]);
+
+        _frame = 13;
+        Assert.True(_driver.GetKeyDown(KeyCode.A));
+        Assert.False(_driver.GetKeyUp(KeyCode.A));
+        Assert.True(_driver.GetKey(KeyCode.A));
+
+        _frame = 14;
+        Assert.True(_driver.GetKeyUp(KeyCode.A));
+        Assert.False(_driver.GetKey(KeyCode.A));
+    }
+
+    [Fact]
+    public void PressKeys_AfterAQuickTapInTheSameFrame_IsDownAgainInTheFrameAfterTheTap()
+    {
+        _driver.PressKeys([Key(KeyCode.A)]);
+        _driver.ReleaseKeys([Key(KeyCode.A)]);
+        _driver.PressKeys([Key(KeyCode.A)]);
+
+        _frame = 11;
+        Assert.True(_driver.GetKeyDown(KeyCode.A));
+        Assert.True(_driver.GetKeyUp(KeyCode.A));
+        Assert.False(_driver.GetKey(KeyCode.A));
+
+        _frame = 12;
+        Assert.True(_driver.GetKeyDown(KeyCode.A));
+        Assert.True(_driver.GetKey(KeyCode.A));
+    }
+
+    [Fact]
+    public void PressKeys_OfAKeyAlreadyHeld_DoesntPutItDownAgain()
+    {
+        _driver.PressKeys([Key(KeyCode.Escape)]);
+        _frame = 12;
+        _driver.PressKeys([Key(KeyCode.Escape)]);
+
+        _frame = 13;
+        Assert.False(_driver.GetKeyDown(KeyCode.Escape));
+        Assert.True(_driver.GetKey(KeyCode.Escape));
+    }
+
+    [Fact]
     public void ReleaseKeys_OfAKeyPressedTwice_KeepsItHeldUntilBothAreReleased()
     {
         _driver.PressKeys([Key(KeyCode.Escape), Key(KeyCode.Escape)]);
@@ -110,13 +181,28 @@ public class LegacyInputDriverTests
     }
 
     [Fact]
-    public void MousePosition_IsThePlayersUntilTheMouseIsMoved()
+    public void MousePosition_IsThePlayersUntilTheFrameAfterTheMouseIsMoved()
     {
         Assert.Null(_driver.MousePosition);
 
         Assert.True(_driver.MoveMouse(Point(100, 200)));
+        Assert.Null(_driver.MousePosition);
 
+        _frame = 11;
         Assert.Equal((100f, 200f, 0f), Coordinates(_driver.MousePosition));
+    }
+
+    [Fact]
+    public void MoveMouse_KeepsTheMouseWhereItWas_UntilTheFrameAfter()
+    {
+        _driver.MoveMouse(Point(100, 200));
+        _frame = 11;
+
+        _driver.MoveMouse(Point(300, 400));
+        Assert.Equal((100f, 200f, 0f), Coordinates(_driver.MousePosition));
+
+        _frame = 12;
+        Assert.Equal((300f, 400f, 0f), Coordinates(_driver.MousePosition));
     }
 
     [Fact]
@@ -141,14 +227,20 @@ public class LegacyInputDriverTests
     }
 
     [Fact]
-    public void DragMouse_MovesTheMouseByTheDelta()
+    public void DragMouse_MovesTheMouseByTheDelta_InTheFrameItsDeltaIsSeen()
     {
         _driver.MoveMouse(Point(100, 200));
         _driver.PressButton(MouseButton.Left);
 
-        Assert.True(_driver.DragMouse(Point(5, -20), MouseButton.Left));
+        _frame = 12;
 
-        Assert.Equal((105f, 180f, 0f), Coordinates(_driver.MousePosition));
+        Assert.True(_driver.DragMouse(Point(5, -20), MouseButton.Left));
+        Assert.True(_driver.DragMouse(Point(5, 0), MouseButton.Left));
+        Assert.Equal((100f, 200f, 0f), Coordinates(_driver.MousePosition));
+
+        _frame = 13;
+        Assert.Equal((110f, 180f, 0f), Coordinates(_driver.MousePosition));
+        Assert.Equal(10, _driver.Axis("mouse x", 0));
     }
 
     [Theory]
@@ -179,7 +271,7 @@ public class LegacyInputDriverTests
     }
 
     [Fact]
-    public void GiveBack_LetsGoOfWhatsHeld_AndHandsBackThePlayersMouse()
+    public void GiveBack_LetsGoOfWhatsHeld_AndHandsBackThePlayersMouse_FromTheNextFrame()
     {
         _driver.PressKeys([Key(KeyCode.A, EventModifiers.Control), Key(KeyCode.A)]);
         _driver.MoveMouse(Point(100, 200));
@@ -187,6 +279,7 @@ public class LegacyInputDriverTests
         _frame = 11;
 
         _driver.GiveBack();
+        Assert.Equal((100f, 200f, 0f), Coordinates(_driver.MousePosition));
 
         _frame = 12;
         Assert.False(_driver.AnyKey);
@@ -262,13 +355,69 @@ public class LegacyInputDriverTests
     [InlineData((int)KeyCode.DownArrow, "Vertical", -1)]
     [InlineData((int)KeyCode.S, "Vertical", -1)]
     [InlineData((int)KeyCode.D, "Vertical", 0)]
-    public void Axis_OfTheGamesKeyAxes_IsWhereItsHeldKeysPush(int key, string axis, float expected)
+    public void AxisRaw_OfTheGamesKeyAxes_IsWhereItsHeldKeysPush(int key, string axis, float expected)
     {
         Assert.Equal(0, _driver.Axis(axis, 0));
         _driver.PressKeys([Key((KeyCode)key)]);
 
         _frame = 11;
-        Assert.Equal(expected, _driver.Axis(axis, 0));
+        Assert.Equal(expected, _driver.AxisRaw(axis, 0));
+    }
+
+    [Fact]
+    public void Axis_OfAKeyAxis_RampsWithTheGamesSensitivity_WhileAxisRawSnaps()
+    {
+        _driver.PressKeys([Key(KeyCode.D)]);
+
+        _frame = 11;
+        Assert.Equal(0.3f, _driver.Axis("Horizontal", 0), 3);
+        Assert.Equal(1, _driver.AxisRaw("Horizontal", 0));
+
+        _frame = 12;
+        Assert.Equal(0.6f, _driver.Axis("Horizontal", 0), 3);
+
+        _frame = 13;
+        Assert.Equal(0.9f, _driver.Axis("Horizontal", 0), 3);
+
+        _frame = 14;
+        Assert.Equal(1, _driver.Axis("Horizontal", 0), 3);
+        Assert.Equal(1, _driver.AxisRaw("Horizontal", 0));
+    }
+
+    [Fact]
+    public void Axis_OfAKeyAxis_IsTheSameWhenReadTwiceInAFrame()
+    {
+        _driver.PressKeys([Key(KeyCode.D)]);
+
+        _frame = 11;
+        _driver.Axis("Horizontal", 0);
+        Assert.Equal(0.3f, _driver.Axis("Horizontal", 0), 3);
+    }
+
+    [Fact]
+    public void Axis_OfAKeyAxis_FallsBackWithTheGamesGravity_OnceLetGo()
+    {
+        _driver.PressKeys([Key(KeyCode.D)]);
+        _frame = 11;
+        _driver.ReleaseKeys([Key(KeyCode.D)]);
+        Assert.Equal(0.3f, _driver.Axis("Horizontal", 0), 3);
+
+        _frame = 12;
+        Assert.Equal(0, _driver.Axis("Horizontal", 0), 3);
+        Assert.Equal(0, _driver.AxisRaw("Horizontal", 0));
+    }
+
+    [Fact]
+    public void Axis_OfAKeyAxis_SnapsToZero_WhenTheOtherWayIsPressed()
+    {
+        _driver.PressKeys([Key(KeyCode.D)]);
+        _frame = 14;
+        Assert.Equal(1, _driver.Axis("Horizontal", 0), 3);
+        _driver.ReleaseKeys([Key(KeyCode.D)]);
+        _driver.PressKeys([Key(KeyCode.A)]);
+
+        _frame = 15;
+        Assert.Equal(-0.3f, _driver.Axis("Horizontal", 0), 3);
     }
 
     [Fact]
@@ -308,8 +457,8 @@ public class LegacyInputDriverTests
         _driver.DragMouse(Point(5, 0), MouseButton.Left);
 
         _frame = 11;
-        Assert.Equal(1, _driver.Axis("Horizontal", 1));
-        Assert.Equal(0.5f, _driver.Axis("Horizontal", -0.5f));
+        Assert.Equal(1, _driver.AxisRaw("Horizontal", 1));
+        Assert.Equal(0.5f, _driver.AxisRaw("Horizontal", -0.5f));
         Assert.Equal(8, _driver.Axis("mouse x", 3));
         Assert.Equal(0.25f, _driver.Axis("Fire1", 0.25f));
     }

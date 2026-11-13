@@ -13,6 +13,16 @@ namespace TNRD.Zeepkist.Tester.InputDrivers;
 /// </summary>
 internal sealed class LegacyInputDriver : IInputDriver
 {
+    /// <summary>
+    /// How far a key axis moves in a second, towards where its keys push and back to 0, in the game's Input Manager.
+    /// </summary>
+    private const float KeyAxisSpeed = 3;
+
+    /// <summary>
+    /// How many strokes of a key it keeps, for a key axis read again after frames it wasn't.
+    /// </summary>
+    private const int KeptStrokes = 8;
+
     private static readonly (EventModifiers Modifier, KeyCode Key)[] _modifierKeys =
     [
         (EventModifiers.Shift, KeyCode.LeftShift),
@@ -27,7 +37,8 @@ internal sealed class LegacyInputDriver : IInputDriver
     private static readonly Dictionary<string, KeyCode> _names = NameKeys();
 
     /// <summary>
-    /// The game's Input Manager's axes that keys push, by name.
+    /// The game's Input Manager's axes that keys push, by name. Each has a gravity and a sensitivity of
+    /// <see cref="KeyAxisSpeed"/>, and snaps.
     /// </summary>
     private static readonly Dictionary<string, (KeyCode[] Positive, KeyCode[] Negative)> _keyAxes = new Dictionary<string, (KeyCode[] Positive, KeyCode[] Negative)>
     {
@@ -47,15 +58,29 @@ internal sealed class LegacyInputDriver : IInputDriver
     };
 
     private readonly Func<int> _frame;
+    private readonly Func<float> _deltaTime;
+    private readonly Dictionary<string, (int Frame, float Value)> _ramps = [];
     private readonly Dictionary<KeyCode, int> _heldKeys = [];
-    private readonly Dictionary<KeyCode, int> _downFrames = [];
-    private readonly Dictionary<KeyCode, int> _upFrames = [];
+
+    /// <summary>
+    /// Each key's strokes, oldest first: the frame it goes down in and the one it goes up in, null while it's held.
+    /// </summary>
+    private readonly Dictionary<KeyCode, List<Stroke>> _strokes = [];
     private (int Frame, float X, float Y) _mouseDelta;
 
+    /// <summary>
+    /// Where the game sees the mouse until <see cref="_movedFrame"/>, and where from then, null for the player's.
+    /// </summary>
+    private Vector3? _seenMouse;
+    private Vector3? _movedMouse;
+    private int _movedFrame = int.MaxValue;
+
     /// <param name="frame">Unity's <c>Time.frameCount</c>.</param>
-    public LegacyInputDriver(Func<int> frame)
+    /// <param name="deltaTime">Seconds since the frame before, for how far a key axis ramps in this one.</param>
+    public LegacyInputDriver(Func<int> frame, Func<float> deltaTime)
     {
         _frame = frame;
+        _deltaTime = deltaTime;
     }
 
     public bool PressKeys(IReadOnlyList<KeyPress> keys)
@@ -87,7 +112,7 @@ internal sealed class LegacyInputDriver : IInputDriver
     public bool MoveMouse(Vector2 screenPoint)
     {
         // Its fields are set one by one because the unit tests' UnityEngine has no method bodies
-        MousePosition = new Vector3 { x = screenPoint.x, y = screenPoint.y };
+        MoveTo(new Vector3 { x = screenPoint.x, y = screenPoint.y });
         return true;
     }
 
@@ -106,8 +131,8 @@ internal sealed class LegacyInputDriver : IInputDriver
             ? (seenIn, _mouseDelta.X + delta.x, _mouseDelta.Y + delta.y)
             : (seenIn, delta.x, delta.y);
 
-        var from = MousePosition ?? default;
-        MousePosition = new Vector3 { x = from.x + delta.x, y = from.y + delta.y };
+        var from = _movedMouse ?? _seenMouse ?? default;
+        MoveTo(new Vector3 { x = from.x + delta.x, y = from.y + delta.y });
         return true;
     }
 
@@ -123,27 +148,30 @@ internal sealed class LegacyInputDriver : IInputDriver
         foreach (var key in _heldKeys.Keys.ToList())
         {
             _heldKeys.Remove(key);
-            if (_downFrames[key] > _frame())
-                _downFrames.Remove(key);
+            var strokes = _strokes[key];
+            if (LastStroke(key).Down > _frame())
+                strokes.RemoveAt(strokes.Count - 1);
             else
-                _upFrames[key] = _frame() + 1;
+                LastStroke(key).Up = _frame() + 1;
         }
 
         _mouseDelta = default;
-        MousePosition = null;
+        MoveTo(null);
     }
 
     /// <summary>
     /// A key or mouse button is held, as Unity counts them.
     /// </summary>
-    public bool AnyKey => _downFrames.Keys.Any(GetKey);
+    public bool AnyKey => _strokes.Keys.Any(GetKey);
 
-    public bool AnyKeyDown => _downFrames.Keys.Any(GetKeyDown);
+    public bool AnyKeyDown => _strokes.Keys.Any(GetKeyDown);
 
     /// <summary>
-    /// Where the mouse is, in screen pixels counted from the bottom left, or null while it's the player's.
+    /// Where the mouse is, in screen pixels counted from the bottom left, or null while it's the player's. A move is seen
+    /// from the frame after, with a drag's delta and the buttons pressed alongside it, and so is giving it back to the
+    /// player, with the buttons going up.
     /// </summary>
-    public Vector3? MousePosition { get; private set; }
+    public Vector3? MousePosition => _frame() >= _movedFrame ? _movedMouse : _seenMouse;
 
     /// <param name="button">0 for the left button, as Unity counts them.</param>
     public bool GetMouseButton(int button)
@@ -165,36 +193,44 @@ internal sealed class LegacyInputDriver : IInputDriver
 
     public bool GetKey(KeyCode key)
     {
-        if (!_downFrames.TryGetValue(key, out var down) || _frame() < down)
-            return false;
-
-        // Released keys are held until the frame that sees them go up
-        return _heldKeys.ContainsKey(key) || _frame() < _upFrames[key];
+        return HeldIn(key, _frame());
     }
 
     public bool GetKeyDown(KeyCode key)
     {
-        return _downFrames.TryGetValue(key, out var frame) && frame == _frame();
+        return StrokesOf(key).Any(stroke => stroke.Down == _frame());
     }
 
     public bool GetKeyUp(KeyCode key)
     {
-        return _upFrames.TryGetValue(key, out var frame) && frame == _frame();
+        return StrokesOf(key).Any(stroke => stroke.Up == _frame());
     }
 
     /// <summary>
-    /// One of the game's axes in its Input Manager, as the player's with what this adds to it. A key axis adds -1, 0 or 1
-    /// as it snaps, and stays within 1 either way; a mouse axis adds how far the drags moved the mouse in the frame before,
-    /// times the axis's sensitivity. An axis it doesn't know is the player's.
+    /// One of the game's axes in its Input Manager, as <c>GetAxis</c> has it: the player's with what this adds to it. A
+    /// key axis ramps as Unity's does: each frame it moves by 3 a second towards where its held keys push it, falls back to
+    /// 0 as fast once they're let go, and starts from 0 when the other way is pressed. It stays within 1 with the player's.
+    /// A mouse axis is as <see cref="AxisRaw"/> has it. An axis it doesn't know is the player's.
     /// </summary>
     public float Axis(string name, float player)
     {
         name ??= string.Empty;
-        if (_keyAxes.TryGetValue(name, out var keys))
-        {
-            var pushed = (keys.Positive.Any(GetKey) ? 1 : 0) - (keys.Negative.Any(GetKey) ? 1 : 0);
-            return Math.Max(-1, Math.Min(1, player + pushed));
-        }
+        if (!_keyAxes.ContainsKey(name))
+            return AxisRaw(name, player);
+
+        return WithinOne(player + Ramp(name));
+    }
+
+    /// <summary>
+    /// One of the game's axes in its Input Manager, as <c>GetAxisRaw</c> has it: the player's with what this adds to it. A
+    /// key axis adds -1, 0 or 1 as it snaps, and stays within 1 either way; a mouse axis adds how far the drags moved the
+    /// mouse in the frame before, times the axis's sensitivity. An axis it doesn't know is the player's.
+    /// </summary>
+    public float AxisRaw(string name, float player)
+    {
+        name ??= string.Empty;
+        if (_keyAxes.ContainsKey(name))
+            return WithinOne(player + Pushed(name, _frame()));
 
         if (!_mouseAxes.TryGetValue(name, out var mouse) || _mouseDelta.Frame != _frame())
             return player;
@@ -297,10 +333,88 @@ internal sealed class LegacyInputDriver : IInputDriver
         return KeyCode.Mouse0 + (int)button;
     }
 
+    /// <summary>
+    /// Down from its down frame, and held until the frame that sees it go up.
+    /// </summary>
+    private bool HeldIn(KeyCode key, int frame)
+    {
+        return StrokesOf(key).Any(stroke => stroke.Down <= frame && (stroke.Up == null || frame < stroke.Up));
+    }
+
+    private IEnumerable<Stroke> StrokesOf(KeyCode key)
+    {
+        return _strokes.TryGetValue(key, out var strokes) ? strokes : [];
+    }
+
+    /// <summary>
+    /// -1, 0 or 1: where the key axis's keys held in the frame push it.
+    /// </summary>
+    private int Pushed(string axis, int frame)
+    {
+        var (positive, negative) = _keyAxes[axis];
+        return (positive.Any(key => HeldIn(key, frame)) ? 1 : 0) - (negative.Any(key => HeldIn(key, frame)) ? 1 : 0);
+    }
+
+    /// <summary>
+    /// Where the key axis has ramped to by this frame. It steps through each frame since it was last read, with this
+    /// frame's delta time for each, so reading it once a frame, as the game does, ramps it as Unity would.
+    /// </summary>
+    private float Ramp(string axis)
+    {
+        var now = _frame();
+        // Never read, it's been 0 until its keys first went down
+        if (!_ramps.TryGetValue(axis, out var ramp))
+            ramp = (Math.Min(now, FirstDown(axis)) - 1, 0);
+
+        var step = KeyAxisSpeed * _deltaTime();
+        for (var frame = ramp.Frame + 1; frame <= now; frame++)
+        {
+            var target = Pushed(axis, frame);
+            var value = target * ramp.Value < 0 ? 0 : ramp.Value;
+            ramp = (frame, MoveTowards(value, target, step));
+        }
+
+        _ramps[axis] = ramp;
+        return ramp.Value;
+    }
+
+    private int FirstDown(string axis)
+    {
+        var (positive, negative) = _keyAxes[axis];
+        return positive.Concat(negative).SelectMany(StrokesOf).Select(stroke => stroke.Down).DefaultIfEmpty(int.MaxValue).Min();
+    }
+
+    private static float WithinOne(float value)
+    {
+        return Math.Max(-1, Math.Min(1, value));
+    }
+
+    private static float MoveTowards(float from, float to, float by)
+    {
+        return Math.Abs(to - from) <= by ? to : from + (Math.Sign(to - from) * by);
+    }
+
+    /// <summary>
+    /// A key already held stays down from its first press. One whose release the game hasn't seen yet goes down the frame
+    /// after it sees it go up, as a key can't go up and down in one frame.
+    /// </summary>
     private void Press(KeyCode key)
     {
-        _heldKeys[key] = _heldKeys.TryGetValue(key, out var count) ? count + 1 : 1;
-        _downFrames[key] = _frame() + 1;
+        if (_heldKeys.TryGetValue(key, out var count))
+        {
+            _heldKeys[key] = count + 1;
+            return;
+        }
+
+        _heldKeys[key] = 1;
+        if (!_strokes.TryGetValue(key, out var strokes))
+            _strokes[key] = strokes = [];
+
+        var seenIn = _frame() + 1;
+        var down = strokes.Count > 0 && LastStroke(key).Up >= seenIn ? LastStroke(key).Up.Value + 1 : seenIn;
+        strokes.Add(new Stroke { Down = down, Later = down - seenIn });
+        if (strokes.Count > KeptStrokes)
+            strokes.RemoveAt(0);
     }
 
     /// <summary>
@@ -317,7 +431,35 @@ internal sealed class LegacyInputDriver : IInputDriver
             return;
         }
 
+        // One put down later goes up as much later, so it's held as long as it was pressed. Let go before it goes down,
+        // it's down and up in one frame, as a quick tap is
         _heldKeys.Remove(key);
-        _upFrames[key] = _frame() + 1;
+        var last = LastStroke(key);
+        last.Up = Math.Max(_frame() + 1 + last.Later, last.Down);
+    }
+
+    private Stroke LastStroke(KeyCode key)
+    {
+        var strokes = _strokes[key];
+        return strokes[strokes.Count - 1];
+    }
+
+    private void MoveTo(Vector3? position)
+    {
+        _seenMouse = MousePosition;
+        _movedMouse = position;
+        _movedFrame = _frame() + 1;
+    }
+
+    private sealed class Stroke
+    {
+        public int Down { get; set; }
+
+        public int? Up { get; set; }
+
+        /// <summary>
+        /// How many frames after the one it would have gone down in it does, as its last stroke's up was still to come.
+        /// </summary>
+        public int Later { get; set; }
     }
 }
