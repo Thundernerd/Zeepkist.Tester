@@ -29,7 +29,9 @@ internal sealed class GameHost : IRunHost
         _screenshots = screenshots;
         _walk = new StartWalk(game, logger, report);
         Input_Legacy.Driver = new LegacyInputDriver(() => Time.frameCount);
-        Input = new TesterInput(new InProcessDrivers(exception => logger.LogError($"{TestRun.Marker} {exception}"), new ImuiDriver(), Input_Legacy.Driver, new UguiPointer<GameObject>(new UguiScene())), new RewiredDriver(), () => Now);
+        Action<Exception> logGiveBackFailure = exception => logger.LogError($"{TestRun.Marker} {exception}");
+        var inProcess = new InProcessDrivers(logGiveBackFailure, new ImuiDriver(), Input_Legacy.Driver, new UguiPointer<GameObject>(new UguiScene()));
+        Input = new TesterInput(inProcess, new RewiredDriver(), () => Now, logGiveBackFailure);
     }
 
     public ManualLogSource Logger { get; }

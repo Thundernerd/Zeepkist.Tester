@@ -19,12 +19,13 @@ public class TesterInputTests
 
     private readonly FakeDriver _driver = new FakeDriver();
     private readonly FakeActions _actions = new FakeActions();
+    private readonly List<Exception> _logged = [];
     private readonly TesterInput _input;
     private float _now;
 
     public TesterInputTests()
     {
-        _input = new TesterInput(_driver, _actions, () => _now);
+        _input = new TesterInput(_driver, _actions, () => _now, _logged.Add);
     }
 
     private static Func<IInput, IEnumerator>[] Calls =>
@@ -278,6 +279,19 @@ public class TesterInputTests
     }
 
     [Fact]
+    public void GiveBack_LetsGoOfTheActions_WhenTheKeysAndMouseThrow_AndLogsWhatEachThrew()
+    {
+        var keysThrew = new InvalidOperationException("keys stuck");
+        var actionsThrew = new InvalidOperationException("actions stuck");
+        _driver.GiveBackThrows = keysThrew;
+        _actions.GiveBackThrows = actionsThrew;
+
+        _input.GiveBack();
+
+        Assert.Equal([keysThrew, actionsThrew], _logged);
+    }
+
+    [Fact]
     public void GiveBack_LeavesTheRouteAlone()
     {
         _input.Route = InputRoute.Os;
@@ -374,8 +388,13 @@ public class TesterInputTests
             return Takes;
         }
 
+        public Exception GiveBackThrows { get; set; }
+
         public void GiveBack()
         {
+            if (GiveBackThrows != null)
+                throw GiveBackThrows;
+
             Events.Add("give back");
         }
     }

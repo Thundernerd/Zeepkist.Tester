@@ -16,15 +16,18 @@ internal sealed class TesterInput : IInput
     private readonly IInputDriver _inProcess;
     private readonly IActionDriver _actions;
     private readonly Func<float> _now;
+    private readonly Action<Exception> _logGiveBackFailure;
 
     /// <param name="inProcess">What the in-process route sends keys and the mouse through.</param>
     /// <param name="actions">What the in-process route sends the game's input actions through.</param>
     /// <param name="now">Seconds of real time, for how long a key is held.</param>
-    public TesterInput(IInputDriver inProcess, IActionDriver actions, Func<float> now)
+    /// <param name="logGiveBackFailure">Hears what a driver throws from <see cref="GiveBack"/>, which it shouldn't.</param>
+    public TesterInput(IInputDriver inProcess, IActionDriver actions, Func<float> now, Action<Exception> logGiveBackFailure)
     {
         _inProcess = inProcess;
         _actions = actions;
         _now = now;
+        _logGiveBackFailure = logGiveBackFailure;
     }
 
     public InputRoute Route { get; set; } = InputRoute.InProcess;
@@ -135,10 +138,14 @@ internal sealed class TesterInput : IInput
         yield return null;
     }
 
+    /// <summary>
+    /// The actions let go even if the keys and mouse throw, and what either threw is logged, not thrown, so this can't
+    /// fail.
+    /// </summary>
     public void GiveBack()
     {
-        _inProcess.GiveBack();
-        _actions.GiveBack();
+        Guarded(_inProcess.GiveBack);
+        Guarded(_actions.GiveBack);
     }
 
     /// <summary>
@@ -152,6 +159,18 @@ internal sealed class TesterInput : IInput
         {
             var pixels = (float)(Math.Round((double)move.By.Value * frame / move.Over) - Math.Round((double)move.By.Value * (frame - 1) / move.Over));
             yield return move.Sideways ? new Vector2 { x = pixels } : new Vector2 { y = -pixels };
+        }
+    }
+
+    private void Guarded(Action giveBack)
+    {
+        try
+        {
+            giveBack();
+        }
+        catch (Exception exception)
+        {
+            _logGiveBackFailure(exception);
         }
     }
 
