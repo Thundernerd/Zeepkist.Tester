@@ -390,9 +390,11 @@ public static class ZlsSteps
     public sealed class ExpectError : NoArguments
     {
         [Arg]
+        [InRange(1, int.MaxValue)]
         public required int Line { get; set; }
 
         [Arg]
+        [InRange(1, int.MaxValue)]
         public required int Column { get; set; }
 
         [Arg]

@@ -148,7 +148,7 @@ public class LineScenarioReaderTests
     [InlineData("undo\nset-text\n  a", 2, "set-text has no end.")]
     [InlineData("undo\nend", 2, "end without set-text.")]
     [InlineData("# only a comment\n\n", 1, "The file has no steps.")]
-    [InlineData("drag-window-edge 10 then", 1, "drag-window-edge takes the pixels to drag, and optionally 'over <frames>', with 'then' before each move after the first, not '10 then'.")]
+    [InlineData("expect-error 0:5 nope", 1, "'line' of zls.expect-error has to be between 1 and 2147483647, not '0'.")]    [InlineData("drag-window-edge 10 then", 1, "drag-window-edge takes the pixels to drag, and optionally 'over <frames>', with 'then' before each move after the first, not '10 then'.")]
     [InlineData("expect-error 2 nope", 1, "expect-error takes a line and column, such as 2:5, then the text to look for, not '2 nope'.")]
     public void AnOldFormThatDoesntFit_Fails(string text, int line, string problem)
     {
