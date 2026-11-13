@@ -1,0 +1,1116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Zeepkist Tester scenario",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": [
+        "string",
+        "number",
+        "boolean"
+      ],
+      "description": "What the scenario checks, for the results.",
+      "markdownDescription": "What the scenario checks, for the results."
+    },
+    "use": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "sample",
+          "other"
+        ]
+      },
+      "description": "Namespaces whose steps this scenario writes without their prefix, such as `[zls]`.",
+      "markdownDescription": "Namespaces whose steps this scenario writes without their prefix, such as `[zls]`."
+    },
+    "start": {
+      "oneOf": [
+        {
+          "enum": [
+            "main-menu",
+            "editor"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "main-menu": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "main-menu"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "editor": {
+              "type": "object",
+              "properties": {
+                "level": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ],
+                  "not": {
+                    "type": "string",
+                    "pattern": "\\$\\{"
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "editor"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "free-play": {
+              "type": "object",
+              "properties": {
+                "uid": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ],
+                  "not": {
+                    "type": "string",
+                    "pattern": "\\$\\{"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "uid"
+              ]
+            }
+          },
+          "required": [
+            "free-play"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Where the scenario starts: `main-menu`, `editor` (the default), `editor: { level: file }` or `free-play: { uid: … }`.",
+      "markdownDescription": "Where the scenario starts: `main-menu`, `editor` (the default), `editor: { level: file }` or `free-play: { uid: … }`."
+    },
+    "input": {
+      "enum": [
+        "in-process",
+        "os"
+      ],
+      "description": "How input reaches the game: `in-process`, the default, or `os`, as a player's keyboard and mouse do.",
+      "markdownDescription": "How input reaches the game: `in-process`, the default, or `os`, as a player's keyboard and mouse do."
+    },
+    "steps": {
+      "$ref": "#/definitions/steps"
+    }
+  },
+  "required": [
+    "steps"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "const": "back-to-editor",
+            "description": "Quits test mode the way a player does, and waits until the editor has loaded the level again, blocks and all.",
+            "markdownDescription": "Quits test mode the way a player does, and waits until the editor has loaded the level again, blocks and all."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "expect-blank-screenshot": {
+                "anyOf": [
+                  {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ],
+                    "pattern": "^[A-Za-z0-9_-]+$"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "anyOf": [
+                          {
+                            "type": [
+                              "string",
+                              "number",
+                              "boolean"
+                            ],
+                            "pattern": "^[A-Za-z0-9_-]+$"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ],
+                        "description": "A name for the file, which goes after the scenario's name.",
+                        "markdownDescription": "A name for the file, which goes after the scenario's name."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "name"
+                    ]
+                  }
+                ],
+                "description": "Covers the frame in one color and takes a screenshot, to check that a run finds a blank one.",
+                "markdownDescription": "Covers the frame in one color and takes a screenshot, to check that a run finds a blank one."
+              }
+            },
+            "required": [
+              "expect-blank-screenshot"
+            ],
+            "additionalProperties": false,
+            "description": "Covers the frame in one color and takes a screenshot, to check that a run finds a blank one.",
+            "markdownDescription": "Covers the frame in one color and takes a screenshot, to check that a run finds a blank one."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "expect-block-count": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "anyOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ],
+                        "description": "How many there should be.",
+                        "markdownDescription": "How many there should be."
+                      },
+                      "type": {
+                        "anyOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ],
+                        "description": "Only counts blocks of this type: its ID in the game's block list, the number a level file stores for it.",
+                        "markdownDescription": "Only counts blocks of this type: its ID in the game's block list, the number a level file stores for it."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "count"
+                    ]
+                  }
+                ],
+                "description": "Counts the level's blocks, or only those of one type.",
+                "markdownDescription": "Counts the level's blocks, or only those of one type."
+              }
+            },
+            "required": [
+              "expect-block-count"
+            ],
+            "additionalProperties": false,
+            "description": "Counts the level's blocks, or only those of one type.",
+            "markdownDescription": "Counts the level's blocks, or only those of one type."
+          },
+          {
+            "const": "expect-no-exceptions",
+            "description": "Checks the game logged no exception since the scenario started, or since the last time this step ran.",
+            "markdownDescription": "Checks the game logged no exception since the scenario started, or since the last time this step ran."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "log": {
+                "anyOf": [
+                  {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "description": "The line to write.",
+                        "markdownDescription": "The line to write."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "message"
+                    ]
+                  }
+                ],
+                "description": "Writes a line to the results and the log, to say what a scenario has got to.",
+                "markdownDescription": "Writes a line to the results and the log, to say what a scenario has got to."
+              }
+            },
+            "required": [
+              "log"
+            ],
+            "additionalProperties": false,
+            "description": "Writes a line to the results and the log, to say what a scenario has got to.",
+            "markdownDescription": "Writes a line to the results and the log, to say what a scenario has got to."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "place-block": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "anyOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ],
+                        "description": "The block's type: its ID in the game's block list, the number a level file stores for it.",
+                        "markdownDescription": "The block's type: its ID in the game's block list, the number a level file stores for it."
+                      },
+                      "as": {
+                        "anyOf": [
+                          {
+                            "type": [
+                              "string",
+                              "number",
+                              "boolean"
+                            ],
+                            "pattern": "^[A-Za-z0-9_-]+$"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ],
+                        "description": "A name for the block, so later steps can use it, and write `${name}` for its UID.",
+                        "markdownDescription": "A name for the block, so later steps can use it, and write `${name}` for its UID."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "type"
+                    ]
+                  }
+                ],
+                "description": "Places a block on the ground below the camera, a cell to the side of where place-start puts the start block, and selects it. It's one undo step, like placing it by hand.",
+                "markdownDescription": "Places a block on the ground below the camera, a cell to the side of where place-start puts the start block, and selects it. It's one undo step, like placing it by hand."
+              }
+            },
+            "required": [
+              "place-block"
+            ],
+            "additionalProperties": false,
+            "description": "Places a block on the ground below the camera, a cell to the side of where place-start puts the start block, and selects it. It's one undo step, like placing it by hand.",
+            "markdownDescription": "Places a block on the ground below the camera, a cell to the side of where place-start puts the start block, and selects it. It's one undo step, like placing it by hand."
+          },
+          {
+            "const": "place-start",
+            "description": "Places a start block on the ground below the camera, facing the way it looks. It's one undo step, like placing it by hand.",
+            "markdownDescription": "Places a start block on the ground below the camera, facing the way it looks. It's one undo step, like placing it by hand."
+          },
+          {
+            "const": "redo",
+            "description": "Presses the level editor's redo key once, and fails when that redid nothing.",
+            "markdownDescription": "Presses the level editor's redo key once, and fails when that redid nothing."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "screenshot": {
+                "anyOf": [
+                  {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ],
+                    "pattern": "^[A-Za-z0-9_-]+$"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "anyOf": [
+                          {
+                            "type": [
+                              "string",
+                              "number",
+                              "boolean"
+                            ],
+                            "pattern": "^[A-Za-z0-9_-]+$"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ],
+                        "description": "A name for the file, which goes after the scenario's name.",
+                        "markdownDescription": "A name for the file, which goes after the scenario's name."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "name"
+                    ]
+                  }
+                ],
+                "description": "Saves what's on screen in the run's results, and fails if it came out blank, because then it shows nothing.",
+                "markdownDescription": "Saves what's on screen in the run's results, and fails if it came out blank, because then it shows nothing."
+              }
+            },
+            "required": [
+              "screenshot"
+            ],
+            "additionalProperties": false,
+            "description": "Saves what's on screen in the run's results, and fails if it came out blank, because then it shows nothing.",
+            "markdownDescription": "Saves what's on screen in the run's results, and fails if it came out blank, because then it shows nothing."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "set-block-setting": {
+                "type": "object",
+                "properties": {
+                  "block": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^[A-Za-z0-9_-]+$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ],
+                    "description": "The block, as `place-block` named it.",
+                    "markdownDescription": "The block, as `place-block` named it."
+                  },
+                  "setting": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ],
+                    "description": "The setting's key, as a level file stores it. A failure lists the keys the block has.",
+                    "markdownDescription": "The setting's key, as a level file stores it. A failure lists the keys the block has."
+                  },
+                  "value": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ],
+                    "description": "The value, which has to fit the setting: a whole number, `true` or `false`, a decimal, or text.",
+                    "markdownDescription": "The value, which has to fit the setting: a whole number, `true` or `false`, a decimal, or text."
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "block",
+                  "setting",
+                  "value"
+                ],
+                "description": "Changes a setting of a named block, as changing it in the block's settings panel does: through the block's editor, so it's one undo step and the level keeps it.",
+                "markdownDescription": "Changes a setting of a named block, as changing it in the block's settings panel does: through the block's editor, so it's one undo step and the level keeps it."
+              }
+            },
+            "required": [
+              "set-block-setting"
+            ],
+            "additionalProperties": false,
+            "description": "Changes a setting of a named block, as changing it in the block's settings panel does: through the block's editor, so it's one undo step and the level keeps it.",
+            "markdownDescription": "Changes a setting of a named block, as changing it in the block's settings panel does: through the block's editor, so it's one undo step and the level keeps it."
+          },
+          {
+            "const": "test-mode",
+            "description": "Starts test mode, and waits until the round starts and the player can drive. The level needs a start block.",
+            "markdownDescription": "Starts test mode, and waits until the round starts and the player can drive. The level needs a start block."
+          },
+          {
+            "const": "undo",
+            "description": "Presses the level editor's undo key once, and fails when that undid nothing.",
+            "markdownDescription": "Presses the level editor's undo key once, and fails when that undid nothing."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "wait": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9]+(\\.[0-9]+)?(ms|s)?$"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "seconds": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "^[0-9]+(\\.[0-9]+)?(ms|s)?$"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ],
+                        "description": "How long to wait.",
+                        "markdownDescription": "How long to wait."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "seconds"
+                    ]
+                  }
+                ],
+                "description": "Waits, such as for the level to run a little before a screenshot.",
+                "markdownDescription": "Waits, such as for the level to run a little before a screenshot."
+              }
+            },
+            "required": [
+              "wait"
+            ],
+            "additionalProperties": false,
+            "description": "Waits, such as for the level to run a little before a screenshot.",
+            "markdownDescription": "Waits, such as for the level to run a little before a screenshot."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "sample.compile": {
+                "anyOf": [
+                  {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "function": {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "description": "The function to compile.",
+                        "markdownDescription": "The function to compile."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "function"
+                    ]
+                  }
+                ],
+                "description": "Its constructors are there to compile on net472: `required` with `SetsRequiredMembersAttribute`.",
+                "markdownDescription": "Its constructors are there to compile on net472: `required` with `SetsRequiredMembersAttribute`."
+              }
+            },
+            "required": [
+              "sample.compile"
+            ],
+            "additionalProperties": false,
+            "description": "Its constructors are there to compile on net472: `required` with `SetsRequiredMembersAttribute`.",
+            "markdownDescription": "Its constructors are there to compile on net472: `required` with `SetsRequiredMembersAttribute`."
+          },
+          {
+            "const": "sample.game-imports",
+            "description": "Uses [InRange], TextBlock and other SDK names next to the namespaces a step file is likely to import.",
+            "markdownDescription": "Uses [InRange], TextBlock and other SDK names next to the namespaces a step file is likely to import."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "sample.game-imports": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 8
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "script": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  },
+                  "word": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^[a-z]+$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "times": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^[0-9]+(\\.[0-9]+)?(ms|s)?$"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                        }
+                      ]
+                    },
+                    "minItems": 1
+                  },
+                  "keys": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^(?:(?:shift|ctrl|alt|cmd)\\+)*(?:space|enter|tab|escape|backspace|delete|up|down|left|right|home|end|pageup|pagedown|[a-z0-9/\\\\.,;'\\[\\]=`-])(?: (?:(?:shift|ctrl|alt|cmd)\\+)*(?:space|enter|tab|escape|backspace|delete|up|down|left|right|home|end|pageup|pagedown|[a-z0-9/\\\\.,;'\\[\\]=`-])){0,7}$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "offset": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "screenshot": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^[A-Za-z0-9_-]+$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Uses [InRange], TextBlock and other SDK names next to the namespaces a step file is likely to import.",
+                "markdownDescription": "Uses [InRange], TextBlock and other SDK names next to the namespaces a step file is likely to import."
+              }
+            },
+            "required": [
+              "sample.game-imports"
+            ],
+            "additionalProperties": false,
+            "description": "Uses [InRange], TextBlock and other SDK names next to the namespaces a step file is likely to import.",
+            "markdownDescription": "Uses [InRange], TextBlock and other SDK names next to the namespaces a step file is likely to import."
+          },
+          {
+            "const": "sample.named-values",
+            "description": "Defines one named value and uses another.",
+            "markdownDescription": "Defines one named value and uses another."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "sample.named-values": {
+                "type": "object",
+                "properties": {
+                  "as": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^[A-Za-z0-9_-]+$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ],
+                    "description": "A name for the new block.",
+                    "markdownDescription": "A name for the new block."
+                  },
+                  "from": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^[A-Za-z0-9_-]+$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ],
+                    "description": "The block to start from.",
+                    "markdownDescription": "The block to start from."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Defines one named value and uses another.",
+                "markdownDescription": "Defines one named value and uses another."
+              }
+            },
+            "required": [
+              "sample.named-values"
+            ],
+            "additionalProperties": false,
+            "description": "Defines one named value and uses another.",
+            "markdownDescription": "Defines one named value and uses another."
+          },
+          {
+            "const": "other.own-namespace"
+          },
+          {
+            "const": "sample.swap-panel",
+            "description": "Needs and changes states of this assembly and of the tester's.",
+            "markdownDescription": "Needs and changes states of this assembly and of the tester's."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "compile": {
+                "anyOf": [
+                  {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "function": {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "description": "The function to compile.",
+                        "markdownDescription": "The function to compile."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "function"
+                    ]
+                  }
+                ],
+                "description": "Its constructors are there to compile on net472: `required` with `SetsRequiredMembersAttribute`.",
+                "markdownDescription": "Its constructors are there to compile on net472: `required` with `SetsRequiredMembersAttribute`."
+              }
+            },
+            "required": [
+              "compile"
+            ],
+            "additionalProperties": false,
+            "description": "Its constructors are there to compile on net472: `required` with `SetsRequiredMembersAttribute`.",
+            "markdownDescription": "Its constructors are there to compile on net472: `required` with `SetsRequiredMembersAttribute`."
+          },
+          {
+            "const": "game-imports",
+            "description": "Uses [InRange], TextBlock and other SDK names next to the namespaces a step file is likely to import.",
+            "markdownDescription": "Uses [InRange], TextBlock and other SDK names next to the namespaces a step file is likely to import."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "game-imports": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 8
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "script": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  },
+                  "word": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^[a-z]+$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "times": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^[0-9]+(\\.[0-9]+)?(ms|s)?$"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                        }
+                      ]
+                    },
+                    "minItems": 1
+                  },
+                  "keys": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^(?:(?:shift|ctrl|alt|cmd)\\+)*(?:space|enter|tab|escape|backspace|delete|up|down|left|right|home|end|pageup|pagedown|[a-z0-9/\\\\.,;'\\[\\]=`-])(?: (?:(?:shift|ctrl|alt|cmd)\\+)*(?:space|enter|tab|escape|backspace|delete|up|down|left|right|home|end|pageup|pagedown|[a-z0-9/\\\\.,;'\\[\\]=`-])){0,7}$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "offset": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "screenshot": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^[A-Za-z0-9_-]+$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Uses [InRange], TextBlock and other SDK names next to the namespaces a step file is likely to import.",
+                "markdownDescription": "Uses [InRange], TextBlock and other SDK names next to the namespaces a step file is likely to import."
+              }
+            },
+            "required": [
+              "game-imports"
+            ],
+            "additionalProperties": false,
+            "description": "Uses [InRange], TextBlock and other SDK names next to the namespaces a step file is likely to import.",
+            "markdownDescription": "Uses [InRange], TextBlock and other SDK names next to the namespaces a step file is likely to import."
+          },
+          {
+            "const": "named-values",
+            "description": "Defines one named value and uses another.",
+            "markdownDescription": "Defines one named value and uses another."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "named-values": {
+                "type": "object",
+                "properties": {
+                  "as": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^[A-Za-z0-9_-]+$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ],
+                    "description": "A name for the new block.",
+                    "markdownDescription": "A name for the new block."
+                  },
+                  "from": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^[A-Za-z0-9_-]+$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ],
+                    "description": "The block to start from.",
+                    "markdownDescription": "The block to start from."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Defines one named value and uses another.",
+                "markdownDescription": "Defines one named value and uses another."
+              }
+            },
+            "required": [
+              "named-values"
+            ],
+            "additionalProperties": false,
+            "description": "Defines one named value and uses another.",
+            "markdownDescription": "Defines one named value and uses another."
+          },
+          {
+            "const": "own-namespace"
+          },
+          {
+            "const": "swap-panel",
+            "description": "Needs and changes states of this assembly and of the tester's.",
+            "markdownDescription": "Needs and changes states of this assembly and of the tester's."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "for": {
+                "type": "object",
+                "minProperties": 1,
+                "maxProperties": 1,
+                "propertyNames": {
+                  "pattern": "^[A-Za-z0-9_-]+$"
+                },
+                "additionalProperties": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ],
+                    "not": {
+                      "type": "string",
+                      "pattern": "\\$\\{"
+                    }
+                  }
+                },
+                "description": "One variable and its values, such as `{ h: [64, 120] }`. The steps run once for each value, with `${h}` standing for it.",
+                "markdownDescription": "One variable and its values, such as `{ h: [64, 120] }`. The steps run once for each value, with `${h}` standing for it."
+              },
+              "steps": {
+                "$ref": "#/definitions/steps"
+              }
+            },
+            "required": [
+              "for",
+              "steps"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "repeat": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "How many times to run the steps.",
+                "markdownDescription": "How many times to run the steps."
+              },
+              "steps": {
+                "$ref": "#/definitions/steps"
+              }
+            },
+            "required": [
+              "repeat",
+              "steps"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "run": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ],
+                "not": {
+                  "type": "string",
+                  "pattern": "\\$\\{"
+                },
+                "description": "A scenario file to run here, relative to this one.",
+                "markdownDescription": "A scenario file to run here, relative to this one."
+              },
+              "with": {
+                "type": "object",
+                "propertyNames": {
+                  "pattern": "^[A-Za-z0-9_-]+$"
+                },
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                },
+                "description": "Named values the file can use as `${name}`.",
+                "markdownDescription": "Named values the file can use as `${name}`."
+              }
+            },
+            "required": [
+              "run"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  }
+}

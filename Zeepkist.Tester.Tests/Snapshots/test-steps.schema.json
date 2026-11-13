@@ -1,0 +1,1207 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Zeepkist Tester scenario",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": [
+        "string",
+        "number",
+        "boolean"
+      ],
+      "description": "What the scenario checks, for the results.",
+      "markdownDescription": "What the scenario checks, for the results."
+    },
+    "use": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "zls",
+          "clashing",
+          "other"
+        ]
+      },
+      "description": "Namespaces whose steps this scenario writes without their prefix, such as `[zls]`.",
+      "markdownDescription": "Namespaces whose steps this scenario writes without their prefix, such as `[zls]`."
+    },
+    "start": {
+      "oneOf": [
+        {
+          "enum": [
+            "main-menu",
+            "editor"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "main-menu": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "main-menu"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "editor": {
+              "type": "object",
+              "properties": {
+                "level": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ],
+                  "not": {
+                    "type": "string",
+                    "pattern": "\\$\\{"
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "editor"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "free-play": {
+              "type": "object",
+              "properties": {
+                "uid": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ],
+                  "not": {
+                    "type": "string",
+                    "pattern": "\\$\\{"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "uid"
+              ]
+            }
+          },
+          "required": [
+            "free-play"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Where the scenario starts: `main-menu`, `editor` (the default), `editor: { level: file }` or `free-play: { uid: … }`.",
+      "markdownDescription": "Where the scenario starts: `main-menu`, `editor` (the default), `editor: { level: file }` or `free-play: { uid: … }`."
+    },
+    "input": {
+      "enum": [
+        "in-process",
+        "os"
+      ],
+      "description": "How input reaches the game: `in-process`, the default, or `os`, as a player's keyboard and mouse do.",
+      "markdownDescription": "How input reaches the game: `in-process`, the default, or `os`, as a player's keyboard and mouse do."
+    },
+    "steps": {
+      "$ref": "#/definitions/steps"
+    }
+  },
+  "required": [
+    "steps"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "wait": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9]+(\\.[0-9]+)?(ms|s)?$"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "seconds": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "^[0-9]+(\\.[0-9]+)?(ms|s)?$"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ]
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "seconds"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "wait"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "const": "undo"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "place-block": {
+                "anyOf": [
+                  {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ],
+                    "pattern": "^[a-z_]+$"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "function": {
+                        "anyOf": [
+                          {
+                            "type": [
+                              "string",
+                              "number",
+                              "boolean"
+                            ],
+                            "pattern": "^[a-z_]+$"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ]
+                      },
+                      "as": {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ]
+                      },
+                      "how-many": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 8
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ],
+                        "default": 1
+                      },
+                      "offset": {
+                        "anyOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ]
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "function"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "place-block"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "zls.drag-window-edge": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "by": {
+                        "anyOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ]
+                      },
+                      "over": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 600
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ],
+                        "default": 1
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "by"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "by": {
+                              "anyOf": [
+                                {
+                                  "type": "integer"
+                                },
+                                {
+                                  "type": "string",
+                                  "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                                }
+                              ]
+                            },
+                            "over": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 600
+                                },
+                                {
+                                  "type": "string",
+                                  "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                                }
+                              ],
+                              "default": 1
+                            }
+                          },
+                          "additionalProperties": false,
+                          "required": [
+                            "by"
+                          ]
+                        }
+                      ]
+                    },
+                    "minItems": 1
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "moves": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "integer"
+                            },
+                            {
+                              "type": "string",
+                              "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "by": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                                    }
+                                  ]
+                                },
+                                "over": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 600
+                                    },
+                                    {
+                                      "type": "string",
+                                      "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                                    }
+                                  ],
+                                  "default": 1
+                                }
+                              },
+                              "additionalProperties": false,
+                              "required": [
+                                "by"
+                              ]
+                            }
+                          ]
+                        },
+                        "minItems": 1
+                      },
+                      "sideways": {
+                        "anyOf": [
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ],
+                        "default": false
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "moves"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "zls.drag-window-edge"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "const": "every-type"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "every-type": {
+                "type": "object",
+                "properties": {
+                  "axis": {
+                    "anyOf": [
+                      {
+                        "enum": [
+                          "horizontal",
+                          "global_velocity",
+                          "page-up"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ],
+                    "default": "global_velocity"
+                  },
+                  "maybe-axis": {
+                    "anyOf": [
+                      {
+                        "enum": [
+                          "horizontal",
+                          "global_velocity",
+                          "page-up"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "text": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  },
+                  "float": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "bool": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "keys": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^(?:(?:shift|ctrl|alt|cmd)\\+)*(?:space|enter|tab|escape|backspace|delete|up|down|left|right|home|end|pageup|pagedown|[a-z0-9/\\\\.,;'\\[\\]=`-])(?: (?:(?:shift|ctrl|alt|cmd)\\+)*(?:space|enter|tab|escape|backspace|delete|up|down|left|right|home|end|pageup|pagedown|[a-z0-9/\\\\.,;'\\[\\]=`-])){0,7}$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "file-name": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^[A-Za-z0-9_-]+$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "times": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^[0-9]+(\\.[0-9]+)?(ms|s)?$"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                        }
+                      ]
+                    }
+                  },
+                  "chords": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": [
+                            "string",
+                            "number",
+                            "boolean"
+                          ],
+                          "pattern": "^(?:(?:shift|ctrl|alt|cmd)\\+)*(?:space|enter|tab|escape|backspace|delete|up|down|left|right|home|end|pageup|pagedown|[a-z0-9/\\\\.,;'\\[\\]=`-])(?: (?:(?:shift|ctrl|alt|cmd)\\+)*(?:space|enter|tab|escape|backspace|delete|up|down|left|right|home|end|pageup|pagedown|[a-z0-9/\\\\.,;'\\[\\]=`-])){0,7}$"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                        }
+                      ]
+                    }
+                  },
+                  "timeout": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "^[0-9]+(\\.[0-9]+)?(ms|s)?$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "every-type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "const": "named"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "named": {
+                "type": "object",
+                "properties": {
+                  "defines": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^[A-Za-z0-9_-]+$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "maybe-defines": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^[A-Za-z0-9_-]+$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "uses": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^[A-Za-z0-9_-]+$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "uses-each": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": [
+                            "string",
+                            "number",
+                            "boolean"
+                          ],
+                          "pattern": "^[A-Za-z0-9_-]+$"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "named"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "const": "written"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "written": {
+                "type": "object",
+                "properties": {
+                  "string": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  },
+                  "no-string": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  },
+                  "text": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  },
+                  "maybe-text": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  },
+                  "no-text": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  },
+                  "strings": {
+                    "type": "array",
+                    "items": {
+                      "type": [
+                        "string",
+                        "number",
+                        "boolean"
+                      ]
+                    }
+                  },
+                  "nested": {
+                    "type": "object",
+                    "properties": {
+                      "line": {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ]
+                      },
+                      "details": {
+                        "type": "array",
+                        "items": {
+                          "type": [
+                            "string",
+                            "number",
+                            "boolean"
+                          ]
+                        }
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "nested-items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "line": {
+                          "type": [
+                            "string",
+                            "number",
+                            "boolean"
+                          ]
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": [
+                              "string",
+                              "number",
+                              "boolean"
+                            ]
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "file-name": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^[A-Za-z0-9_-]+$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "keys": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^(?:(?:shift|ctrl|alt|cmd)\\+)*(?:space|enter|tab|escape|backspace|delete|up|down|left|right|home|end|pageup|pagedown|[a-z0-9/\\\\.,;'\\[\\]=`-])(?: (?:(?:shift|ctrl|alt|cmd)\\+)*(?:space|enter|tab|escape|backspace|delete|up|down|left|right|home|end|pageup|pagedown|[a-z0-9/\\\\.,;'\\[\\]=`-])){0,7}$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "defines": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^[A-Za-z0-9_-]+$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "uses": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ],
+                        "pattern": "^[A-Za-z0-9_-]+$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "get-only": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "written"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "const": "ranged"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ranged": {
+                "type": "object",
+                "properties": {
+                  "number": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 0.1
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  },
+                  "time": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 0.1
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "^[0-9]+(\\.[0-9]+)?(ms|s)?$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "ranged"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "const": "clashing.wait"
+          },
+          {
+            "const": "zls.compile"
+          },
+          {
+            "const": "other.compile"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "drag-window-edge": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "by": {
+                        "anyOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ]
+                      },
+                      "over": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 600
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ],
+                        "default": 1
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "by"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "by": {
+                              "anyOf": [
+                                {
+                                  "type": "integer"
+                                },
+                                {
+                                  "type": "string",
+                                  "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                                }
+                              ]
+                            },
+                            "over": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 600
+                                },
+                                {
+                                  "type": "string",
+                                  "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                                }
+                              ],
+                              "default": 1
+                            }
+                          },
+                          "additionalProperties": false,
+                          "required": [
+                            "by"
+                          ]
+                        }
+                      ]
+                    },
+                    "minItems": 1
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "moves": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "integer"
+                            },
+                            {
+                              "type": "string",
+                              "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "by": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                                    }
+                                  ]
+                                },
+                                "over": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 600
+                                    },
+                                    {
+                                      "type": "string",
+                                      "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                                    }
+                                  ],
+                                  "default": 1
+                                }
+                              },
+                              "additionalProperties": false,
+                              "required": [
+                                "by"
+                              ]
+                            }
+                          ]
+                        },
+                        "minItems": 1
+                      },
+                      "sideways": {
+                        "anyOf": [
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "\\$\\{[A-Za-z0-9_-]+\\}"
+                          }
+                        ],
+                        "default": false
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "moves"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "drag-window-edge"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "const": "compile",
+            "description": "`zls.compile`\n\n`other.compile`",
+            "markdownDescription": "`zls.compile`\n\n`other.compile`"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "for": {
+                "type": "object",
+                "minProperties": 1,
+                "maxProperties": 1,
+                "propertyNames": {
+                  "pattern": "^[A-Za-z0-9_-]+$"
+                },
+                "additionalProperties": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ],
+                    "not": {
+                      "type": "string",
+                      "pattern": "\\$\\{"
+                    }
+                  }
+                },
+                "description": "One variable and its values, such as `{ h: [64, 120] }`. The steps run once for each value, with `${h}` standing for it.",
+                "markdownDescription": "One variable and its values, such as `{ h: [64, 120] }`. The steps run once for each value, with `${h}` standing for it."
+              },
+              "steps": {
+                "$ref": "#/definitions/steps"
+              }
+            },
+            "required": [
+              "for",
+              "steps"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "repeat": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "How many times to run the steps.",
+                "markdownDescription": "How many times to run the steps."
+              },
+              "steps": {
+                "$ref": "#/definitions/steps"
+              }
+            },
+            "required": [
+              "repeat",
+              "steps"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "run": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ],
+                "not": {
+                  "type": "string",
+                  "pattern": "\\$\\{"
+                },
+                "description": "A scenario file to run here, relative to this one.",
+                "markdownDescription": "A scenario file to run here, relative to this one."
+              },
+              "with": {
+                "type": "object",
+                "propertyNames": {
+                  "pattern": "^[A-Za-z0-9_-]+$"
+                },
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                },
+                "description": "Named values the file can use as `${name}`.",
+                "markdownDescription": "Named values the file can use as `${name}`."
+              }
+            },
+            "required": [
+              "run"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  }
+}
