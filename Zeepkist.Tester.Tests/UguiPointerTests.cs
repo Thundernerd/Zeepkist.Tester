@@ -110,6 +110,21 @@ public class UguiPointerTests
     }
 
     [Fact]
+    public void WhatThePointerEntersAndLeaves_IsToldOfTheLeftButton_AsTheInputModuleMovesItWithThat()
+    {
+        _pointer.MoveMouse(_onButton);
+        _pointer.PressButton(MouseButton.Left);
+        _pointer.DragMouse(Delta(_onButton, _onOther), MouseButton.Left);
+        _pointer.PressButton(MouseButton.Right);
+        _pointer.ReleaseButton(MouseButton.Right);
+        _scene.Hovers.Clear();
+
+        _pointer.MoveMouse(_onNothing);
+
+        Assert.Equal(["Exit menu/other Left menu/button"], _scene.Hovers);
+    }
+
+    [Fact]
     public void GiveBack_LetsGoOfEveryHeldButton()
     {
         _pointer.MoveMouse(_onButton);
@@ -131,10 +146,10 @@ public class UguiPointerTests
         _pointer.MoveMouse(_onButton);
         _scene.Sent.Clear();
 
-        _pointer.PressButton(MouseButton.Left);
+        _pointer.PressButton(MouseButton.Right);
 
         Assert.Null(_scene.Selected);
-        Assert.Equal(["Deselect menu/field", "Down menu/button Left"], _scene.Sent);
+        Assert.Equal(["Deselect menu/field Right", "Down menu/button Right"], _scene.Sent);
     }
 
     [Fact]
@@ -248,6 +263,11 @@ public class UguiPointerTests
 
         public List<string> Sent { get; } = [];
 
+        /// <summary>
+        /// Each enter and exit, with the button and what took its press that it carries.
+        /// </summary>
+        public List<string> Hovers { get; } = [];
+
         public bool Ready { get; set; } = true;
 
         public bool ModuleReadsUnityInput { get; set; }
@@ -282,14 +302,17 @@ public class UguiPointerTests
             return Selectable.Contains(node);
         }
 
-        public void Deselect()
+        public void Deselect(PointerState<string> state)
         {
-            Sent.Add($"Deselect {Selected}");
+            Sent.Add($"Deselect {Selected} {state.Button}");
             Selected = null;
         }
 
         public void Send(string node, PointerEvent pointerEvent, PointerState<string> state)
         {
+            if (pointerEvent is PointerEvent.Enter or PointerEvent.Exit)
+                Hovers.Add($"{pointerEvent} {node} {state.Button} {state.Pressed}");
+
             Sent.Add(pointerEvent is PointerEvent.Enter or PointerEvent.Exit
                 ? $"{pointerEvent} {node}"
                 : $"{pointerEvent} {node} {state.Button}");

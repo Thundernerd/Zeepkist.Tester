@@ -78,11 +78,11 @@ internal sealed class UguiPointer<TNode> : IInputDriver
             return false;
 
         FindHit();
-        DeselectIfElsewhere();
+        DeselectIfElsewhere(button);
         var pressed = Handler(_state.Hit, PointerEvent.Down);
         var press = new Press(pressed ?? Handler(_state.Hit, PointerEvent.Click), _state.Position);
         _held[button] = press;
-        Use(button, press);
+        LoadPress(button, press);
         if (pressed != null)
             _scene.Send(pressed, PointerEvent.Down, _state);
 
@@ -105,7 +105,7 @@ internal sealed class UguiPointer<TNode> : IInputDriver
         if (_held.TryGetValue(button, out var press))
         {
             _held.Remove(button);
-            Use(button, press);
+            LoadPress(button, press);
             var pressed = press.Pressed;
             if (pressed != null)
             {
@@ -115,7 +115,6 @@ internal sealed class UguiPointer<TNode> : IInputDriver
             }
         }
 
-        _state.Pressed = null;
         EnterHit();
         return true;
     }
@@ -130,14 +129,13 @@ internal sealed class UguiPointer<TNode> : IInputDriver
         {
             foreach (var held in _held)
             {
-                Use(held.Key, held.Value);
+                LoadPress(held.Key, held.Value);
                 if (held.Value.Pressed != null)
                     SendIfHandled(held.Value.Pressed, PointerEvent.Up);
             }
         }
 
         _held.Clear();
-        _state.Pressed = null;
         _state.Hit = null;
         _placed = false;
         if (Active)
@@ -151,21 +149,25 @@ internal sealed class UguiPointer<TNode> : IInputDriver
     /// <c>DeselectIfSelectionChanged</c> does before a press goes down: a click elsewhere takes the focus from an input
     /// field. Whatever the press lands on can then select itself.
     /// </summary>
-    private void DeselectIfElsewhere()
+    private void DeselectIfElsewhere(MouseButton button)
     {
         var selected = _scene.Selected;
         if (selected == null)
             return;
 
         var selectable = SelfAndAbove(_state.Hit).FirstOrDefault(_scene.CanSelect);
-        if (!Equals(selectable, selected))
-            _scene.Deselect();
+        if (Equals(selectable, selected))
+            return;
+
+        // Nothing has taken the press yet as the input module deselects
+        LoadPress(button, new Press(null, _state.Position));
+        _scene.Deselect(_state);
     }
 
     /// <summary>
-    /// Has the events that follow carry the button and what took its press.
+    /// Puts the button, what took its press and where, in the state the events that follow carry.
     /// </summary>
-    private void Use(MouseButton button, Press press)
+    private void LoadPress(MouseButton button, Press press)
     {
         _state.Button = button;
         _state.Pressed = press.Pressed;
@@ -210,10 +212,13 @@ internal sealed class UguiPointer<TNode> : IInputDriver
     }
 
     /// <summary>
-    /// Leaves what the hit isn't in and enters what it newly is, as Unity's input module does: only below what both share.
+    /// Leaves what the hit isn't in and enters what it newly is, as Unity's input module does: only below what both share,
+    /// and with the left button's state, held or not, as the input module moves the pointer with that.
     /// </summary>
     private void EnterHit()
     {
+        LoadPress(MouseButton.Left, _held.TryGetValue(MouseButton.Left, out var left) ? left : default);
+
         var now = SelfAndAbove(_state.Hit).ToList();
 
         foreach (var node in _entered)

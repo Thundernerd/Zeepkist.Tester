@@ -43,10 +43,14 @@ internal sealed class UguiScene : IUguiScene<GameObject>
         return node != null && ExecuteEvents.CanHandleEvent<ISelectHandler>(node);
     }
 
-    public void Deselect()
+    /// <summary>
+    /// Passes the press's pointer data, as the input module does, for what reads the pointer as it's deselected. The
+    /// press goes down where the pointer is now, so that's its raycast.
+    /// </summary>
+    public void Deselect(PointerState<GameObject> state)
     {
         if (EventSystem.current != null)
-            EventSystem.current.SetSelectedGameObject(null, new BaseEventData(EventSystem.current));
+            EventSystem.current.SetSelectedGameObject(null, Data(state, _lastHit));
     }
 
     public GameObject HitAt(Vector2 screenPoint)
@@ -107,23 +111,7 @@ internal sealed class UguiScene : IUguiScene<GameObject>
             _pressHits[state.Button] = _lastHit;
 
         _pressHits.TryGetValue(state.Button, out var pressHit);
-
-        var data = new PointerEventData(EventSystem.current)
-        {
-            position = state.Position,
-            button = (PointerEventData.InputButton)state.Button,
-            pointerCurrentRaycast = _lastHit,
-            pointerEnter = state.Hit,
-            pointerPress = state.Pressed,
-            rawPointerPress = state.Pressed,
-            pressPosition = state.PressPosition,
-            pointerPressRaycast = pressHit,
-            eligibleForClick = state.Pressed != null,
-            clickCount = 1,
-            clickTime = Time.unscaledTime,
-            useDragThreshold = true,
-        };
-
+        var data = Data(state, pressHit);
         switch (pointerEvent)
         {
             case PointerEvent.Enter:
@@ -142,5 +130,24 @@ internal sealed class UguiScene : IUguiScene<GameObject>
                 ExecuteEvents.Execute(node, data, ExecuteEvents.pointerClickHandler);
                 break;
         }
+    }
+
+    private PointerEventData Data(PointerState<GameObject> state, RaycastResult pressHit)
+    {
+        return new PointerEventData(EventSystem.current)
+        {
+            position = state.Position,
+            button = (PointerEventData.InputButton)state.Button,
+            pointerCurrentRaycast = _lastHit,
+            pointerEnter = state.Hit,
+            pointerPress = state.Pressed,
+            rawPointerPress = state.Pressed,
+            pressPosition = state.PressPosition,
+            pointerPressRaycast = pressHit,
+            eligibleForClick = state.Pressed != null,
+            clickCount = 1,
+            clickTime = Time.unscaledTime,
+            useDragThreshold = true,
+        };
     }
 }

@@ -26,14 +26,15 @@ internal interface IUguiScene<TNode>
     public TNode Selected { get; }
 
     /// <summary>
-    /// Whether the object can be selected, which is having a handler for being selected.
+    /// Whether the object has a handler for being selected.
     /// </summary>
     public bool CanSelect(TNode node);
 
     /// <summary>
-    /// Has the event system select nothing, which tells what was selected that it no longer is.
+    /// Has the event system select nothing, which tells what was selected that it no longer is, with the press that
+    /// took the selection from it.
     /// </summary>
-    public void Deselect();
+    public void Deselect(PointerState<TNode> state);
 
     /// <summary>
     /// The topmost object at the point, or null over none.
