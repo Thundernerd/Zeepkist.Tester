@@ -162,25 +162,28 @@ Things to keep from the current runner, which took effort to get right:
 
 ### What a run changes, and what the runner puts back
 
-Comparing the game's data before and after a run (#60) showed that the game changes more than the mod under test does, on boot and in the editor, and so do the player's other mods. The runner copies each of these before the game starts and afterwards replaces it with the copy, or deletes it if there was none, also after a killed run. It's a fixed list rather than a `backup` setting in `zeepkist-test.json`, because what's on it doesn't depend on the mod under test. `Zeepkist.Tester.Tests.InGame/run.sh` puts back the same list, except configs, as neither of its plugins has one.
+Comparing the game's data before and after a run (#60) showed that the game changes more than the mod under test does, on boot and in the editor, and so do the player's other mods. The runner copies each of these before the game starts and afterwards replaces it with the copy, or deletes it if there was none. Recovery after a killed run puts them back the same way. It's a fixed list rather than a `backup` setting in `zeepkist-test.json`, because what's on it doesn't depend on the mod under test. `Zeepkist.Tester.Tests.InGame/run.sh` puts back the same list.
 
-| Where | What a run changes | Put back |
-| --- | --- | --- |
-| `Roaming/Zeepkist/Autosaves`, `Backups` | The editor's autosaves and level backups | Yes |
-| `Roaming/Zeepkist/Mods` | Every loaded mod's data, not only the mod under test's. Level Editor Trails, for one, writes a file for each level name a run opens | Yes, the whole folder |
-| `BepInEx/config/<guid>.cfg` | BepInEx writes the settings each mod under test and the tester binds | Yes |
-| `LocalLow/Steelpan Interactive/Zeepkist/Technical/Backup` | The game prunes old `Progress*` backups and writes a new one on boot | Yes |
-| `LocalLow/…/Belangrijk/Backups` | The same for `Settings*` backups | Yes |
-| `LocalLow/…/DeletedBackups` | The game removes folders whose date has passed and adds one | Yes |
-| `LocalLow/…/LevelIndexes` | The game rewrites an index | Yes |
-| `BepInEx/cache` | BepInEx's chainloader and Harmony caches | Yes |
-| `BepInEx/LogOutput.log` | BepInEx's log, which the run replaces | Yes, after copying it into the run's `out` |
+`Roaming` and `LocalLow` are `%USERPROFILE%\AppData\Roaming\Zeepkist` and `%USERPROFILE%\AppData\LocalLow\Steelpan Interactive\Zeepkist`, inside the Proton prefix on Linux. `BepInEx` is in the game's install.
 
-Putting back the game's own backups and indexes undoes housekeeping the game would have done on the player's next launch anyway, so it costs nothing, and the player's data is then exactly as the run found it. Leaving them would mean a run prunes the player's backups the way a launch of their own does, once per run.
+| Where | What a run changes |
+| --- | --- |
+| `Roaming/Autosaves`, `Roaming/Backups` | The editor's autosaves and level backups |
+| `Roaming/Mods`, the whole folder | Every loaded mod's data, not only the mod under test's. Level Editor Trails, for one, writes a file for each level name a run opens |
+| `LocalLow/Technical/Backup` | The game prunes old `Progress*` backups and writes a new one on boot |
+| `LocalLow/Belangrijk/Backups` | The same for `Settings*` backups |
+| `LocalLow/DeletedBackups` | The game removes folders whose date has passed and adds one |
+| `LocalLow/LevelIndexes` | The game rewrites an index |
+| `LocalLow/Player.log`, `Player-prev.log`, `LevelTrace.log`, `LevelTrace.previous.log`, `LevelTrace_verbose.log` | Each launch rewrites the game's logs. The runner copies `Player.log` into the run's `out` before putting it back |
+| `BepInEx/cache` | BepInEx's chainloader and Harmony caches |
+| `BepInEx/config`, the whole folder | BepInEx writes the settings each loaded plugin binds, the player's other mods' too |
+| `BepInEx/LogOutput.log` | BepInEx's log, which the runner copies into `out` before putting it back |
+
+Putting back the game's own backups means a run never prunes the player's backups, and leaves nothing on disk that the player's own launches didn't. Leaving them changed would let runs prune the player's backups.
 
 What a mod sends over the network can't be put back. Zeepkist GTR logged in to its backend during the run behind #60.
 
-**The player's other mods stay loaded.** The runner sets aside only other copies of the mods under test. The rest are what players run the mod alongside, and some are what it depends on, ZeepSDK first. The game installs mod.io mods into `BepInEx/plugins/Mods` itself, so moving them out for a run risks the game treating them as missing. Their local data is put back with `Roaming/Zeepkist/Mods`, and a CI machine has none of them, so its runs are the same each time. Alternatives considered:
+**The player's other mods stay loaded.** The runner sets aside only other copies of the mods under test. The rest are what players run the mod alongside, and some are what it depends on, ZeepSDK first. The game installs mod.io mods into `BepInEx/plugins/Mods` itself, and moving them out for a run may make it fetch them again or drop them from the player's list. That's unchecked, and reason enough not to touch them. Their local data and configs are put back with `Roaming/Mods` and `BepInEx/config`. A CI machine has only the mods its setup installs, so its runs repeat. Alternatives considered:
 - Load only the mods under test and their dependencies: runs repeat across machines and nothing reaches a mod's backend, but it needs the dependencies from each plugin's `BepInDependency` and a way to keep the game from re-fetching what was set aside.
 - Leave it to a setting in `zeepkist-test.json`: two ways to run before either is needed.
 
@@ -277,7 +280,7 @@ Recommendation: **C# tests as the base, a data format for scenarios that change 
 
 What changes from the bash runner:
 - **Finding the game:** `HKCU\Software\Valve\Steam\SteamPath` → `steamapps/libraryfolders.vdf` → `appmanifest_1440670.acf`, the same lookup as now. `ZEEPKIST_DIR` stays as an override.
-- **Game data:** `%APPDATA%\Zeepkist` and `%USERPROFILE%\AppData\LocalLow\Steelpan Interactive\Zeepkist` (on Linux, the same folders inside the Proton prefix). What's backed up from there is in *What a run changes, and what the runner puts back* in §4.
+- **Game data:** `%APPDATA%\Zeepkist` and `%USERPROFILE%\AppData\LocalLow\Steelpan Interactive\Zeepkist` (on Linux, the same folders inside the Proton prefix). What's put back there is in *What a run changes, and what the runner puts back* in §4.
 - **Launch:** `steam.exe -applaunch 1440670 -ztest <runId>`. Detect the game by the `Zeepkist.exe` process. Steam's launch failures are in `<Steam>\logs\console_log.txt` on both platforms.
 - **Lock between runs:** a lock file under `%LOCALAPPDATA%`, or a named mutex, instead of `flock`.
 - **OS input:** `SendInput` works natively and is the reference platform for the OS driver. Windows doesn't let a background process steal focus (`SetForegroundWindow` restrictions), so the in-game driver brings its own window forward before sending. It also fails the step, saying why, when `GetForegroundWindow()` isn't the game's window, rather than typing into whatever has focus.
