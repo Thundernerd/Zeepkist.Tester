@@ -29,7 +29,7 @@ public sealed class PlaceBlock : Step
         if (central == null)
             yield break;
 
-        var types = central.manager.loader.globalBlockList.blocks;
+        var types = central.BlockTypes();
         if (Type < 0 || Type >= types.Count || types[Type] == null)
         {
             context.Fail($"The game has no block type {Type}.");

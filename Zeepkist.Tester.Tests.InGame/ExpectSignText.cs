@@ -24,7 +24,7 @@ public sealed class ExpectSignText : Step
         if (central == null)
             yield break;
 
-        var block = central.undoRedo.allBlocksDictionary[Block.Get(context).Uid];
+        var block = central.GetBlock(context, Block);
         var actual = block.GetAllBlockEditV18sFromThisBlock().OfType<BlockEdit_v18_WriteableSign>().Single().writeableText;
         context.Check(actual == Text, $"{Block} shows {actual}", Text, actual);
     }

@@ -21,7 +21,7 @@ public sealed class ClickBlock : Step
         if (central == null)
             yield break;
 
-        var block = central.undoRedo.allBlocksDictionary[Block.Get(context).Uid];
+        var block = central.GetBlock(context, Block);
         var point = FindPoint(central, block)
             ?? throw new StepFailedException($"No part of {Block} is where the editor takes a click on it.");
 

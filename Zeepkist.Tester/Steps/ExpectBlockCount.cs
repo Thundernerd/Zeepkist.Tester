@@ -28,7 +28,7 @@ public sealed class ExpectBlockCount : Step
         if (central == null)
             yield break;
 
-        var count = central.undoRedo.allBlocksDictionary.Values.Count(block => block != null && (Type == null || block.blockID == Type));
+        var count = central.Blocks().Count(block => Type == null || block.blockID == Type);
         var what = (count == 1 ? "block" : "blocks") + (Type == null ? string.Empty : $" of type {Type}");
         var expected = Count.ToString(CultureInfo.InvariantCulture);
         var actual = count.ToString(CultureInfo.InvariantCulture);

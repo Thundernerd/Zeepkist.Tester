@@ -33,12 +33,7 @@ public sealed class SetBlockSetting : Step
         if (central == null)
             yield break;
 
-        var uid = Block.Get(context).Uid;
-        if (!central.undoRedo.allBlocksDictionary.TryGetValue(uid, out var block) || block == null)
-        {
-            context.Fail($"The level has no block with {Block}'s UID \"{uid}\" any more.");
-            yield break;
-        }
+        var block = central.GetBlock(context, Block);
 
         var blockEdits = block.GetAllBlockEditV18sFromThisBlock();
         if (blockEdits.Count == 0)
