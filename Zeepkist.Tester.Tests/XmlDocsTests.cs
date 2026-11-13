@@ -49,6 +49,32 @@ public class XmlDocsTests
     }
 
     [Fact]
+    public void ReadWhenAsked_Assembly_ReadsTheDocFileNextToWhereItIs()
+    {
+        using var folder = new TemporaryFolder();
+        var assembly = WriteDocs(folder, "Mod", "<member name=\"T:Mod.Wait\"><summary>Waits.</summary></member>");
+
+        var summaries = XmlDocs.ReadWhenAsked(name => name == "Mod" ? assembly : null);
+
+        Assert.Equal("Waits.", summaries("Mod", "T:Mod.Wait"));
+        Assert.Null(summaries("Other", "T:Other.Wait"));
+    }
+
+    [Fact]
+    public void ReadWhenAsked_AssemblyNotYetFound_IsLookedForAgainNextTime()
+    {
+        using var folder = new TemporaryFolder();
+        var assembly = WriteDocs(folder, "Mod", "<member name=\"T:Mod.Wait\"><summary>Waits.</summary></member>");
+        string location = null;
+
+        var summaries = XmlDocs.ReadWhenAsked(_ => location);
+        Assert.Null(summaries("Mod", "T:Mod.Wait"));
+        location = assembly;
+
+        Assert.Equal("Waits.", summaries("Mod", "T:Mod.Wait"));
+    }
+
+    [Fact]
     public void Read_SeveralAssemblies_FindsTheMembersOfEach()
     {
         using var folder = new TemporaryFolder();

@@ -264,6 +264,17 @@ public class ScenarioParserTests
         Assert.Equal("${lamp}", node.With["uid"].Text);
     }
 
+    public static TheoryData<string> ControlNodeNames => new TheoryData<string>(ControlNodes.All);
+
+    [Theory]
+    [MemberData(nameof(ControlNodeNames))]
+    public void EachReservedName_IsReadAsItsControlNode(string name)
+    {
+        var exception = Assert.Throws<ScenarioException>(() => ScenarioParser.Parse("scenario.ztest.yaml", new StringReader($"steps:\n  - {name}:\n"), ScenarioSteps.Descriptors));
+
+        Assert.StartsWith($"{name}: ", exception.Problem);
+    }
+
     [Theory]
     [MemberData(nameof(Errors))]
     public void AFileThatCantBeRead_FailsWithItsFileLineAndColumn(string fixture, int line, int column, string problem)

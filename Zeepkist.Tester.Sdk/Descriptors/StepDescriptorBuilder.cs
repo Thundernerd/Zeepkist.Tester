@@ -24,9 +24,6 @@ public sealed class StepDescriptorBuilder
 
     private static readonly Regex _kebabCase = new Regex("^[a-z0-9]+(-[a-z0-9]+)*$");
 
-    // A scenario reads these as control nodes, so a step with one of these names would be hidden when it's written unprefixed
-    private static readonly string[] _controlNodes = ["for", "repeat", "run"];
-
     private static readonly Dictionary<string, ArgumentType> _scalarTypes = new Dictionary<string, ArgumentType>()
     {
         [typeof(string).FullName] = new ArgumentType { Kind = ArgumentKind.String },
@@ -90,10 +87,18 @@ public sealed class StepDescriptorBuilder
 
     public StepDescriptor Build(Type stepType)
     {
-        return NamingWhatCantBeFound(stepType, () => BuildStep(stepType));
+        return Build(stepType, new Dictionary<string, Type>());
     }
 
-    private StepDescriptor BuildStep(Type stepType)
+    /// <summary>
+    /// Builds a step whose value kinds can't clash with <paramref name="classesByKind"/>, the class of each kind built so far, and adds its own to them.
+    /// </summary>
+    private StepDescriptor Build(Type stepType, Dictionary<string, Type> classesByKind)
+    {
+        return NamingWhatCantBeFound(stepType, () => BuildStep(stepType, classesByKind));
+    }
+
+    private StepDescriptor BuildStep(Type stepType, Dictionary<string, Type> classesByKind)
     {
         var stepAttribute = FindAttribute<StepAttribute>(stepType)
             ?? throw new StepDefinitionException($"{stepType.FullName} has no [Step] attribute.");
@@ -102,10 +107,10 @@ public sealed class StepDescriptorBuilder
             throw new StepDefinitionException($"{stepType.FullName} has [Step] but doesn't derive from Step.");
 
         var (name, stepNamespace) = ReadName(stepAttribute, stepType, "Step");
-        if (_controlNodes.Contains(name))
-            throw new StepDefinitionException($"Step name '{name}' ({stepType.FullName}) is reserved for a scenario's control nodes: for, repeat and run.");
+        if (ControlNodes.All.Contains(name))
+            throw new StepDefinitionException($"Step name '{name}' ({stepType.FullName}) is reserved for a scenario's control nodes: {string.Join(", ", ControlNodes.All.Take(ControlNodes.All.Count - 1))} and {ControlNodes.All.Last()}.");
 
-        var arguments = BuildArguments(stepType, [stepType]);
+        var arguments = BuildArguments(stepType, [stepType], classesByKind);
         var lineSyntax = ConstructorValue<string>(FindAttribute<LineSyntaxAttribute>(stepType));
         if (lineSyntax != null)
             RequireLineSyntax(lineSyntax, arguments, stepType);
@@ -129,15 +134,17 @@ public sealed class StepDescriptorBuilder
     }
 
     /// <summary>
-    /// Builds several steps, which can't share a name within a namespace.
+    /// Builds several steps, which can't share a name within a namespace. The value kinds they name can't share a name at all:
+    /// a scenario doesn't write a kind with a namespace, and the game tells kinds apart by their classes.
     /// </summary>
     public IReadOnlyList<StepDescriptor> BuildAll(IEnumerable<Type> stepTypes)
     {
         var descriptors = new List<StepDescriptor>();
         var typesByName = new Dictionary<string, Type>();
+        var classesByKind = new Dictionary<string, Type>();
         foreach (var stepType in stepTypes)
         {
-            var descriptor = Build(stepType);
+            var descriptor = Build(stepType, classesByKind);
             if (typesByName.TryGetValue(descriptor.FullName, out var other))
                 throw new StepDefinitionException($"{other.FullName} and {stepType.FullName} are both the step '{descriptor.FullName}'.");
 
@@ -325,7 +332,7 @@ public sealed class StepDescriptorBuilder
             throw new StepDefinitionException($"{what} names {type.FullName}, which has no [State] attribute.");
     }
 
-    private IReadOnlyList<ArgumentDescriptor> BuildArguments(Type owner, List<Type> enclosing)
+    private IReadOnlyList<ArgumentDescriptor> BuildArguments(Type owner, List<Type> enclosing, Dictionary<string, Type> classesByKind)
     {
         var arguments = new List<ArgumentDescriptor>();
         foreach (var property in owner.GetProperties())
@@ -339,7 +346,7 @@ public sealed class StepDescriptorBuilder
             if (arguments.Any(argument => argument.Name == name))
                 throw new StepDefinitionException($"{owner.FullName} has more than one argument named '{name}'.");
 
-            var type = BuildType(property.PropertyType, name, enclosing);
+            var type = BuildType(property.PropertyType, name, enclosing, classesByKind);
             var range = FindAttribute<InRangeAttribute>(property);
             var pattern = ConstructorValue<string>(FindAttribute<PatternAttribute>(property));
             if (pattern != null)
@@ -407,25 +414,25 @@ public sealed class StepDescriptorBuilder
         }
     }
 
-    private ArgumentType BuildType(Type type, string argument, List<Type> enclosing)
+    private ArgumentType BuildType(Type type, string argument, List<Type> enclosing, Dictionary<string, Type> classesByKind)
     {
         if (IsGeneric(type, "System.Nullable`1"))
-            return BuildType(type.GetGenericArguments()[0], argument, enclosing);
+            return BuildType(type.GetGenericArguments()[0], argument, enclosing, classesByKind);
 
         if (_scalarTypes.TryGetValue(type.FullName, out var scalar))
             return scalar;
 
         if (IsGeneric(type, typeof(Name<>).FullName))
-            return BuildNamedValue(ArgumentKind.Name, type, argument, enclosing);
+            return BuildNamedValue(ArgumentKind.Name, type, argument, enclosing, classesByKind);
 
         if (IsGeneric(type, typeof(Ref<>).FullName))
-            return BuildNamedValue(ArgumentKind.Ref, type, argument, enclosing);
+            return BuildNamedValue(ArgumentKind.Ref, type, argument, enclosing, classesByKind);
 
         if (type.IsEnum)
             return new ArgumentType { Kind = ArgumentKind.Enum, EnumValues = [.. EnumMembers(type).Select(WrittenEnumValue)] };
 
         if (IsGeneric(type, "System.Collections.Generic.List`1"))
-            return new ArgumentType { Kind = ArgumentKind.List, ItemType = BuildType(type.GetGenericArguments()[0], argument, enclosing) };
+            return new ArgumentType { Kind = ArgumentKind.List, ItemType = BuildType(type.GetGenericArguments()[0], argument, enclosing, classesByKind) };
 
         if (!type.IsClass || !type.GetProperties().Any(property => FindAttribute<ArgAttribute>(property) != null))
             throw new StepDefinitionException($"Argument '{argument}' ({enclosing.Last().FullName}) has the type {type.FullName}, which isn't an argument type.");
@@ -437,11 +444,11 @@ public sealed class StepDescriptorBuilder
         {
             Kind = ArgumentKind.Object,
             Documentation = Summary('T', type),
-            Arguments = BuildArguments(type, [.. enclosing, type]),
+            Arguments = BuildArguments(type, [.. enclosing, type], classesByKind),
         };
     }
 
-    private static ArgumentType BuildNamedValue(ArgumentKind argumentKind, Type type, string argument, List<Type> enclosing)
+    private static ArgumentType BuildNamedValue(ArgumentKind argumentKind, Type type, string argument, List<Type> enclosing, Dictionary<string, Type> classesByKind)
     {
         var valueType = type.GetGenericArguments()[0];
         var kindAttribute = FindAttribute<ValueKindAttribute>(valueType)
@@ -451,29 +458,44 @@ public sealed class StepDescriptorBuilder
         RequireKebabCase($"Value kind '{kind}'", kind, valueType);
 
         var substitute = NamedValue<string>(kindAttribute, nameof(ValueKindAttribute.Substitute));
-        if (substitute != null && !IsStringProperty(valueType, substitute))
-            throw new StepDefinitionException($"Value kind Substitute '{substitute}' ({valueType.FullName}) isn't a public string property of it.");
+        if (substitute != null && !ValueKindRules.IsSubstituteProperty(valueType, substitute))
+            throw new StepDefinitionException(ValueKindRules.SubstituteNotAString(substitute, valueType));
 
-        return new ArgumentType { Kind = argumentKind, Pattern = Name<object>.Pattern, ValueKind = kind, BaseValueKinds = BaseKinds(valueType), Substitute = substitute };
+        ClaimKind(classesByKind, kind, valueType);
+        return new ArgumentType { Kind = argumentKind, Pattern = Name<object>.Pattern, ValueKind = kind, BaseValueKinds = BaseKinds(valueType, classesByKind), Substitute = substitute };
     }
 
-    private static List<string> BaseKinds(Type valueType)
+    private static List<string> BaseKinds(Type valueType, Dictionary<string, Type> classesByKind)
     {
-        var kinds = new List<string>();
+        var baseKinds = new List<string>();
         for (var baseType = valueType.BaseType; baseType != null; baseType = baseType.BaseType)
         {
             var attribute = FindAttribute<ValueKindAttribute>(baseType);
-            if (attribute != null)
-                kinds.Add(ConstructorValue<string>(attribute));
+            if (attribute == null)
+                continue;
+
+            var kind = ConstructorValue<string>(attribute);
+            ClaimKind(classesByKind, kind, baseType);
+            baseKinds.Add(kind);
         }
 
-        return kinds;
+        return baseKinds;
     }
 
-    private static bool IsStringProperty(Type type, string name)
+    /// <summary>
+    /// Records <paramref name="valueType"/> as the class of <paramref name="kind"/>, and fails if another class already is. The game tells
+    /// kinds apart by their classes, so two classes of one kind would pass a check and fail in the game.
+    /// </summary>
+    private static void ClaimKind(Dictionary<string, Type> classesByKind, string kind, Type valueType)
     {
-        var property = type.GetProperty(name);
-        return property != null && property.CanRead && property.PropertyType.FullName == typeof(string).FullName;
+        if (!classesByKind.TryGetValue(kind, out var other))
+        {
+            classesByKind.Add(kind, valueType);
+            return;
+        }
+
+        if (other.FullName != valueType.FullName || other.Assembly.GetName().Name != valueType.Assembly.GetName().Name)
+            throw new StepDefinitionException(ValueKindRules.Clash(other, valueType, kind));
     }
 
     private static bool DerivesFromStep(Type type)

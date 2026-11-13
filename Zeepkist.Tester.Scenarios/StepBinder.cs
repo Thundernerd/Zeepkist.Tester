@@ -23,7 +23,16 @@ internal sealed class StepBinder
     public static Step Bind(StepNode node, Type stepType, IValues values)
     {
         var step = (Step)Activator.CreateInstance(stepType);
-        new StepBinder(values).Fill(step, node.Step.FullName, node.Step.Arguments, node.Arguments);
+        try
+        {
+            new StepBinder(values).Fill(step, node.Step.FullName, node.Step.Arguments, node.Arguments);
+        }
+        catch (ScenarioException exception)
+        {
+            // Binding happens as the step runs, where a mistake in the file fails the step
+            throw new StepFailedException(exception.Message);
+        }
+
         return step;
     }
 
@@ -36,7 +45,7 @@ internal sealed class StepBinder
             if (written.Values.TryGetValue(argument.Name, out var value))
             {
                 if (!property.CanWrite)
-                    throw Fail(value.Location, $"{what} can't be set: its property has no setter.");
+                    throw new ScenarioException(value.Location, $"{what} can't be set: its property has no setter.");
 
                 property.SetValue(owner, Convert(property.PropertyType, argument, argument.Type, value, what));
             }
@@ -77,14 +86,14 @@ internal sealed class StepBinder
         }
         catch (StepFailedException exception)
         {
-            throw Fail(scalar.Location, exception.Message);
+            throw new ScenarioException(scalar.Location, exception.Message);
         }
     }
 
     private static object ConvertText(Type type, ArgumentDescriptor argument, ArgumentType argumentType, string text, SourceLocation location, string what)
     {
         type = Nullable.GetUnderlyingType(type) ?? type;
-        var read = Read(new WrittenValue(argument, argumentType, text, location, what));
+        var read = new WrittenValue(argument, argumentType, text, location, what).Read();
         switch (argumentType.Kind)
         {
             case ArgumentKind.Int:
@@ -102,22 +111,5 @@ internal sealed class StepBinder
                 // TextBlock, Keys, FileName, Name<T> and Ref<T> each hold the text
                 return Activator.CreateInstance(type, read);
         }
-    }
-
-    private static object Read(WrittenValue value)
-    {
-        try
-        {
-            return value.Read();
-        }
-        catch (ScenarioException exception)
-        {
-            throw new StepFailedException(exception.Message);
-        }
-    }
-
-    private static StepFailedException Fail(SourceLocation location, string problem)
-    {
-        return new StepFailedException($"{location}: {problem}");
     }
 }

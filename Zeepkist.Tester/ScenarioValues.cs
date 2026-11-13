@@ -46,6 +46,7 @@ internal sealed class ScenarioValues : IValues
         if (value == null)
             throw new StepFailedException($"The name '{name}' has to be defined with a value, not null.");
 
+        RequireSubstituteMember(typeof(T));
         _values.Add(name, new Defined(value, typeof(T)));
     }
 
@@ -59,7 +60,12 @@ internal sealed class ScenarioValues : IValues
         if (defined.Value is T value)
             return value;
 
-        throw new StepFailedException(ScenarioMessages.WrongKind(name, defined.Kind, KindOf(typeof(T))));
+        // A check only compares kinds' names, so two classes of one kind pass it and land here
+        var kind = KindOf(typeof(T));
+        if (kind == defined.Kind && HasKind(typeof(T)) && HasKind(defined.ValueType))
+            throw new StepFailedException(ValueKindRules.Clash(defined.ValueType, typeof(T), kind));
+
+        throw new StepFailedException(ScenarioMessages.WrongKind(name, defined.Kind, kind));
     }
 
     public string Substitute(string text)
@@ -85,6 +91,24 @@ internal sealed class ScenarioValues : IValues
     private Defined FindOrNull(string name)
     {
         return _values.TryGetValue(name, out var defined) ? defined : _outer?.FindOrNull(name);
+    }
+
+    /// <summary>
+    /// A step's own kind doesn't always reach the registry's rules through an argument, so this is where its member is checked then.
+    /// </summary>
+    private static void RequireSubstituteMember(Type valueType)
+    {
+        var member = valueType.GetCustomAttribute<ValueKindAttribute>()?.Substitute;
+        if (member == null)
+            return;
+
+        if (!ValueKindRules.IsSubstituteProperty(valueType, member))
+            throw new StepFailedException(ValueKindRules.SubstituteNotAString(member, valueType));
+    }
+
+    private static bool HasKind(Type valueType)
+    {
+        return valueType.GetCustomAttribute<ValueKindAttribute>() != null;
     }
 
     private static string KindOf(Type valueType)
