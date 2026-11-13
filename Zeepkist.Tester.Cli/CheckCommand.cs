@@ -114,9 +114,30 @@ internal sealed class CheckCommand
         foreach (var problem in problems)
             _output.WriteLine(problem);
 
-        var errors = problems.Count(problem => problem.Severity == CheckSeverity.Error);
-        _output.WriteLine($"Checked {Counted.Of(files.Count, "file")}: {Counted.Of(errors, "error", "no")}, {Counted.Of(problems.Count - errors, "warning", "no")}.");
+        var testErrors = TestsLevelsNotFound(registry, config);
+        foreach (var error in testErrors)
+            _output.WriteLine($"error: {error}");
+
+        var warnings = problems.Count(problem => problem.Severity == CheckSeverity.Warning);
+        var errors = problems.Count - warnings + testErrors.Count;
+        _output.WriteLine($"Checked {Counted.Of(files.Count, "file")}: {Counted.Of(errors, "error", "no")}, {Counted.Of(warnings, "warning", "no")}.");
         return errors == 0 ? 0 : 1;
+    }
+
+    /// <summary>
+    /// Each C# test whose <see cref="TestDescriptor.Level"/> isn't in the configured <c>scenarios</c> folder, which is where the
+    /// game looks for it. Without one there's nowhere to look.
+    /// </summary>
+    private static List<string> TestsLevelsNotFound(StepRegistry registry, TestConfig config)
+    {
+        if (config?.Scenarios == null)
+            return [];
+
+        var folder = Path.Combine(config.Folder, config.Scenarios);
+        return registry.Tests
+            .Where(test => test.Level != null && !File.Exists(Path.Combine(folder, test.Level.Replace('/', Path.DirectorySeparatorChar))))
+            .Select(test => $"[InGameTest] {test.TypeName}.{test.MethodName} can't find its Level '{test.Level}' in {folder}.")
+            .ToList();
     }
 
     private int Fail(string problem)
