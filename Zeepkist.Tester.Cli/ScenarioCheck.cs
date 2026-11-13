@@ -235,6 +235,10 @@ internal sealed class ScenarioCheck
         foreach (var mismatch in run.Mismatches(scenario))
             Report(mismatch.Location, CheckSeverity.Error, mismatch.Problem);
 
+        // A name it takes that the run leaves out is that run's mistake, which is reported there, not at each use
+        foreach (var name in (scenario.Takes ?? []).Where(name => given.Find(name) == null))
+            given.Define(name, new NamedValue([TextValue.Kind], true, null));
+
         var ranFrom = _ranFrom;
         _ranFrom = run.Location;
         Follow(scenario, given, held);

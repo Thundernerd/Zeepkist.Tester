@@ -229,6 +229,18 @@ public class ScenarioCheckTests
             problems);
     }
 
+    [Fact]
+    public void ANameACallerLeavesOut_IsOnlyReportedAtTheCaller()
+    {
+        using var folder = new TemporaryFolder();
+        var caller = Write(folder, "a.ztest.yaml", "steps:\n  - run: b.ztest.yaml\n");
+        Write(folder, "b.ztest.yaml", "with: [time]\nsteps:\n  - wait: ${time}\n");
+
+        var problem = Assert.Single(ScenarioCheck.Run([caller], CheckSteps.Registry));
+
+        Assert.Equal($"{caller}:2:5: error: run: 'b.ztest.yaml' takes 'time', but with: doesn't pass it.", problem.ToString());
+    }
+
     [Fact(Timeout = 60000)]
     public async Task ManyNestedRepeats_StopBeingFollowed_AndSaySo()
     {
