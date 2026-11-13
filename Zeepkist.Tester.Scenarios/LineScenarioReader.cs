@@ -44,7 +44,7 @@ internal sealed class LineScenarioReader
     }
 
     /// <summary>
-    /// Reads the file the way <see cref="Read"/> does, but goes on after each line that can't be read, so <c>ztest check</c> can report them all at once.
+    /// Reads the file the way <see cref="Read(string, TextReader, IEnumerable{StepDescriptor})"/> does, but goes on after each line that can't be read, so <c>ztest check</c> can report them all at once.
     /// </summary>
     /// <returns>The scenario, or null when a line can't be read, and each problem in the order of its line.</returns>
     public static (LineScenario Scenario, IReadOnlyList<ScenarioException> Problems) ReadAll(string file, TextReader reader, IEnumerable<StepDescriptor> steps)
