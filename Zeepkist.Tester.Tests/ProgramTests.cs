@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.Json.Nodes;
 using TNRD.Zeepkist.Tester.Cli;
 using TNRD.Zeepkist.Tester.Tests.SampleMod;
 using Xunit;
@@ -233,6 +235,85 @@ public sealed class ProgramTests : IDisposable
 
         Assert.Equal(0, RunIn(_folder.Path, "check", file, "--plugin", _modPath));
         Assert.False(Directory.Exists(Path.Combine(_folder.Path, ".ztest")));
+    }
+
+    [Fact]
+    public void Init_NoSettings_WritesThemWithTheSchemaForScenarios_NextToTheConfig()
+    {
+        WriteConfig();
+        var current = Directory.CreateDirectory(Path.Combine(_folder.Path, "deep")).FullName;
+
+        Assert.Equal(0, RunIn(current, "init"));
+        var settings = JsonNode.Parse(File.ReadAllText(Path.Combine(_folder.Path, ".vscode", "settings.json")));
+        Assert.Equal("**/*.ztest.yaml", (string)settings["yaml.schemas"][".ztest/schema.json"]);
+    }
+
+    [Fact]
+    public void Init_SaysHowOtherEditorsFindTheSchema()
+    {
+        Assert.Equal(0, RunIn(_folder.Path, "init"));
+        Assert.Contains("# yaml-language-server: $schema=", _output.ToString());
+        Assert.Contains("# $schema:", _output.ToString());
+    }
+
+    [Fact]
+    public void Init_KeepsTheOtherSettings_AndOtherSchemas()
+    {
+        Write(Path.Combine(".vscode", "settings.json"), """
+            {
+                "editor.tabSize": 2,
+                "yaml.schemas": { "other.json": "*.other.yaml", ".ztest/schema.json": "old/*.yaml" },
+            }
+            """);
+
+        Assert.Equal(0, RunIn(_folder.Path, "init"));
+        var settings = JsonNode.Parse(File.ReadAllText(Path.Combine(_folder.Path, ".vscode", "settings.json")));
+        Assert.Equal(2, (int)settings["editor.tabSize"]);
+        Assert.Equal("*.other.yaml", (string)settings["yaml.schemas"]["other.json"]);
+        Assert.Equal(["old/*.yaml", "**/*.ztest.yaml"], settings["yaml.schemas"][".ztest/schema.json"].AsArray().Select(glob => (string)glob));
+    }
+
+    [Fact]
+    public void Init_Twice_ChangesNothingTheSecondTime()
+    {
+        Assert.Equal(0, RunIn(_folder.Path, "init"));
+        var path = Path.Combine(_folder.Path, ".vscode", "settings.json");
+        var first = File.ReadAllText(path);
+        _output.GetStringBuilder().Clear();
+
+        Assert.Equal(0, RunIn(_folder.Path, "init"));
+        Assert.Equal(first, File.ReadAllText(path));
+        Assert.Contains("already", Lines()[0]);
+    }
+
+    [Fact]
+    public void Init_SettingsWithComments_AreLeftAlone_AndItSaysWhatToAdd()
+    {
+        var path = Write(Path.Combine(".vscode", "settings.json"), "{\n    // mine\n    \"editor.tabSize\": 2\n}\n");
+
+        Assert.Equal(1, RunIn(_folder.Path, "init"));
+        Assert.Equal("{\n    // mine\n    \"editor.tabSize\": 2\n}\n", File.ReadAllText(path));
+        Assert.Contains("\"yaml.schemas\": { \".ztest/schema.json\": \"**/*.ztest.yaml\" }", _output.ToString());
+    }
+
+    [Theory]
+    [InlineData("[]")]
+    [InlineData("{ \"yaml.schemas\": 1 }")]
+    [InlineData("{ nope")]
+    public void Init_SettingsItCantAddTo_Fail(string settings)
+    {
+        var path = Write(Path.Combine(".vscode", "settings.json"), settings);
+
+        Assert.Equal(1, RunIn(_folder.Path, "init"));
+        Assert.StartsWith("error: ", _output.ToString());
+        Assert.Equal(settings, File.ReadAllText(path));
+    }
+
+    [Fact]
+    public void Init_AnArgument_PrintsUsageAndFails()
+    {
+        Assert.Equal(1, Run("init", "--nope"));
+        Assert.Contains("Usage: ztest", _output.ToString());
     }
 
     private int Run(params string[] arguments)
