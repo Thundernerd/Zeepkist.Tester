@@ -21,28 +21,27 @@ internal sealed class ScenarioRunner
     private readonly ExceptionLog _exceptions;
     private readonly StepTypes _steps;
     private readonly IReadOnlyList<TestPluginRegistration> _plugins;
-    private readonly Action<RunStep> _report;
     private readonly ScenarioLoader _loader;
     private readonly string _folder;
-    private readonly InGameTests _tests;
+    private readonly RunRecorder _recorder;
+    private readonly InGameTestRunner _tests;
 
     /// <param name="host">The game.</param>
     /// <param name="exceptions">Where the game's exceptions are listed under each scenario.</param>
-    /// <param name="steps">The steps scenarios can use.</param>
+    /// <param name="catalog">The steps scenarios can use, and the C# tests a run can choose from.</param>
     /// <param name="plugins">What the test plugins gave.</param>
     /// <param name="report">Takes each step's result.</param>
     /// <param name="folder">What a scenario's name is relative to, so two files of one name in two folders stay apart.</param>
-    /// <param name="tests">The C# tests a run can choose from.</param>
-    public ScenarioRunner(IRunHost host, ExceptionLog exceptions, StepTypes steps, IReadOnlyList<TestPluginRegistration> plugins, Action<RunStep> report, string folder, InGameTests tests)
+    public ScenarioRunner(IRunHost host, ExceptionLog exceptions, RunCatalog catalog, IReadOnlyList<TestPluginRegistration> plugins, Action<RunStep> report, string folder)
     {
         _folder = folder;
         _host = host;
         _exceptions = exceptions;
-        _steps = steps;
+        _steps = catalog.Steps;
         _plugins = plugins;
-        _report = report;
-        _tests = tests;
-        _loader = new ScenarioLoader(steps.Descriptors);
+        _recorder = new RunRecorder(host, report);
+        _tests = new InGameTestRunner(host, exceptions, catalog, _recorder);
+        _loader = new ScenarioLoader(catalog.Steps.Descriptors);
     }
 
     private IEnumerable<IScenarioHooks> Hooks => _plugins.SelectMany(plugin => plugin.ScenarioHooks);
@@ -53,13 +52,13 @@ internal sealed class ScenarioRunner
     {
         if (files.Count == 0 && tests.Count == 0)
         {
-            _report(RunStep.Fail("scenarios", "run.json names no scenarios or tests, so this run tested nothing."));
+            _recorder.Report(RunStep.Fail("scenarios", "run.json names no scenarios or tests, so this run tested nothing."));
             yield break;
         }
 
         var run = new RunContext(_host.Logger, Services());
-        var units = LoadAll(files).Select(scenario => RunUnit.Of(scenario, new ScenarioContext(run, ScenarioName(scenario.File)), RunScenarioSteps))
-            .Concat(SelectTests(tests).Select(test => RunUnit.Of(test, new ScenarioContext(run, test.Descriptor.Name), RunTest)))
+        var units = LoadAll(files).Select(scenario => UnitOf(scenario, run))
+            .Concat(_tests.Select(tests, run))
             .ToList();
         if (units.Count == 0)
             yield break;
@@ -82,13 +81,9 @@ internal sealed class ScenarioRunner
         }
     }
 
-    private List<InGameTest> SelectTests(IReadOnlyList<string> selectors)
+    private RunUnit UnitOf(Scenario scenario, RunContext run)
     {
-        var selected = _tests.Select(selectors, out var unknown);
-        foreach (var selector in unknown)
-            _report(new RunStep { Name = "load", Scenario = selector, Detail = $"No [InGameTest] is named {selector}: a test is selected by its class's name, or by Class.Method." });
-
-        return selected;
+        return new RunUnit(new ScenarioContext(run, ScenarioName(scenario.File)), scenario.File, scenario.Start, scenario.Input, unit => RunNodes(unit, scenario.Steps, Frame.Top(scenario.File)));
     }
 
     private string ScenarioName(string file)
@@ -97,11 +92,6 @@ internal sealed class ScenarioRunner
             .Replace('\\', '/')
             .TrimStart('/');
         return name.EndsWith(ScenarioFileEnd, StringComparison.OrdinalIgnoreCase) ? name.Substring(0, name.Length - ScenarioFileEnd.Length) : name;
-    }
-
-    private static string Describe(Exception exception)
-    {
-        return exception is StepFailedException ? exception.Message : $"{exception.GetType().Name}: {exception.Message}";
     }
 
     /// <exception cref="StepDefinitionException">Two test plugins gave a service of one type.</exception>
@@ -135,11 +125,11 @@ internal sealed class ScenarioRunner
             }
             catch (ScenarioException exception)
             {
-                _report(new RunStep { Name = "load", Scenario = ScenarioName(file), File = exception.Location.File, Line = (int)exception.Location.Line, Detail = exception.Message });
+                _recorder.Report(new RunStep { Name = "load", Scenario = ScenarioName(file), File = exception.Location.File, Line = (int)exception.Location.Line, Detail = exception.Message });
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
             {
-                _report(new RunStep { Name = "load", Scenario = ScenarioName(file), File = file, Detail = exception.Message });
+                _recorder.Report(new RunStep { Name = "load", Scenario = ScenarioName(file), File = file, Detail = exception.Message });
             }
         }
 
@@ -157,8 +147,8 @@ internal sealed class ScenarioRunner
             catch (Exception exception)
             {
                 var name = $"{hooks.GetType().Name}.{nameof(IScenarioHooks.RunStarted)}";
-                LogError(exception);
-                _report(RunStep.Fail(name, Describe(exception)));
+                _recorder.LogError(exception);
+                _recorder.Report(RunStep.Fail(name, RunRecorder.Describe(exception)));
                 problem = $"{name} failed.";
                 return false;
             }
@@ -171,7 +161,7 @@ internal sealed class ScenarioRunner
     private void ReportNotRun(IEnumerable<RunUnit> units, string why)
     {
         foreach (var unit in units)
-            _report(new RunStep { Name = "not run", Scenario = unit.Name, File = unit.File, Detail = why });
+            _recorder.Report(new RunStep { Name = "not run", Scenario = unit.Name, File = unit.File, Detail = why });
     }
 
     private IEnumerator RunOne(RunUnit unit, bool isFirst)
@@ -203,21 +193,13 @@ internal sealed class ScenarioRunner
     private IEnumerator RunHook(RunUnit unit, IScenarioHooks hooks, string hook, Func<IEnumerator> routine, Action failed)
     {
         Exception error = null;
-        yield return GuardedRoutine.Run(Called(routine), exception => error = exception);
+        yield return GuardedRoutine.Run(RunRecorder.Called(routine), exception => error = exception);
         if (error == null)
             yield break;
 
-        LogError(error);
-        _report(new RunStep { Name = $"{hooks.GetType().Name}.{hook}", Scenario = unit.Name, File = unit.File, Detail = Describe(error) });
+        _recorder.LogError(error);
+        _recorder.Report(new RunStep { Name = $"{hooks.GetType().Name}.{hook}", Scenario = unit.Name, File = unit.File, Detail = RunRecorder.Describe(error) });
         failed?.Invoke();
-    }
-
-    /// <summary>
-    /// A hook or a test's class needn't be an iterator, so the call itself can throw too.
-    /// </summary>
-    private static IEnumerator Called(Func<IEnumerator> routine)
-    {
-        yield return routine();
     }
 
     private IEnumerator EnterStart(RunUnit unit)
@@ -231,66 +213,18 @@ internal sealed class ScenarioRunner
 
         unit.StartFailed = true;
         if (error is not StartFailedException)
-            LogError(error);
+            _recorder.LogError(error);
 
-        _report(new RunStep
+        _recorder.Report(new RunStep
         {
             Name = $"start: {start.State.Name}",
             Scenario = unit.Name,
             File = unit.File,
             Line = (int)(start.Location?.Line ?? 0),
-            Detail = error is StartFailedException ? error.Message : Describe(error),
-            Seconds = Seconds(startedAt),
+            Detail = error is StartFailedException ? error.Message : RunRecorder.Describe(error),
+            Seconds = _recorder.Seconds(startedAt),
         });
-        yield return FailureScreenshot(unit);
-    }
-
-    private IEnumerator RunScenarioSteps(RunUnit unit, Scenario file)
-    {
-        return RunNodes(unit, file.Steps, Frame.Top(file.File));
-    }
-
-    /// <summary>
-    /// The test's steps record themselves as <see cref="IStepContext.Run"/> runs them. The test's own entry, <c>test</c>, is
-    /// there when the test failed outside a step, recorded a check of its own, or ran no step, so every test shows. A failed step
-    /// that stops the test doesn't hide what the test recorded before it.
-    /// </summary>
-    private IEnumerator RunTest(RunUnit unit, InGameTest test)
-    {
-        var values = new ScenarioValues();
-        var stepsRun = 0;
-        var stopped = false;
-        var context = unit.Context.ForTest(_host, _exceptions, values, step => RunTestStep(unit, values, step, () => stepsRun++, () => stopped = true));
-        RunStep recorded = null;
-        yield return RunRecorded(context, Called(() => test.Run(context)), step => recorded = step, error => error is TestStoppedException);
-        if (!context.Failed && stepsRun > 0 && context.Detail.Length == 0 && context.Expected == null)
-            yield break;
-
-        recorded.Name = "test";
-        recorded.Scenario = unit.Name;
-        _report(recorded);
-
-        // The step that stopped it took one already
-        if (context.Failed && !stopped)
-            yield return FailureScreenshot(unit);
-    }
-
-    /// <exception cref="TestStoppedException">The step failed, which stops the test that ran it.</exception>
-    private IEnumerator RunTestStep(RunUnit unit, ScenarioValues values, Step step, Action ran, Action stopping)
-    {
-        var context = unit.Context.ForStep(_host, _exceptions, values);
-        RunStep recorded = null;
-        yield return RunRecorded(context, StepPreconditions.Run(step, context), result => recorded = result);
-        ran();
-        recorded.Name = step == null ? "null" : _steps.NameOf(step.GetType());
-        recorded.Scenario = unit.Name;
-        _report(recorded);
-        if (!context.Failed)
-            yield break;
-
-        yield return FailureScreenshot(unit);
-        stopping();
-        throw new TestStoppedException();
+        yield return _recorder.FailureScreenshot(unit);
     }
 
     private IEnumerator RunNodes(RunUnit unit, IReadOnlyList<ScenarioNode> nodes, Frame frame)
@@ -383,8 +317,8 @@ internal sealed class ScenarioRunner
     private IEnumerator FailNode(RunUnit unit, Frame frame, string name, SourceLocation location, string problem)
     {
         unit.Stopped = true;
-        _report(frame.Failed(name, location, unit.Name, problem));
-        yield return FailureScreenshot(unit);
+        _recorder.Report(frame.Failed(name, location, unit.Name, problem));
+        yield return _recorder.FailureScreenshot(unit);
     }
 
     private static string WithNamesWritten(ScalarArgument value, ScenarioValues values)
@@ -403,48 +337,20 @@ internal sealed class ScenarioRunner
     {
         var context = unit.Context.ForStep(_host, _exceptions, frame.Values);
         RunStep recorded = null;
-        yield return RunRecorded(context, BindAndRun(node, context, frame), step => recorded = step);
+        yield return _recorder.RunStep(context, BindAndRun(node, context, frame), step => recorded = step);
         recorded.Name = node.Step.FullName;
         recorded.Scenario = unit.Name;
         recorded.File = frame.File;
         recorded.Line = (int)node.Location.Line;
         recorded.RanFrom = frame.RanFrom;
         recorded.Passes = frame.Passes;
-        _report(recorded);
+        _recorder.Report(recorded);
 
         if (context.Failed)
         {
             unit.Stopped = true;
-            yield return FailureScreenshot(unit);
+            yield return _recorder.FailureScreenshot(unit);
         }
-    }
-
-    /// <summary>
-    /// Runs <paramref name="routine"/> for <paramref name="context"/>'s step, failing the step with what it throws, then gives
-    /// <paramref name="recorded"/> the step's result, for the caller to say which step it was. An exception
-    /// <paramref name="stops"/> holds for only stops the routine, which fails nothing.
-    /// </summary>
-    private IEnumerator RunRecorded(StepContext context, IEnumerator routine, Action<RunStep> recorded, Func<Exception, bool> stops = null)
-    {
-        var startedAt = _host.Now;
-        Exception error = null;
-        yield return GuardedRoutine.Run(routine, exception => error = exception);
-        if (error != null && stops?.Invoke(error) != true)
-        {
-            if (error is not StepFailedException)
-                LogError(error);
-
-            context.Fail(Describe(error));
-        }
-
-        recorded(new RunStep
-        {
-            Passed = !context.Failed,
-            Detail = context.Detail,
-            Expected = context.Expected,
-            Actual = context.Actual,
-            Seconds = Seconds(startedAt),
-        });
     }
 
     /// <summary>
@@ -454,81 +360,6 @@ internal sealed class ScenarioRunner
     {
         var step = StepBinder.Bind(node, _steps.TypeOf(node.Step), frame.Values);
         yield return StepPreconditions.Run(step, context);
-    }
-
-    /// <summary>
-    /// Not being able to take one shouldn't change what the run found.
-    /// </summary>
-    private IEnumerator FailureScreenshot(RunUnit unit)
-    {
-        yield return GuardedRoutine.Run(_host.Screenshot(ScreenshotNames.For(unit.Name, "failure")), LogError);
-    }
-
-    private void LogError(Exception exception)
-    {
-        _host.Logger.LogError($"{TestRun.Marker} {exception}");
-    }
-
-    private double Seconds(float startedAt)
-    {
-        return Math.Round(_host.Now - startedAt, 2);
-    }
-
-    /// <summary>
-    /// A scenario or a C# test, which run alike: hooks around them, from where they start, and their steps.
-    /// </summary>
-    private sealed class RunUnit
-    {
-        private readonly Func<RunUnit, IEnumerator> _body;
-
-        private RunUnit(ScenarioContext context, string file, ScenarioStart start, InputRoute inputRoute, Func<RunUnit, IEnumerator> body)
-        {
-            Context = context;
-            File = file;
-            Start = start;
-            InputRoute = inputRoute;
-            _body = body;
-        }
-
-        /// <summary>
-        /// Empty for a C# test.
-        /// </summary>
-        public string File { get; }
-
-        public ScenarioStart Start { get; }
-
-        public InputRoute InputRoute { get; }
-
-        public ScenarioContext Context { get; }
-
-        public string Name => Context.ScenarioName;
-
-        public bool Stopped { get; set; }
-
-        public bool StartFailed { get; set; }
-
-        public static RunUnit Of(Scenario scenario, ScenarioContext context, Func<RunUnit, Scenario, IEnumerator> run)
-        {
-            return new RunUnit(context, scenario.File, scenario.Start, scenario.Input, running => run(running, scenario));
-        }
-
-        public static RunUnit Of(InGameTest test, ScenarioContext context, Func<RunUnit, InGameTest, IEnumerator> run)
-        {
-            var start = new ScenarioStart(StartState.All.Single(state => state.Name == test.Descriptor.Start), new Dictionary<string, string>());
-            return new RunUnit(context, string.Empty, start, InputRoute.InProcess, running => run(running, test));
-        }
-
-        public IEnumerator RunBody()
-        {
-            return _body(this);
-        }
-    }
-
-    /// <summary>
-    /// Thrown out of a C# test by the step that failed, to stop it as a failed step stops a scenario.
-    /// </summary>
-    private sealed class TestStoppedException : Exception
-    {
     }
 
     /// <summary>

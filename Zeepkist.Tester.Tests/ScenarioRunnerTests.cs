@@ -947,7 +947,7 @@ public sealed class ScenarioRunnerTests : IDisposable
     private Exception RunExpectingError(string[] files, string[] tests)
     {
         Exception error = null;
-        var runner = new ScenarioRunner(_host, _exceptions, StepTypes.Build(_stepTypes), _plugins, _steps.Add, _folder.Path, InGameTests.Build(new[] { typeof(RunnerTests), typeof(BrokenRunnerTests) }.SelectMany(type => type.GetMethods()).Where(method => method.IsDefined(typeof(InGameTestAttribute), false))));
+        var runner = new ScenarioRunner(_host, _exceptions, new RunCatalog(StepTypes.Build(_stepTypes), InGameTests.Build(new[] { typeof(RunnerTests), typeof(BrokenRunnerTests) }.SelectMany(type => type.GetMethods()).Where(method => method.IsDefined(typeof(InGameTestAttribute), false)))), _plugins, _steps.Add, _folder.Path);
         var routine = GuardedRoutine.Run(runner.Run(files, tests), exception => error = exception);
         var frames = 0;
         while (routine.MoveNext())
