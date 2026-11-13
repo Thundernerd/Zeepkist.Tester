@@ -170,6 +170,16 @@ public sealed class ProgramTests : IDisposable
     }
 
     [Fact]
+    public void Check_TwoBuildsOfOnePlugin_NamesBoth()
+    {
+        var file = Write("a.ztest.yaml", "steps:\n  - undo\n");
+        var debug = AnotherBuild.Of(_modPath, Path.Combine(_folder.Path, "Debug"));
+
+        Assert.Equal(1, Run("check", file, "--plugin", _modPath, "--plugin", debug));
+        Assert.Equal([$"error: {_modPath} and {debug} are both Zeepkist.Tester.Tests.SampleMod. Pass only one of them."], Lines());
+    }
+
+    [Fact]
     public void Check_AnEmptyPath_IsAnErrorAndNotAStackTrace()
     {
         Assert.Equal(1, Run("check", string.Empty));

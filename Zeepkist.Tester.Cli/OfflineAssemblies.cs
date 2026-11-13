@@ -20,7 +20,7 @@ internal sealed class OfflineAssemblies : IDisposable
         _context = new MetadataLoadContext(new FolderResolver(folders.ToList()), coreAssembly);
     }
 
-    /// <exception cref="UnreadableAssemblyException">The file isn't a .NET assembly.</exception>
+    /// <exception cref="UnreadableAssemblyException">The file isn't a .NET assembly, or another build of it is already loaded.</exception>
     public Assembly Load(string path)
     {
         try
@@ -30,6 +30,15 @@ internal sealed class OfflineAssemblies : IDisposable
         catch (BadImageFormatException exception)
         {
             throw new UnreadableAssemblyException($"{path} isn't a .NET assembly.", exception);
+        }
+        catch (FileLoadException exception)
+        {
+            var name = AssemblyName.GetAssemblyName(path).Name;
+            var other = _context.GetAssemblies().FirstOrDefault(assembly => assembly.GetName().Name == name);
+            if (other == null)
+                throw;
+
+            throw new UnreadableAssemblyException($"{other.Location} and {path} are both {name}. Pass only one of them.", exception);
         }
     }
 
