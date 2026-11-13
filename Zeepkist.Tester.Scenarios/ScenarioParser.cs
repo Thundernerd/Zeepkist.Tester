@@ -26,21 +26,27 @@ internal sealed class ScenarioParser
     private readonly Dictionary<string, IReadOnlyList<string>> _loopValues = [];
 
     /// <summary>
-    /// Where problems go when reading goes on after them. Null when the first one ends the reading.
+    /// Maps with a key that isn't one of theirs. That key is most likely a misspelling of one that's then missing, which
+    /// would only be the same mistake again.
     /// </summary>
-    private readonly List<ScenarioException> _problems;
+    private readonly HashSet<YamlMappingNode> _mapsWithUnknownKeys = [];
 
-    private ScenarioParser(string file, IEnumerable<StepDescriptor> steps, List<ScenarioException> problems)
+    /// <summary>
+    /// Takes each problem. It throws it to end the reading there, or keeps it to go on.
+    /// </summary>
+    private readonly Action<ScenarioException> _report;
+
+    private ScenarioParser(string file, IEnumerable<StepDescriptor> steps, Action<ScenarioException> report)
     {
         _file = file;
         _steps = steps.ToDictionary(step => step.FullName);
-        _problems = problems;
+        _report = report;
     }
 
     /// <exception cref="ScenarioException">The file can't be read as a scenario. This is the first problem in it.</exception>
     public static Scenario Parse(string file, TextReader reader, IEnumerable<StepDescriptor> steps)
     {
-        return new ScenarioParser(file, steps, null).ReadScenario(ScenarioYaml.Load(file, reader));
+        return new ScenarioParser(file, steps, problem => throw problem).ReadScenario(ScenarioYaml.Load(file, reader));
     }
 
     /// <summary>
@@ -54,7 +60,7 @@ internal sealed class ScenarioParser
         Scenario scenario;
         try
         {
-            scenario = new ScenarioParser(file, steps, problems).ReadScenario(ScenarioYaml.Load(file, reader));
+            scenario = new ScenarioParser(file, steps, problems.Add).ReadScenario(ScenarioYaml.Load(file, reader));
         }
         catch (ScenarioException exception)
         {
@@ -78,11 +84,11 @@ internal sealed class ScenarioParser
             throw Fail(root, $"A scenario is a map with a steps: key, not {Describe(root)}.");
 
         var entries = ReadKeys(header, "A scenario", "description", "use", "start", "input", "steps");
-        if (!entries.TryGetValue("steps", out var steps))
-            Report(Fail(header, "A scenario needs steps:."));
+        if (!entries.TryGetValue("steps", out var steps) && !_mapsWithUnknownKeys.Contains(header))
+            _report(Fail(header, "A scenario needs steps:."));
 
         // Nothing in the header depends on another part of it, so each is read on its own
-        var description = entries.TryGetValue("description", out var written) ? Attempt(() => ReadScalar(written, "description")) : null;
+        var description = entries.TryGetValue("description", out var descriptionWritten) ? Attempt(() => ReadScalar(descriptionWritten, "description")) : null;
         var start = entries.TryGetValue("start", out var startWritten) ? Attempt(() => ReadStart(startWritten)) : ScenarioStart.Default;
         var input = entries.TryGetValue("input", out var inputWritten) ? Attempt(() => ReadInput(inputWritten)) : InputRoute.InProcess;
         var use = entries.TryGetValue("use", out var useWritten) ? Attempt(() => ReadUse(useWritten)) ?? [] : [];
@@ -211,7 +217,7 @@ internal sealed class ScenarioParser
 
     private StepNode Checked(StepNode node)
     {
-        ValueChecks.Check(node, _loopValues, Report);
+        ValueChecks.Check(node, _loopValues, _report);
         return node;
     }
 
@@ -234,6 +240,8 @@ internal sealed class ScenarioParser
 
         var literals = values.Select(value => ReadLiteral(value, "A value of for:")).ToList();
         var body = RequireSteps(map, entries, "for:");
+        if (body == null)
+            return null;
 
         // A body's own for of this name is an error in itself, which ztest check reports. Here the inner one wins, as it would until then
         _loopValues.TryGetValue(name, out var outer);
@@ -262,7 +270,8 @@ internal sealed class ScenarioParser
         if (!int.TryParse(written, NumberStyles.None, CultureInfo.InvariantCulture, out var count) || count < 1)
             throw Fail(entries[ControlNodes.Repeat], $"repeat: takes a whole number of at least 1, not '{written}'.");
 
-        return new RepeatNode(Location(map), count, ReadBody(RequireSteps(map, entries, "repeat:"), use));
+        var body = RequireSteps(map, entries, "repeat:");
+        return body == null ? null : new RepeatNode(Location(map), count, ReadBody(body, use));
     }
 
     private RunNode ReadRun(YamlMappingNode map)
@@ -290,9 +299,14 @@ internal sealed class ScenarioParser
         return new RunNode(Location(map), file, with);
     }
 
+    /// <returns>Null when a misspelled key is reported instead.</returns>
     private YamlNode RequireSteps(YamlMappingNode map, Dictionary<string, YamlNode> entries, string node)
     {
-        return entries.TryGetValue("steps", out var steps) ? steps : throw Fail(map, $"{node} needs steps:.");
+        if (entries.TryGetValue("steps", out var steps))
+            return steps;
+
+        // A misspelled steps: is reported already, and there's no body to read
+        return _mapsWithUnknownKeys.Contains(map) ? null : throw Fail(map, $"{node} needs steps:.");
     }
 
     /// <summary>
@@ -385,9 +399,11 @@ internal sealed class ScenarioParser
             && !map.Children.Keys.OfType<YamlScalarNode>().Any(key => arguments.Any(argument => argument.Name == key.Value));
     }
 
-    /// <param name="given">The names of the arguments the file wrote.</param>
     private void RequireArguments(string owner, IReadOnlyList<ArgumentDescriptor> arguments, IReadOnlyCollection<string> given, YamlNode node)
     {
+        if (node is YamlMappingNode map && _mapsWithUnknownKeys.Contains(map))
+            return;
+
         var missing = arguments.FirstOrDefault(argument => argument.IsRequired && !given.Contains(argument.Name));
         if (missing != null)
             throw Fail(node, $"{owner} needs the argument '{missing.Name}'.");
@@ -477,14 +493,15 @@ internal sealed class ScenarioParser
             var key = ReadKey(entry.Key);
             if (!allowed.Contains(key))
             {
-                Report(Fail(entry.Key, $"{owner} has no {keyKind} '{key}'. {(allowed.Count == 0 ? "It takes none." : $"It takes: {string.Join(", ", allowed)}.")}"));
+                _mapsWithUnknownKeys.Add(map);
+                _report(Fail(entry.Key, $"{owner} has no {keyKind} '{key}'. {(allowed.Count == 0 ? "It takes none." : $"It takes: {string.Join(", ", allowed)}.")}"));
                 continue;
             }
 
             // YamlDotNet's own check for this tells a key with a tag from one without
             if (entries.ContainsKey(key))
             {
-                Report(Fail(entry.Key, $"{owner} has the {keyKind} '{key}' twice."));
+                _report(Fail(entry.Key, $"{owner} has the {keyKind} '{key}' twice."));
                 continue;
             }
 
@@ -505,34 +522,20 @@ internal sealed class ScenarioParser
     }
 
     /// <summary>
-    /// Reads a part of the file that the rest doesn't depend on. When reading goes on after problems, a problem in it is
-    /// kept and the part is left out, as the default.
+    /// Reads a part of the file that the rest doesn't depend on. When reading goes on after a problem in it, the part
+    /// reads as its type's default, such as null.
     /// </summary>
     private T Attempt<T>(Func<T> read)
     {
-        if (_problems == null)
-            return read();
-
         try
         {
             return read();
         }
         catch (ScenarioException exception)
         {
-            Report(exception);
+            _report(exception);
             return default;
         }
-    }
-
-    /// <summary>
-    /// Keeps a problem when reading goes on after problems, and otherwise ends the reading with it.
-    /// </summary>
-    private void Report(ScenarioException problem)
-    {
-        if (_problems == null)
-            throw problem;
-
-        _problems.Add(problem);
     }
 
     private ScenarioException Fail(YamlNode node, string problem)

@@ -268,7 +268,7 @@ public class ScenarioCheckTests
     }
 
     [Fact]
-    public void BadValuesInSeveralSteps_AreEachReported_InOneCheck()
+    public void AFileWithBadValuesInSeveralSteps_ReportsEach_InOneCheck()
     {
         using var folder = new TemporaryFolder();
         var file = Write(folder, "a.ztest.yaml", "steps:\n  - wait: soon\n  - place-block: LAMP\n  - wait: later\n");
@@ -285,7 +285,7 @@ public class ScenarioCheckTests
     }
 
     [Fact]
-    public void BadValuesInOneStep_AreEachReported()
+    public void AStepWithSeveralBadValues_ReportsEach()
     {
         using var folder = new TemporaryFolder();
         var file = Write(folder, "a.ztest.yaml", "steps:\n  - place-block: { function: LAMP, how-many: 9 }\n");
@@ -342,6 +342,19 @@ public class ScenarioCheckTests
         var problem = Assert.Single(ScenarioCheck.Run([file], CheckSteps.Registry));
 
         Assert.Equal($"{file}:3:12: error: steps: has no steps in it.", problem.ToString());
+    }
+
+    [Theory]
+    [InlineData("steps:\n  - place-block: { functoin: lamp }\n", "2:20: error: place-block has no argument 'functoin'. It takes: function, as, how-many, offset.")]
+    [InlineData("stepz:\n  - undo\n", "1:1: error: A scenario has no key 'stepz'. It takes: description, use, start, input, steps.")]
+    public void AMisspelledKey_IsntAlsoReportedAsMissing(string yaml, string problem)
+    {
+        using var folder = new TemporaryFolder();
+        var file = Write(folder, "a.ztest.yaml", yaml);
+
+        var reported = Assert.Single(ScenarioCheck.Run([file], CheckSteps.Registry));
+
+        Assert.Equal($"{file}:{problem}", reported.ToString());
     }
 
     private static string Write(TemporaryFolder folder, string name, string yaml)
