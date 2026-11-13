@@ -108,14 +108,14 @@ internal sealed class BlockSettings
     {
         private readonly Dictionary<string, T> _values;
         private readonly TryRead<T> _tryRead;
-        private readonly Func<T, string> _write;
+        private readonly Func<T, string> _format;
         private readonly string _takes;
 
-        public Settings(Dictionary<string, T> values, TryRead<T> tryRead, Func<T, string> write, string takes)
+        public Settings(Dictionary<string, T> values, TryRead<T> tryRead, Func<T, string> format, string takes)
         {
             _values = values;
             _tryRead = tryRead;
-            _write = write;
+            _format = format;
             _takes = takes;
         }
 
@@ -137,7 +137,7 @@ internal sealed class BlockSettings
 
         public string Read(string key)
         {
-            return _write(_values[key]);
+            return _format(_values[key]);
         }
     }
 }
