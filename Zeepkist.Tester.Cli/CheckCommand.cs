@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using TNRD.Zeepkist.Tester.Sdk;
 
 namespace TNRD.Zeepkist.Tester.Cli;
@@ -65,38 +64,9 @@ internal sealed class CheckCommand
 
     private int Run(string folder)
     {
-        TestConfig config;
-        try
-        {
-            config = TestConfig.Find(folder);
-        }
-        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
-        {
-            return Fail($"Can't read {TestConfig.FileName}: {exception.Message}");
-        }
-
-        if (_plugins.Count == 0 && config?.TestPlugin != null)
-        {
-            var plugin = config.FindTestPluginDll();
-            if (plugin == null)
-                return Fail($"Build {config.TestPlugin} first, or pass --plugin.");
-
-            _plugins.Add(plugin);
-        }
-
-        StepRegistry registry;
-        try
-        {
-            registry = OfflineRegistry.Read(_plugins);
-        }
-        catch (StepDefinitionException exception)
-        {
-            return Fail(exception.Message);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or BadImageFormatException or TypeLoadException)
-        {
-            return Fail($"Can't read the plugins: {exception.Message}");
-        }
+        var problem = RegistryLoader.Load(_plugins, folder, out var config, out var registry);
+        if (problem != null)
+            return Fail(problem);
 
         return _checkRegistry ? CheckRegistry(registry) : CheckScenarios(registry, config);
     }

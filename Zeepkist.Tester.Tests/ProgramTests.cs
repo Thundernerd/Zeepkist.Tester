@@ -182,6 +182,44 @@ public sealed class ProgramTests : IDisposable
         Assert.Contains("warning: No step enters the state 'core.core-state', so the offline check never sees it hold.", Lines());
     }
 
+    [Fact]
+    public void Docs_WritesTheReference_OfTheTestersStepsAndThePlugins()
+    {
+        var output = Path.Combine(_folder.Path, "reference.md");
+
+        Assert.Equal(0, Run("docs", "--output", output, "--plugin", _modPath));
+        var markdown = File.ReadAllText(output);
+        Assert.Contains("`sample.compile`", markdown);
+        Assert.Contains("`wait`", markdown);
+        Assert.Matches(@"^Wrote \d+ steps and \d+ states to .*reference\.md\.$", Lines()[0]);
+    }
+
+    [Fact]
+    public void Docs_WithoutOutput_WritesStepsMd_WithTheConfiguredPlugin()
+    {
+        Write("zeepkist-test.json", $$"""{ "testPlugin": {{System.Text.Json.JsonSerializer.Serialize(_modPath)}} }""");
+
+        Assert.Equal(0, RunIn(_folder.Path, "docs"));
+        Assert.Contains("`sample.compile`", File.ReadAllText(Path.Combine(_folder.Path, "steps.md")));
+    }
+
+    [Fact]
+    public void Docs_AFolderItCantWriteTo_FailsWithoutAStackTrace()
+    {
+        Assert.Equal(1, Run("docs", "--output", Path.Combine(_folder.Path, "missing", "steps.md")));
+        Assert.StartsWith("error: Can't write ", _output.ToString());
+    }
+
+    [Theory]
+    [InlineData("--output")]
+    [InlineData("--nope")]
+    [InlineData("steps.md")]
+    public void Docs_ABadOption_PrintsUsageAndFails(string option)
+    {
+        Assert.Equal(1, Run("docs", option));
+        Assert.Contains("Usage: ztest", _output.ToString());
+    }
+
     private int Run(params string[] arguments)
     {
         return RunIn(Environment.CurrentDirectory, arguments);
