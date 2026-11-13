@@ -92,6 +92,63 @@ public class LineScenarioReaderTests
         Assert.Equal(problem, exception.Problem);
     }
 
+    [Fact]
+    public void SetText_TakesTheLinesUpToEnd_WithoutTheirSharedIndent()
+    {
+        var steps = Steps("set-text\n    a = placed(\"{uid:lamp}\")   \n\n      function f()\n      end\nend\nundo\n");
+
+        Assert.Equal(["zls.set-text", "undo"], steps.Select(step => step.Step.FullName));
+        Assert.Equal("a = placed(\"${lamp}\")\n\n  function f()\n  end", Text(steps[0].Arguments, "value"));
+        Assert.Equal(1, steps[0].Location.Line);
+        Assert.Equal(7, steps[1].Location.Line);
+    }
+
+    [Theory]
+    [InlineData("drag-window-edge 300", false, "300", null)]
+    [InlineData("drag-window-edge -1000 over 10 then 200 over 2", false, "-1000", "10", "200", "2")]
+    [InlineData("drag-window-edge-sideways -50", true, "-50", null)]
+    public void DragWindowEdge_IsAListOfMoves_AndSidewaysIsAnArgument(string line, bool sideways, params string[] moves)
+    {
+        var step = Assert.Single(Steps(line));
+
+        Assert.Equal("zls.drag-window-edge", step.Step.FullName);
+        var written = Assert.IsType<ListArgument>(step.Arguments.Values["moves"]).Items.Cast<ObjectArgument>().ToList();
+        Assert.Equal(moves.Length / 2, written.Count);
+        for (var i = 0; i < written.Count; i++)
+        {
+            Assert.Equal(moves[i * 2], Text(written[i], "by"));
+            Assert.Equal(moves[(i * 2) + 1], written[i].Values.TryGetValue("over", out var over) ? ((ScalarArgument)over).Text : null);
+        }
+
+        Assert.Equal(sideways, step.Arguments.Values.ContainsKey("sideways"));
+        if (sideways)
+            Assert.Equal("true", Text(step.Arguments, "sideways"));
+    }
+
+    [Fact]
+    public void ExpectError_SplitsItsPositionIntoLineAndColumn()
+    {
+        var step = Assert.Single(Steps("expect-error 2:15 'nope' isn't defined"));
+
+        Assert.Equal("2", Text(step.Arguments, "line"));
+        Assert.Equal("15", Text(step.Arguments, "column"));
+        Assert.Equal("'nope' isn't defined", Text(step.Arguments, "message"));
+    }
+
+    [Theory]
+    [InlineData("set-text now\nend", 1, "set-text takes nothing after it: the text goes on the lines below it.")]
+    [InlineData("undo\nset-text\n  a", 2, "set-text has no end.")]
+    [InlineData("undo\nend", 2, "end without set-text.")]
+    [InlineData("drag-window-edge 10 then", 1, "drag-window-edge takes the pixels to drag, and optionally 'over <frames>', with 'then' before each move after the first, not '10 then'.")]
+    [InlineData("expect-error 2 nope", 1, "expect-error takes a line and column, such as 2:5, then the text to look for, not '2 nope'.")]
+    public void AnOldFormThatDoesntFit_Fails(string text, int line, string problem)
+    {
+        var exception = Assert.Throws<ScenarioException>(() => Read(text));
+
+        Assert.Equal(line, exception.Location.Line);
+        Assert.Equal(problem, exception.Problem);
+    }
+
     private static List<StepNode> Steps(string text)
     {
         return Read(text).Entries.Select(entry => entry.Step).Where(step => step != null).ToList();

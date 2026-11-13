@@ -13,6 +13,13 @@ namespace TNRD.Zeepkist.Tester.Scenarios;
 /// </summary>
 internal sealed class LineScenarioReader
 {
+    // The old forms a LineSyntax can't describe, each read by its own method here
+    private const string SetText = "set-text";
+    private const string End = "end";
+    private const string DragWindowEdge = "drag-window-edge";
+    private const string DragWindowEdgeSideways = "drag-window-edge-sideways";
+    private const string ExpectError = "expect-error";
+
     private static readonly Regex _oldValues = new Regex(@"\{uid:(?<name>[^}]*)\}|\$\{");
 
     private readonly string _file;
@@ -67,8 +74,21 @@ internal sealed class LineScenarioReader
         var space = line.IndexOf(' ');
         var name = space < 0 ? line : line.Substring(0, space);
         var argument = space < 0 ? string.Empty : line.Substring(space + 1).Trim();
-        var step = Resolve(name, location);
+        switch (name)
+        {
+            case End:
+                throw new ScenarioException(location, $"{End} without {SetText}.");
+            case SetText:
+                return ReadSetText(lines, ref index, location, argument);
+            case DragWindowEdge:
+                return ReadDragWindowEdge(location, argument, false);
+            case DragWindowEdgeSideways:
+                return ReadDragWindowEdge(location, argument, true);
+            case ExpectError:
+                return ReadExpectError(location, argument);
+        }
 
+        var step = Resolve(name, location);
         var syntax = LineSyntax.For(step);
         var matched = syntax.Match(argument)
             ?? throw new ScenarioException(location, $"{name} takes {Describe(step)}, not '{argument}'.");
@@ -83,6 +103,88 @@ internal sealed class LineScenarioReader
         }
 
         return Checked(step, location, values);
+    }
+
+    /// <summary>
+    /// The lines after it up to an <c>end</c> at the start of a line, without their shared indent, as ZeepLogicScript read them.
+    /// </summary>
+    private StepNode ReadSetText(string[] lines, ref int index, SourceLocation location, string argument)
+    {
+        if (argument.Length > 0)
+            throw new ScenarioException(location, $"{SetText} takes nothing after it: the text goes on the lines below it.");
+
+        var start = index + 1;
+        var end = Array.FindIndex(lines, start, line => line.TrimEnd() == End);
+        if (end < 0)
+            throw new ScenarioException(location, $"{SetText} has no {End}.");
+
+        index = end;
+        var body = lines.Skip(start).Take(end - start).Select(line => line.TrimEnd()).ToList();
+        var indent = body.Where(line => line.Length > 0).Select(line => line.Length - line.TrimStart().Length).DefaultIfEmpty(0).Min();
+        var text = string.Join("\n", body.Select(line => line.Length == 0 ? line : line.Substring(indent)));
+
+        var step = Resolve(SetText, location);
+        return Checked(step, location, new Dictionary<string, ArgumentValue> { [Primary(step, location).Name] = Scalar(location, text) });
+    }
+
+    /// <summary>
+    /// <c>&lt;pixels&gt; [over &lt;frames&gt;]</c>, with <c>then</c> before each move after the first, into a list of moves.
+    /// <c>drag-window-edge-sideways</c> is the same step with <c>sideways</c>.
+    /// </summary>
+    private StepNode ReadDragWindowEdge(SourceLocation location, string argument, bool sideways)
+    {
+        var step = Resolve(DragWindowEdge, location);
+        var moves = Primary(step, location);
+        var move = moves.Type.Kind == ArgumentKind.List ? moves.Type.ItemType : moves.Type;
+        var by = move.Arguments.FirstOrDefault(each => each.IsPrimary)
+            ?? throw new ScenarioException(location, $"{step.FullName}'s moves have no primary argument for the pixels.");
+
+        var items = new List<ArgumentValue>();
+        foreach (var written in string.Join(" ", argument.Split([' '], StringSplitOptions.RemoveEmptyEntries)).Split([" then "], StringSplitOptions.None))
+        {
+            var words = written.Split([' '], StringSplitOptions.RemoveEmptyEntries);
+            if (!(words.Length == 1 || (words.Length == 3 && words[1] == "over")))
+            {
+                var name = sideways ? DragWindowEdgeSideways : DragWindowEdge;
+                throw new ScenarioException(location, $"{name} takes the pixels to drag, and optionally 'over <frames>', with 'then' before each move after the first, not '{argument}'.");
+            }
+
+            var values = new Dictionary<string, ArgumentValue> { [by.Name] = Scalar(location, words[0]) };
+            if (words.Length == 3)
+                values.Add("over", Scalar(location, words[2]));
+
+            items.Add(new ObjectArgument(location, values));
+        }
+
+        var arguments = new Dictionary<string, ArgumentValue> { [moves.Name] = new ListArgument(location, items) };
+        if (sideways)
+            arguments.Add("sideways", Scalar(location, "true"));
+
+        return Checked(step, location, arguments);
+    }
+
+    /// <summary>
+    /// <c>&lt;line&gt;:&lt;column&gt; &lt;text&gt;</c>, where the text is the rest of the line.
+    /// </summary>
+    private StepNode ReadExpectError(SourceLocation location, string argument)
+    {
+        var space = argument.IndexOf(' ');
+        var position = space < 0 ? [] : argument.Substring(0, space).Split(':');
+        if (position.Length != 2)
+            throw new ScenarioException(location, $"{ExpectError} takes a line and column, such as 2:5, then the text to look for, not '{argument}'.");
+
+        return Checked(Resolve(ExpectError, location), location, new Dictionary<string, ArgumentValue>
+        {
+            ["line"] = Scalar(location, position[0]),
+            ["column"] = Scalar(location, position[1]),
+            ["message"] = Scalar(location, argument.Substring(space + 1).Trim()),
+        });
+    }
+
+    private static ArgumentDescriptor Primary(StepDescriptor step, SourceLocation location)
+    {
+        return step.Arguments.FirstOrDefault(argument => argument.IsPrimary)
+            ?? throw new ScenarioException(location, $"{step.FullName} has no primary argument to take what the old line wrote.");
     }
 
     private StepNode Checked(StepDescriptor step, SourceLocation location, Dictionary<string, ArgumentValue> values)
