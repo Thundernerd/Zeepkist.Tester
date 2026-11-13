@@ -13,7 +13,7 @@ public class LegacyInputDriverTests
 {
     private readonly LegacyInputDriver _driver;
     private int _frame = 10;
-    private float _deltaTime = 0.1f;
+    private readonly float _deltaTime = 0.1f;
 
     public LegacyInputDriverTests()
     {
