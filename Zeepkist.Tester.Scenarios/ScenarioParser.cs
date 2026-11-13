@@ -23,7 +23,6 @@ internal sealed class ScenarioParser
     private readonly Dictionary<string, StepDescriptor> _steps;
     private readonly List<YamlSequenceNode> _bodiesRead = [];
     private readonly Dictionary<string, IReadOnlyList<string>> _loopValues = [];
-    private List<string> _use = [];
 
     private ScenarioParser(string file, IEnumerable<StepDescriptor> steps)
     {
@@ -56,10 +55,8 @@ internal sealed class ScenarioParser
         var description = entries.TryGetValue("description", out var written) ? ReadScalar(written, "description") : null;
         var start = entries.TryGetValue("start", out written) ? ReadStart(written) : ScenarioStart.Default;
         var input = entries.TryGetValue("input", out written) ? ReadInput(written) : InputRoute.InProcess;
-        if (entries.TryGetValue("use", out written))
-            _use = ReadUse(written);
-
-        return new Scenario(_file, description, _use, start, input, ReadBody(steps));
+        var use = entries.TryGetValue("use", out written) ? ReadUse(written) : [];
+        return new Scenario(_file, description, use, start, input, ReadBody(steps, use));
     }
 
     private List<string> ReadUse(YamlNode written)
@@ -126,7 +123,9 @@ internal sealed class ScenarioParser
         };
     }
 
-    private List<ScenarioNode> ReadBody(YamlNode steps)
+    /// <param name="steps">The value of a steps: key.</param>
+    /// <param name="use">The namespaces whose steps can be written unprefixed.</param>
+    private List<ScenarioNode> ReadBody(YamlNode steps, IReadOnlyList<string> use)
     {
         if (steps is not YamlSequenceNode list)
             throw Fail(steps, $"steps: takes a list of steps, not {Describe(steps)}.");
@@ -139,17 +138,17 @@ internal sealed class ScenarioParser
             throw Fail(steps, "steps: is used a second time through an alias. Use run: to share steps.");
 
         _bodiesRead.Add(list);
-        return list.Select(ReadNode).ToList();
+        return list.Select(item => ReadNode(item, use)).ToList();
     }
 
-    private ScenarioNode ReadNode(YamlNode item)
+    private ScenarioNode ReadNode(YamlNode item, IReadOnlyList<string> use)
     {
         if (item is YamlSequenceNode)
             throw Fail(item, "A step is a name or a map with its name as the key, not a list.");
 
         if (item is YamlScalarNode bare)
         {
-            var named = Resolve(bare);
+            var named = Resolve(bare, use);
             return Checked(new StepNode(Location(item), named, ReadNoArguments(named, item)));
         }
 
@@ -158,20 +157,20 @@ internal sealed class ScenarioParser
             throw Fail(item, "A step is a name or a map with its name as the key, but this map is empty.");
 
         var written = map.Children.Keys.Select(ReadKey).ToList();
-        if (written.Contains("for"))
-            return ReadFor(map);
+        if (written.Contains(ControlNodes.For))
+            return ReadFor(map, use);
 
-        if (written.Contains("repeat"))
-            return ReadRepeat(map);
+        if (written.Contains(ControlNodes.Repeat))
+            return ReadRepeat(map, use);
 
-        if (written.Contains("run"))
+        if (written.Contains(ControlNodes.Run))
             return ReadRun(map);
 
         if (map.Children.Count != 1)
             throw Fail(map.Children.Keys.ElementAt(1), "A step has one key, but this is another. Is it indented too far, or missing its - ?");
 
         var entry = map.Children.First();
-        var step = Resolve(entry.Key);
+        var step = Resolve(entry.Key, use);
         return Checked(new StepNode(Location(item), step, ReadObject(step.FullName, step.Arguments, entry.Value)));
     }
 
@@ -181,11 +180,11 @@ internal sealed class ScenarioParser
         return node;
     }
 
-    private ForNode ReadFor(YamlMappingNode map)
+    private ForNode ReadFor(YamlMappingNode map, IReadOnlyList<string> use)
     {
-        var entries = ReadKeys(map, "for:", "for", "steps");
-        if (entries["for"] is not YamlMappingNode variables || variables.Children.Count == 0)
-            throw Fail(entries["for"], "for: takes a variable and its values, such as { h: [64, 120] }.");
+        var entries = ReadKeys(map, "for:", ControlNodes.For, "steps");
+        if (entries[ControlNodes.For] is not YamlMappingNode variables || variables.Children.Count == 0)
+            throw Fail(entries[ControlNodes.For], "for: takes a variable and its values, such as { h: [64, 120] }.");
 
         if (variables.Children.Count > 1)
             throw Fail(variables.Children.Keys.ElementAt(1), "A for has one variable, but this is another. Nest two fors for every combination.");
@@ -204,7 +203,7 @@ internal sealed class ScenarioParser
         // A body's own for of this name is an error in itself, which ztest check reports. Here the inner one wins, as it would until then
         _loopValues.TryGetValue(name, out var outer);
         _loopValues[name] = literals;
-        var steps = ReadBody(body);
+        var steps = ReadBody(body, use);
         if (outer == null)
             _loopValues.Remove(name);
         else
@@ -213,20 +212,20 @@ internal sealed class ScenarioParser
         return new ForNode(Location(map), name, literals, steps);
     }
 
-    private RepeatNode ReadRepeat(YamlMappingNode map)
+    private RepeatNode ReadRepeat(YamlMappingNode map, IReadOnlyList<string> use)
     {
-        var entries = ReadKeys(map, "repeat:", "repeat", "steps");
-        var written = ReadScalar(entries["repeat"], "repeat:");
+        var entries = ReadKeys(map, "repeat:", ControlNodes.Repeat, "steps");
+        var written = ReadScalar(entries[ControlNodes.Repeat], "repeat:");
         if (!int.TryParse(written, NumberStyles.None, CultureInfo.InvariantCulture, out var count) || count < 1)
-            throw Fail(entries["repeat"], $"repeat: takes a whole number of at least 1, not '{written}'.");
+            throw Fail(entries[ControlNodes.Repeat], $"repeat: takes a whole number of at least 1, not '{written}'.");
 
-        return new RepeatNode(Location(map), count, ReadBody(RequireSteps(map, entries, "repeat:")));
+        return new RepeatNode(Location(map), count, ReadBody(RequireSteps(map, entries, "repeat:"), use));
     }
 
     private RunNode ReadRun(YamlMappingNode map)
     {
-        var entries = ReadKeys(map, "run:", "run", "with");
-        var file = ReadLiteral(entries["run"], "run:");
+        var entries = ReadKeys(map, "run:", ControlNodes.Run, "with");
+        var file = ReadLiteral(entries[ControlNodes.Run], "run:");
         var with = new Dictionary<string, ScalarArgument>();
         if (entries.TryGetValue("with", out var written))
         {
@@ -256,13 +255,13 @@ internal sealed class ScenarioParser
     /// <summary>
     /// Finds the step a name means: a prefixed name is that step, and any other is the tester's or a <c>use:</c>d namespace's.
     /// </summary>
-    private StepDescriptor Resolve(YamlNode node)
+    private StepDescriptor Resolve(YamlNode node, IReadOnlyList<string> use)
     {
         var written = ReadKey(node);
         if (written.Contains('.'))
             return _steps.TryGetValue(written, out var prefixed) ? prefixed : throw Fail(node, $"There's no step '{written}'.");
 
-        var used = _use.Where(space => _steps.ContainsKey($"{space}.{written}")).Select(space => _steps[$"{space}.{written}"]).ToList();
+        var used = use.Where(space => _steps.ContainsKey($"{space}.{written}")).Select(space => _steps[$"{space}.{written}"]).ToList();
         if (_steps.TryGetValue(written, out var core))
         {
             if (used.Count == 0)
