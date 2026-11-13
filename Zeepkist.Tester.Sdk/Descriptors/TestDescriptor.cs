@@ -22,6 +22,16 @@ public sealed class TestDescriptor
     /// </summary>
     public required string Start { get; init; }
 
+    /// <summary>
+    /// The level file it opens in the editor, relative to the <c>scenarios</c> folder, or null for a new level.
+    /// </summary>
+    public string Level { get; init; }
+
+    /// <summary>
+    /// The UID of the level it plays in free play, or null when it doesn't start there.
+    /// </summary>
+    public string FreePlayUid { get; init; }
+
     public string Documentation { get; init; }
 
     /// <summary>

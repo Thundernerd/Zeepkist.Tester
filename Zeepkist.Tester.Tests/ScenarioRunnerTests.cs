@@ -809,6 +809,34 @@ public sealed class ScenarioRunnerTests : IDisposable
     }
 
     [Fact]
+    public void ATestWithALevel_OpensThatFileInTheEditor_FromTheScenariosFolder()
+    {
+        Run([], ["RunnerTests.FromALevel"]);
+
+        Assert.Equal([$"editor {Path.Combine(_folder.Path, "levels", "three-blocks.zeeplevel")}"], _host.Entered);
+        Assert.Equal(["enter editor", "level"], Events);
+    }
+
+    [Fact]
+    public void ATestInFreePlay_PlaysItsUid()
+    {
+        Run([], ["RunnerTests.InFreePlay"]);
+
+        Assert.Equal(["free-play EZ01"], _host.Entered);
+        Assert.Equal(["enter free-play", "free play"], Events);
+    }
+
+    [Fact]
+    public void AScenarioWithALevel_OpensThatFileInTheEditor_FromItsOwnFolder()
+    {
+        Directory.CreateDirectory(Path.Combine(_folder.Path, "sub"));
+
+        Run(Write("sub/a", "start:\n  editor: { level: levels/three-blocks.zeeplevel }\nsteps:\n  - t.note: x\n"));
+
+        Assert.Equal([$"editor {Path.Combine(_folder.Path, "sub", "levels", "three-blocks.zeeplevel")}"], _host.Entered);
+    }
+
+    [Fact]
     public void AFailedStep_StopsItsTestWithAScreenshot_AndTheRunGoesOn()
     {
         Run([], ["RunnerTests.FailsHalfway", "RunnerTests.TwoNotes"]);
@@ -1034,6 +1062,11 @@ public sealed class ScenarioRunnerTests : IDisposable
 
         public Action WhenEntering { get; set; }
 
+        /// <summary>
+        /// Each start entered: its state, and the level file it opens or the UID it plays.
+        /// </summary>
+        public List<string> Entered { get; } = [];
+
         public bool ScreenshotThrows { get; set; }
 
         /// <summary>
@@ -1056,13 +1089,14 @@ public sealed class ScenarioRunnerTests : IDisposable
 
         public LEV_LevelEditorCentral Editor => null;
 
-        public IEnumerator EnterStart(ScenarioStart start, string scenarioFile)
+        public IEnumerator EnterStart(ScenarioStart start, string levelFolder)
         {
             WhenEntering?.Invoke();
             if (++_enters == FailEnterAt)
                 throw EnterException ?? new StartFailedException("the main menu: not reached after 120 seconds");
 
             _recorder.Events.Add($"enter {start.State.Name}");
+            Entered.Add(start.State == StartState.Editor ? $"editor {start.LevelPath(levelFolder)}".TrimEnd() : $"{start.State.Name} {start.Value}".TrimEnd());
             yield return null;
         }
 

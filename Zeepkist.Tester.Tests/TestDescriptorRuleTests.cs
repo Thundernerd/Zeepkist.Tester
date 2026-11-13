@@ -30,6 +30,19 @@ public class TestDescriptorRuleTests
         Assert.Equal($"[InGameTest] {Here}+NoEmptyConstructor.Test is in a class that can't be made: it has to be a concrete, non-generic class with a public constructor that takes nothing.", error.Message);
     }
 
+    [Theory]
+    [InlineData(nameof(Starts.FreePlayWithoutAUid), "starts in free-play, which needs FreePlayUid.")]
+    [InlineData(nameof(Starts.FreePlayWithAnEmptyUid), "starts in free-play, which needs FreePlayUid.")]
+    [InlineData(nameof(Starts.EditorWithAnEmptyLevel), "has an empty Level: leave it out for a new level.")]
+    [InlineData(nameof(Starts.LevelFromTheMenu), "has a Level, which only Start.Editor opens.")]
+    [InlineData(nameof(Starts.UidInTheEditor), "has a FreePlayUid, which only Start.FreePlay plays.")]
+    public void BuildTest_AStartWithoutItsArgument_OrAnArgumentOfAnotherStart_Fails(string method, string problem)
+    {
+        var error = Assert.Throws<StepDefinitionException>(() => Build(typeof(Starts), method));
+
+        Assert.Equal($"[InGameTest] {Here}+Starts.{method} {problem}", error.Message);
+    }
+
     [Fact]
     public void BuildTests_TwoClassesOfOneNameWithOneTest_Fails()
     {
@@ -85,6 +98,39 @@ public class TestDescriptorRuleTests
 
         [InGameTest]
         private IEnumerator Private(IStepContext context)
+        {
+            yield break;
+        }
+    }
+
+    public sealed class Starts
+    {
+        [InGameTest(Start = Start.FreePlay)]
+        public IEnumerator FreePlayWithoutAUid(IStepContext context)
+        {
+            yield break;
+        }
+
+        [InGameTest(Start = Start.FreePlay, FreePlayUid = "")]
+        public IEnumerator FreePlayWithAnEmptyUid(IStepContext context)
+        {
+            yield break;
+        }
+
+        [InGameTest(Level = "")]
+        public IEnumerator EditorWithAnEmptyLevel(IStepContext context)
+        {
+            yield break;
+        }
+
+        [InGameTest(Start = Start.MainMenu, Level = "levels/a.zeeplevel")]
+        public IEnumerator LevelFromTheMenu(IStepContext context)
+        {
+            yield break;
+        }
+
+        [InGameTest(FreePlayUid = "EZ01")]
+        public IEnumerator UidInTheEditor(IStepContext context)
         {
             yield break;
         }

@@ -21,6 +21,18 @@ public sealed class WindowTests
         yield break;
     }
 
+    [InGameTest(Level = "levels/window.zeeplevel")]
+    public IEnumerator FromALevel(IStepContext context)
+    {
+        yield break;
+    }
+
+    [InGameTest(Start = Start.FreePlay, FreePlayUid = "EZ01")]
+    public IEnumerator InFreePlay(IStepContext context)
+    {
+        yield break;
+    }
+
     public IEnumerator NotATest(IStepContext context)
     {
         yield break;

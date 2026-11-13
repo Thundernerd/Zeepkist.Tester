@@ -89,10 +89,37 @@ public sealed class ProgramTests : IDisposable
     {
         Write("zeepkist-test.json", $$"""{ "scenarios": "tests", "testPlugin": {{System.Text.Json.JsonSerializer.Serialize(_modPath)}} }""");
         Write(Path.Combine("tests", "a.ztest.yaml"), "steps:\n  - sample.compile: lamp\n");
+        Write(Path.Combine("tests", "levels", "window.zeeplevel"), "a level");
         var current = Directory.CreateDirectory(Path.Combine(_folder.Path, "deep", "down")).FullName;
 
         Assert.Equal(0, RunIn(current, "check"));
         Assert.Contains("Checked 1 file: no errors, no warnings.", _output.ToString());
+    }
+
+    [Fact]
+    public void Check_ATestsLevelThatIsntInTheConfiguredFolder_IsAnError()
+    {
+        WriteConfig();
+        Write(Path.Combine("tests", "a.ztest.yaml"), "steps:\n  - sample.compile: lamp\n");
+
+        Assert.Equal(1, RunIn(_folder.Path, "check"));
+        Assert.Equal(
+            [
+                $"error: [InGameTest] {typeof(WindowTests).FullName}.FromALevel can't find its Level 'levels/window.zeeplevel' in {Path.Combine(_folder.Path, "tests")}.",
+                "Checked 1 file: 1 error, no warnings.",
+            ],
+            Lines());
+    }
+
+    [Fact]
+    public void Check_ATestsLevelInTheConfiguredFolder_IsFound_WhicheverFilesAreChecked()
+    {
+        WriteConfig();
+        Write(Path.Combine("tests", "levels", "window.zeeplevel"), "a level");
+        var file = Write("a.ztest.yaml", "steps:\n  - sample.compile: lamp\n");
+
+        Assert.Equal(0, RunIn(_folder.Path, "check", file));
+        Assert.Equal("Checked 1 file: no errors, no warnings.", Lines().Single());
     }
 
     [Fact]
@@ -107,6 +134,7 @@ public sealed class ProgramTests : IDisposable
         File.Copy(_modPath, built);
         File.SetLastWriteTimeUtc(built, DateTime.UtcNow);
         Write(Path.Combine("tests", "a.ztest.yaml"), "steps:\n  - sample.compile: lamp\n");
+        Write(Path.Combine("tests", "levels", "window.zeeplevel"), "a level");
 
         Assert.Equal(0, RunIn(_folder.Path, "check"));
     }
@@ -343,6 +371,7 @@ public sealed class ProgramTests : IDisposable
     {
         WriteConfig();
         Write(Path.Combine("tests", "a.ztest.yaml"), "steps:\n  - sample.compile: lamp\n");
+        Write(Path.Combine("tests", "levels", "window.zeeplevel"), "a level");
 
         Assert.Equal(0, RunIn(_folder.Path, "check"));
         Assert.Contains("\"sample.compile\"", File.ReadAllText(Path.Combine(_folder.Path, ".ztest", "schema.json")));
