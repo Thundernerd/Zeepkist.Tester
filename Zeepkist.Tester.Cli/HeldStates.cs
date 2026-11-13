@@ -14,11 +14,11 @@ internal sealed class HeldStates
     private readonly HashSet<string> _held;
 
     /// <param name="states">Every state of the registry, by full name.</param>
-    /// <param name="start">The state the scenario starts in.</param>
-    public HeldStates(IReadOnlyDictionary<string, StateDescriptor> states, string start)
+    /// <param name="held">The states that hold where the scenario starts.</param>
+    public HeldStates(IReadOnlyDictionary<string, StateDescriptor> states, IEnumerable<string> held)
     {
         _states = states;
-        _held = [start];
+        _held = [.. held];
     }
 
     /// <summary>

@@ -66,6 +66,7 @@ internal static class StepSchema
                 ["use"] = Use(all),
                 ["start"] = Start(),
                 ["input"] = Documented(new JsonObject { ["enum"] = Array("in-process", "os") }, "How input reaches the game: `in-process`, the default, or `os`, as a player's keyboard and mouse do."),
+                ["with"] = Takes(),
                 ["steps"] = new JsonObject { ["$ref"] = StepsRef },
             },
             ["required"] = Array("steps"),
@@ -219,6 +220,18 @@ internal static class StepSchema
         var use = new JsonObject { ["type"] = "array" };
         use["items"] = namespaces.Length > 0 ? new JsonObject { ["enum"] = Array(namespaces) } : false;
         return Documented(use, "Namespaces whose steps this scenario writes without their prefix, such as `[zls]`.");
+    }
+
+    private static JsonObject Takes()
+    {
+        var takes = new JsonObject
+        {
+            ["type"] = "array",
+            ["uniqueItems"] = true,
+            ["items"] = new JsonObject { ["type"] = "string", ["pattern"] = NamePattern },
+        };
+
+        return Documented(takes, "Says another file runs this one, and the names its `run:` passes in through `with:`, such as `[block, time]`.");
     }
 
     private static JsonObject Start()

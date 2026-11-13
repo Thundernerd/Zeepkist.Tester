@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using TNRD.Zeepkist.Tester.Scenarios;
 using TNRD.Zeepkist.Tester.Sdk;
 
@@ -19,7 +20,7 @@ internal sealed class ScenarioLoader
         _steps = steps;
     }
 
-    /// <exception cref="ScenarioException">The file or a file it runs can't be read as a scenario, or they run in a circle.</exception>
+    /// <exception cref="ScenarioException">The file or a file it runs can't be read as a scenario, they run in a circle, or a <c>with:</c> doesn't pass what the file it runs takes.</exception>
     /// <exception cref="IOException">The file can't be read.</exception>
     /// <exception cref="UnauthorizedAccessException">The file can't be read.</exception>
     public Scenario Load(string file)
@@ -67,6 +68,10 @@ internal sealed class ScenarioLoader
             throw new ScenarioException(run.Location, ScenarioMessages.RunAlreadyRunning(run.File));
 
         var scenario = Parse(target);
+        var mismatch = run.Mismatches(scenario).FirstOrDefault();
+        if (mismatch != null)
+            throw mismatch;
+
         running.Add(target);
         RequireRuns(target, scenario.Steps, running);
         running.RemoveAt(running.Count - 1);

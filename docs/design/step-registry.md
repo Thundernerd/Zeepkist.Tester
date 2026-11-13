@@ -473,6 +473,17 @@ The runner handles the control nodes itself; they aren't registry steps, but the
 | `repeat` | `- repeat: 3` + `steps:` |
 | `run` | `- run: shared/open-lights.ztest.yaml` with optional `with: { name: value }`. Its steps report under the caller, with the file and line of both. |
 
+A file that's meant to be run by others says so with a `with:` header listing the names it takes, `[]` when it takes none:
+
+```yaml
+with: [block, time]
+steps:
+  - wait: ${time}
+  - set-block-setting: { block: "${block}", setting: is, value: "true" }
+```
+
+A `run:` of it has to pass exactly those names: one left out or one it doesn't take fails at load, in the game and in `ztest check`. Without the header a file takes whatever its callers pass.
+
 ### Control nodes and names
 
 **`${x}` works in any single value.** The harness keeps each argument's YAML text, substitutes it, and only then converts it to the argument's type, so `int`, `Seconds`, `FileName`, an enum, `Name` and `Ref` all take it:
@@ -547,7 +558,7 @@ public sealed class WindowTests
 | Offline checks | `ztest check [files or folders...] [--plugin <dll>]...`, `ztest check --registry` | The registry; reports `file:line:col: error\|warning: message`, and exits with 1 on errors |
 | `.zlstest` → YAML | `ztest convert` | The registry plus a `[LineSyntax("<function> [as <as>]")]` attribute per old step; see below |
 
-`ztest check` with no files checks the `scenarios` folder of the nearest `zeepkist-test.json`, and reads the steps of its `testPlugin`, a project or a DLL, unless `--plugin` names others. Of the files it's given, one that another runs is only followed from there, because it may need what that passes in through `with:`. It reports a file's first problem from loading, and then every problem with names and states. A file whose lists and maps nest more than 100 deep is a load error, in the game as well, so that reading it can't overflow the stack. It stops following a scenario, with a warning, after a million steps of nested loops and `run:` files, and a value used in nested `for`s tries its first 1000 combinations.
+`ztest check` with no files checks the `scenarios` folder of the nearest `zeepkist-test.json`, and reads the steps of its `testPlugin`, a project or a DLL, unless `--plugin` names others. Of the files it's given, one that another runs is only followed from there, because it may need what that passes in through `with:`. One that nothing given runs is followed on its own: from its `start:`, or, when it has a `with:` header, with the names the header lists and from wherever a caller may leave it, so a state only counts as not holding once a step in it leaves that state. It reports a file's first problem from loading, and then every problem with names and states. A file whose lists and maps nest more than 100 deep is a load error, in the game as well, so that reading it can't overflow the stack. It stops following a scenario, with a warning, after a million steps of nested loops and `run:` files, and a value used in nested `for`s tries its first 1000 combinations.
 
 ### The editor schema
 
