@@ -59,7 +59,7 @@ public class UguiPointerTests
     }
 
     [Fact]
-    public void TwoButtonsHeldAtOnce_EachGoUpOnWhatTookTheirOwnPress_WithAClickOnlyWhereReleasedOverThat()
+    public void TwoButtonsHeldAtOnce_EachGoesUpOnWhatTookItsOwnPress_WithNoClickWhereReleasedOverSomethingElse()
     {
         _pointer.MoveMouse(_onButton);
         _pointer.PressButton(MouseButton.Left);
@@ -71,6 +71,28 @@ public class UguiPointerTests
         _pointer.ReleaseButton(MouseButton.Left);
 
         Assert.Equal(["Up menu/button Left"], _scene.Sent);
+    }
+
+    [Fact]
+    public void TwoButtonsHeldAtOnce_EachClickWhatTookTheirOwnPress()
+    {
+        _pointer.MoveMouse(_onButton);
+        _pointer.PressButton(MouseButton.Left);
+        _pointer.DragMouse(Delta(_onButton, _onOther), MouseButton.Left);
+        _pointer.PressButton(MouseButton.Right);
+        _pointer.DragMouse(Delta(_onOther, _onButton), MouseButton.Left);
+        _scene.Sent.Clear();
+
+        _pointer.ReleaseButton(MouseButton.Left);
+        _pointer.DragMouse(Delta(_onButton, _onOther), MouseButton.Right);
+        _pointer.ReleaseButton(MouseButton.Right);
+
+        Assert.Equal(
+        [
+            "Up menu/button Left", "Click menu/button Left",
+            "Exit menu/button", "Enter menu/other",
+            "Up menu/other Right", "Click menu/other Right",
+        ], _scene.Sent);
     }
 
     [Fact]
