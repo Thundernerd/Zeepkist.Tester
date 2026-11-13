@@ -5,8 +5,7 @@ using TNRD.Zeepkist.Tester.Sdk;
 namespace TNRD.Zeepkist.Tester;
 
 /// <summary>
-/// Runs what a run's units do guarded, and records it: each result reported, what went wrong logged, and a screenshot where
-/// a unit failed.
+/// Records what a run's units do. It reports each result, logs what went wrong, and takes a screenshot where a unit failed.
 /// </summary>
 internal sealed class RunRecorder
 {
@@ -40,11 +39,13 @@ internal sealed class RunRecorder
     }
 
     /// <summary>
-    /// Runs <paramref name="routine"/> for <paramref name="context"/>'s step, failing the step with what it throws, then gives
-    /// <paramref name="recorded"/> the step's result, for the caller to say which step it was. An exception
-    /// <paramref name="stops"/> holds for only stops the routine, which fails nothing.
+    /// Runs a step's routine and fails the step with what it throws. Then fills in what the step found, which the caller reports.
     /// </summary>
-    public IEnumerator RunStep(StepContext context, IEnumerator routine, Action<RunStep> recorded, Func<Exception, bool> stops = null)
+    /// <param name="context">The step's context.</param>
+    /// <param name="routine">What the step does.</param>
+    /// <param name="recorded">The step's result, which says which step it was.</param>
+    /// <param name="stops">Says whether an exception only stops the routine. Such an exception fails nothing.</param>
+    public IEnumerator RunGuarded(StepContext context, IEnumerator routine, RunStep recorded, Func<Exception, bool> stops = null)
     {
         var startedAt = _host.Now;
         Exception error = null;
@@ -57,14 +58,11 @@ internal sealed class RunRecorder
             context.Fail(Describe(error));
         }
 
-        recorded(new RunStep
-        {
-            Passed = !context.Failed,
-            Detail = context.Detail,
-            Expected = context.Expected,
-            Actual = context.Actual,
-            Seconds = Seconds(startedAt),
-        });
+        recorded.Passed = !context.Failed;
+        recorded.Detail = context.Detail;
+        recorded.Expected = context.Expected;
+        recorded.Actual = context.Actual;
+        recorded.Seconds = Seconds(startedAt);
     }
 
     /// <summary>

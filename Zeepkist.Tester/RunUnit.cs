@@ -6,8 +6,7 @@ using TNRD.Zeepkist.Tester.Sdk;
 namespace TNRD.Zeepkist.Tester;
 
 /// <summary>
-/// What a run runs one at a time: a scenario or a C# test, which run alike: hooks around them, from where they start, and
-/// their steps.
+/// One scenario or C# test in a run. Both run alike, with hooks around them, from where they start.
 /// </summary>
 internal sealed class RunUnit
 {

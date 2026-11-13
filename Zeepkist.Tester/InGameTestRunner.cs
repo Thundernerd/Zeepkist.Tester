@@ -59,15 +59,13 @@ internal sealed class InGameTestRunner
     {
         var values = new ScenarioValues();
         var stepsRun = 0;
+        var context = unit.Context.ForTest(_host, _exceptions, values, step => RunTestStep(unit, values, step, () => stepsRun++));
+        var recorded = new RunStep { Name = "test", Scenario = unit.Name };
         var stopped = false;
-        var context = unit.Context.ForTest(_host, _exceptions, values, step => RunTestStep(unit, values, step, () => stepsRun++, () => stopped = true));
-        RunStep recorded = null;
-        yield return _recorder.RunStep(context, RunRecorder.Called(() => test.Run(context)), step => recorded = step, error => error is TestStoppedException);
+        yield return _recorder.RunGuarded(context, RunRecorder.Called(() => test.Run(context)), recorded, error => stopped = error is TestStoppedException);
         if (!context.Failed && stepsRun > 0 && context.Detail.Length == 0 && context.Expected == null)
             yield break;
 
-        recorded.Name = "test";
-        recorded.Scenario = unit.Name;
         _recorder.Report(recorded);
 
         // The step that stopped it took one already
@@ -76,20 +74,17 @@ internal sealed class InGameTestRunner
     }
 
     /// <exception cref="TestStoppedException">The step failed, which stops the test that ran it.</exception>
-    private IEnumerator RunTestStep(RunUnit unit, ScenarioValues values, Step step, Action ran, Action stopping)
+    private IEnumerator RunTestStep(RunUnit unit, ScenarioValues values, Step step, Action ran)
     {
         var context = unit.Context.ForStep(_host, _exceptions, values);
-        RunStep recorded = null;
-        yield return _recorder.RunStep(context, StepPreconditions.Run(step, context), result => recorded = result);
+        var recorded = new RunStep { Name = step == null ? "null" : _catalog.Steps.NameOf(step.GetType()), Scenario = unit.Name };
+        yield return _recorder.RunGuarded(context, StepPreconditions.Run(step, context), recorded);
         ran();
-        recorded.Name = step == null ? "null" : _catalog.Steps.NameOf(step.GetType());
-        recorded.Scenario = unit.Name;
         _recorder.Report(recorded);
         if (!context.Failed)
             yield break;
 
         yield return _recorder.FailureScreenshot(unit);
-        stopping();
         throw new TestStoppedException();
     }
 

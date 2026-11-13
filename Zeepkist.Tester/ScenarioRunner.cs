@@ -336,14 +336,16 @@ internal sealed class ScenarioRunner
     private IEnumerator RunStepNode(RunUnit unit, StepNode node, Frame frame)
     {
         var context = unit.Context.ForStep(_host, _exceptions, frame.Values);
-        RunStep recorded = null;
-        yield return _recorder.RunStep(context, BindAndRun(node, context, frame), step => recorded = step);
-        recorded.Name = node.Step.FullName;
-        recorded.Scenario = unit.Name;
-        recorded.File = frame.File;
-        recorded.Line = (int)node.Location.Line;
-        recorded.RanFrom = frame.RanFrom;
-        recorded.Passes = frame.Passes;
+        var recorded = new RunStep
+        {
+            Name = node.Step.FullName,
+            Scenario = unit.Name,
+            File = frame.File,
+            Line = (int)node.Location.Line,
+            RanFrom = frame.RanFrom,
+            Passes = frame.Passes,
+        };
+        yield return _recorder.RunGuarded(context, BindAndRun(node, context, frame), recorded);
         _recorder.Report(recorded);
 
         if (context.Failed)
