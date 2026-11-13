@@ -238,11 +238,19 @@ internal sealed class ScenarioParser
         // A body's own for of this name is an error in itself, which ztest check reports. Here the inner one wins, as it would until then
         _loopValues.TryGetValue(name, out var outer);
         _loopValues[name] = literals;
-        var steps = ReadBody(body, use);
-        if (outer == null)
-            _loopValues.Remove(name);
-        else
-            _loopValues[name] = outer;
+        List<ScenarioNode> steps;
+        try
+        {
+            steps = ReadBody(body, use);
+        }
+        finally
+        {
+            // Reading goes on after a body that can't be read, and the steps after it can't see its variable
+            if (outer == null)
+                _loopValues.Remove(name);
+            else
+                _loopValues[name] = outer;
+        }
 
         return new ForNode(Location(map), name, literals, steps);
     }

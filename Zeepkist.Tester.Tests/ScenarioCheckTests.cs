@@ -333,6 +333,17 @@ public class ScenarioCheckTests
             problems);
     }
 
+    [Fact]
+    public void AForThatCantBeRead_DoesntLendItsVariableToTheStepsAfterIt()
+    {
+        using var folder = new TemporaryFolder();
+        var file = Write(folder, "a.ztest.yaml", "steps:\n  - for: { s: [abc] }\n    steps: []\n  - wait: ${s}\n");
+
+        var problem = Assert.Single(ScenarioCheck.Run([file], CheckSteps.Registry));
+
+        Assert.Equal($"{file}:3:12: error: steps: has no steps in it.", problem.ToString());
+    }
+
     private static string Write(TemporaryFolder folder, string name, string yaml)
     {
         var file = Path.Combine(folder.Path, name);
