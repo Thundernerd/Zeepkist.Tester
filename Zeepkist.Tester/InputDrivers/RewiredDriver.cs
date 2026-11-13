@@ -68,8 +68,9 @@ internal sealed class RewiredDriver : IActionDriver
                 }
             }
 
-            // Turned off for every player since the step set it, so it lets go, as a held key's action does
-            if (!on)
+            // Turned off for every player since the step set it, so it lets go, as a held key's action does. One that has
+            // already let go is left to clear, so it's the player's again once it's back on.
+            if (!on && frame.Now != 0)
                 _frames.Set(frame.ActionId, 0);
         }
     }
