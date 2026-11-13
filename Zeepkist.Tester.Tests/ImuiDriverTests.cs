@@ -56,8 +56,7 @@ public class ImuiDriverTests
     {
         Assert.False(_driver.MoveMouse(_underUgui));
 
-        Assert.NotNull(ImuiDriver.Position);
-        Assert.NotEqual((_underUgui.x, _underUgui.y), (ImuiDriver.Position.Value.x, ImuiDriver.Position.Value.y));
+        AssertImuiMouseNotAt(_underUgui);
         _driver.GiveBack();
     }
 
@@ -71,7 +70,7 @@ public class ImuiDriverTests
         _driver.ReleaseButton(MouseButton.Left);
 
         Assert.Empty(_backend.Queued);
-        Assert.Equal((_onWindow.x, _onWindow.y), (ImuiDriver.Position.Value.x, ImuiDriver.Position.Value.y));
+        AssertImuiMouseAt(_onWindow);
         _driver.GiveBack();
     }
 
@@ -82,7 +81,7 @@ public class ImuiDriverTests
         _driver.PressButton(MouseButton.Left);
 
         Assert.True(_driver.DragMouse(Delta(_onWindow, _underUgui), MouseButton.Left));
-        Assert.Equal((_underUgui.x, _underUgui.y), (ImuiDriver.Position.Value.x, ImuiDriver.Position.Value.y));
+        AssertImuiMouseAt(_underUgui);
         _driver.ReleaseButton(MouseButton.Left);
 
         Assert.Equal(["Down Left 1", "Drag Left 40,0", "Up Left"], _backend.Queued);
@@ -97,7 +96,7 @@ public class ImuiDriverTests
 
         Assert.True(_driver.MoveMouse(_underUgui));
 
-        Assert.Equal((_underUgui.x, _underUgui.y), (ImuiDriver.Position.Value.x, ImuiDriver.Position.Value.y));
+        AssertImuiMouseAt(_underUgui);
         _driver.GiveBack();
     }
 
@@ -110,16 +109,8 @@ public class ImuiDriverTests
 
         _driver.ReleaseButton(MouseButton.Left);
 
-        Assert.NotEqual((_underUgui.x, _underUgui.y), (ImuiDriver.Position.Value.x, ImuiDriver.Position.Value.y));
+        AssertImuiMouseNotAt(_underUgui);
         _driver.GiveBack();
-    }
-
-    /// <summary>
-    /// Vector2's operators have no body here either.
-    /// </summary>
-    private static Vector2 Delta(Vector2 from, Vector2 to)
-    {
-        return new Vector2 { x = to.x - from.x, y = to.y - from.y };
     }
 
     // UguiTop is internal, so a public test takes its name
@@ -136,6 +127,32 @@ public class ImuiDriverTests
 
         Assert.Equal(taken, _driver.PressButton(MouseButton.Left));
         _driver.GiveBack();
+    }
+
+    /// <summary>
+    /// Vector2's operators have no body here either.
+    /// </summary>
+    private static Vector2 Delta(Vector2 from, Vector2 to)
+    {
+        return new Vector2 { x = to.x - from.x, y = to.y - from.y };
+    }
+
+    /// <summary>
+    /// Where Imui finds the mouse, field by field, as Vector2's own equality has no body here either.
+    /// </summary>
+    private static void AssertImuiMouseAt(Vector2 screenPoint)
+    {
+        Assert.NotNull(ImuiDriver.Position);
+        Assert.Equal((screenPoint.x, screenPoint.y), (ImuiDriver.Position.Value.x, ImuiDriver.Position.Value.y));
+    }
+
+    /// <summary>
+    /// That Imui has a mouse from the tester, but not at the point.
+    /// </summary>
+    private static void AssertImuiMouseNotAt(Vector2 screenPoint)
+    {
+        Assert.NotNull(ImuiDriver.Position);
+        Assert.NotEqual((screenPoint.x, screenPoint.y), (ImuiDriver.Position.Value.x, ImuiDriver.Position.Value.y));
     }
 
     private sealed class FakeBackend : IImuiBackend

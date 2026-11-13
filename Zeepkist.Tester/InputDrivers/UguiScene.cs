@@ -14,11 +14,6 @@ namespace TNRD.Zeepkist.Tester.InputDrivers;
 /// </summary>
 internal sealed class UguiScene : IUguiScene<GameObject>
 {
-    /// <summary>
-    /// <see cref="TopAt"/>'s, which is static, as uGUI is only used from Unity's main thread.
-    /// </summary>
-    private static readonly List<RaycastResult> _topResults = [];
-
     private readonly List<RaycastResult> _results = [];
 
     /// <summary>
@@ -44,7 +39,7 @@ internal sealed class UguiScene : IUguiScene<GameObject>
 
     public GameObject HitAt(Vector2 screenPoint)
     {
-        _lastHit = Topmost(screenPoint, _results);
+        _lastHit = Topmost(screenPoint);
         if (IsImui(_lastHit.gameObject))
             _lastHit = default;
 
@@ -55,12 +50,12 @@ internal sealed class UguiScene : IUguiScene<GameObject>
     /// What's on top at the point for <see cref="ImuiDriver"/>, from the same raycast as <see cref="HitAt"/>.
     /// </summary>
     /// <param name="screenPoint">In Unity's screen pixels, counted from the bottom left.</param>
-    public static UguiTop TopAt(Vector2 screenPoint)
+    public UguiTop TopAt(Vector2 screenPoint)
     {
-        if (EventSystem.current == null)
+        if (!Ready)
             return UguiTop.NoEventSystem;
 
-        var hit = Topmost(screenPoint, _topResults).gameObject;
+        var hit = Topmost(screenPoint).gameObject;
         if (hit == null)
             return UguiTop.Nothing;
 
@@ -142,11 +137,11 @@ internal sealed class UguiScene : IUguiScene<GameObject>
     /// <summary>
     /// The topmost of what the event system's raycasters find at the point, as the input module takes it, or nothing.
     /// </summary>
-    private static RaycastResult Topmost(Vector2 screenPoint, List<RaycastResult> results)
+    private RaycastResult Topmost(Vector2 screenPoint)
     {
-        results.Clear();
-        EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = screenPoint }, results);
-        foreach (var result in results)
+        _results.Clear();
+        EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = screenPoint }, _results);
+        foreach (var result in _results)
         {
             // Sorted topmost first
             if (result.gameObject != null)

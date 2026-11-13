@@ -11,7 +11,14 @@ namespace TNRD.Zeepkist.Tester.InputDrivers;
 /// </summary>
 internal sealed class ImuiBackend : IImuiBackend
 {
+    private readonly UguiScene _ugui;
     private ImuiUnityGUIBackend _backend;
+
+    /// <param name="ugui">The game's uGUI, which finds what's on top of the backend.</param>
+    public ImuiBackend(UguiScene ugui)
+    {
+        _ugui = ugui;
+    }
 
     public bool Present => Backend != null;
 
@@ -35,7 +42,7 @@ internal sealed class ImuiBackend : IImuiBackend
 
     public UguiTop TopAt(Vector2 screenPoint)
     {
-        return UguiScene.TopAt(screenPoint);
+        return _ugui.TopAt(screenPoint);
     }
 
     public void QueueKey(ImKeyboardEventType type, KeyCode key, EventModifiers modifiers, char character)

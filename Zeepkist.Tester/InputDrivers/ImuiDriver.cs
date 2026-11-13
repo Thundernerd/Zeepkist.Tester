@@ -88,7 +88,7 @@ internal sealed class ImuiDriver : IInputDriver
             return false;
 
         _point = screenPoint;
-        return Place();
+        return PlaceImuiMouse();
     }
 
     public bool PressButton(MouseButton button)
@@ -122,7 +122,7 @@ internal sealed class ImuiDriver : IInputDriver
             QueueMouseEvent(ImMouseEventType.Drag, button, new Vector2 { x = delta.x / scale, y = delta.y / scale });
         }
 
-        return Place();
+        return PlaceImuiMouse();
     }
 
     /// <summary>
@@ -134,7 +134,7 @@ internal sealed class ImuiDriver : IInputDriver
             return false;
 
         QueueMouseEvent(ImMouseEventType.Up, button, default);
-        Place();
+        PlaceImuiMouse();
         return true;
     }
 
@@ -157,7 +157,7 @@ internal sealed class ImuiDriver : IInputDriver
     /// holds a press, its mouse follows the pointer anywhere, as what took the press keeps it.
     /// </summary>
     /// <returns>Whether Imui has the pointer.</returns>
-    private bool Place()
+    private bool PlaceImuiMouse()
     {
         if (_heldButtons.Count == 0 && _point is { } point && _backend.TopAt(point) == UguiTop.Other)
         {
