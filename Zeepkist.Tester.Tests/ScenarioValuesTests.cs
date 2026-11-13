@@ -1,7 +1,6 @@
 using TNRD.Zeepkist.Tester.Sdk;
 using Xunit;
 using static TNRD.Zeepkist.Tester.Tests.TestSteps;
-using BlockValue = TNRD.Zeepkist.Tester.Tests.TestSteps.BlockValue;
 
 namespace TNRD.Zeepkist.Tester.Tests;
 
@@ -12,9 +11,9 @@ public class ScenarioValuesTests
     [Fact]
     public void Get_AfterSet_GivesTheValueThatNameDefined()
     {
-        var lamp = new BlockValue { Uid = "uid-1" };
-        var name = new Name<BlockValue>("lamp");
-        var reference = new Ref<BlockValue>("lamp");
+        var lamp = new PlacedBlock { Uid = "uid-1" };
+        var name = new Name<PlacedBlock>("lamp");
+        var reference = new Ref<PlacedBlock>("lamp");
 
         name.Set(_context, lamp);
 
@@ -24,10 +23,10 @@ public class ScenarioValuesTests
     [Fact]
     public void Set_NameAlreadyDefined_FailsTheStepNamingIt()
     {
-        var name = new Name<BlockValue>("lamp");
-        name.Set(_context, new BlockValue());
+        var name = new Name<PlacedBlock>("lamp");
+        name.Set(_context, new PlacedBlock());
 
-        var exception = Assert.Throws<StepFailedException>(() => name.Set(_context, new BlockValue()));
+        var exception = Assert.Throws<StepFailedException>(() => name.Set(_context, new PlacedBlock()));
 
         Assert.Equal("The name 'lamp' is already defined, as a block.", exception.Message);
     }
@@ -37,7 +36,7 @@ public class ScenarioValuesTests
     {
         new Name<WindowValue>("lamp").Set(_context, new WindowValue());
 
-        var exception = Assert.Throws<StepFailedException>(() => new Name<BlockValue>("lamp").Set(_context, new BlockValue()));
+        var exception = Assert.Throws<StepFailedException>(() => new Name<PlacedBlock>("lamp").Set(_context, new PlacedBlock()));
 
         Assert.Equal("The name 'lamp' is already defined, as a window.", exception.Message);
     }
@@ -45,7 +44,7 @@ public class ScenarioValuesTests
     [Fact]
     public void Set_NullValue_FailsTheStepNamingIt()
     {
-        var exception = Assert.Throws<StepFailedException>(() => new Name<BlockValue>("lamp").Set(_context, null));
+        var exception = Assert.Throws<StepFailedException>(() => new Name<PlacedBlock>("lamp").Set(_context, null));
 
         Assert.Equal("The name 'lamp' has to be defined with a value, not null.", exception.Message);
     }
@@ -53,7 +52,7 @@ public class ScenarioValuesTests
     [Fact]
     public void Set_NameLeftOut_FailsTheStep()
     {
-        var exception = Assert.Throws<StepFailedException>(() => default(Name<BlockValue>).Set(_context, new BlockValue()));
+        var exception = Assert.Throws<StepFailedException>(() => default(Name<PlacedBlock>).Set(_context, new PlacedBlock()));
 
         Assert.Equal("The step defines a named value, but its name was left out.", exception.Message);
     }
@@ -61,7 +60,7 @@ public class ScenarioValuesTests
     [Fact]
     public void Get_NameLeftOut_FailsTheStep()
     {
-        var exception = Assert.Throws<StepFailedException>(() => default(Ref<BlockValue>).Get(_context));
+        var exception = Assert.Throws<StepFailedException>(() => default(Ref<PlacedBlock>).Get(_context));
 
         Assert.Equal("The step uses a named value, but its name was left out.", exception.Message);
     }
@@ -69,7 +68,7 @@ public class ScenarioValuesTests
     [Fact]
     public void Get_NameNotDefined_FailsTheStepNamingIt()
     {
-        var exception = Assert.Throws<StepFailedException>(() => new Ref<BlockValue>("lamp").Get(_context));
+        var exception = Assert.Throws<StepFailedException>(() => new Ref<PlacedBlock>("lamp").Get(_context));
 
         Assert.Equal("The name 'lamp' isn't defined by an earlier step.", exception.Message);
     }
@@ -79,7 +78,7 @@ public class ScenarioValuesTests
     {
         new Name<WindowValue>("lamp").Set(_context, new WindowValue());
 
-        var exception = Assert.Throws<StepFailedException>(() => new Ref<BlockValue>("lamp").Get(_context));
+        var exception = Assert.Throws<StepFailedException>(() => new Ref<PlacedBlock>("lamp").Get(_context));
 
         Assert.Equal("The name 'lamp' is a window, not a block.", exception.Message);
     }
@@ -87,9 +86,9 @@ public class ScenarioValuesTests
     [Fact]
     public void Get_OnAnotherScenariosValues_DoesNotFindTheName()
     {
-        new Name<BlockValue>("lamp").Set(_context, new BlockValue());
+        new Name<PlacedBlock>("lamp").Set(_context, new PlacedBlock());
 
-        Assert.Throws<StepFailedException>(() => new Ref<BlockValue>("lamp").Get(new Context()));
+        Assert.Throws<StepFailedException>(() => new Ref<PlacedBlock>("lamp").Get(new Context()));
     }
 
     [Fact]
@@ -172,11 +171,11 @@ public class ScenarioValuesTests
     public void AScope_ReadsWhatIsDefinedAroundIt()
     {
         var outer = new ScenarioValues();
-        outer.Define("lamp", new BlockValue { Uid = "uid-1" });
+        outer.Define("lamp", new PlacedBlock { Uid = "uid-1" });
 
         var inner = outer.NewScope();
 
-        Assert.Equal("uid-1", inner.Get<BlockValue>("lamp").Uid);
+        Assert.Equal("uid-1", inner.Get<PlacedBlock>("lamp").Uid);
         Assert.Equal("uid-1", inner.Substitute("${lamp}"));
     }
 
@@ -184,9 +183,9 @@ public class ScenarioValuesTests
     public void AScope_CantDefineANameFromAroundIt_SoNothingIsHidden()
     {
         var outer = new ScenarioValues();
-        outer.Define("lamp", new BlockValue());
+        outer.Define("lamp", new PlacedBlock());
 
-        var exception = Assert.Throws<StepFailedException>(() => outer.NewScope().Define("lamp", new BlockValue()));
+        var exception = Assert.Throws<StepFailedException>(() => outer.NewScope().Define("lamp", new PlacedBlock()));
 
         Assert.Equal("The name 'lamp' is already defined, as a block.", exception.Message);
     }
@@ -196,10 +195,10 @@ public class ScenarioValuesTests
     {
         var outer = new ScenarioValues();
 
-        outer.NewScope().Define("lamp", new BlockValue());
+        outer.NewScope().Define("lamp", new PlacedBlock());
 
-        Assert.Throws<StepFailedException>(() => outer.Get<BlockValue>("lamp"));
-        outer.NewScope().Define("lamp", new BlockValue());
+        Assert.Throws<StepFailedException>(() => outer.Get<PlacedBlock>("lamp"));
+        outer.NewScope().Define("lamp", new PlacedBlock());
     }
 
     [Fact]
@@ -209,7 +208,7 @@ public class ScenarioValuesTests
         values.Define("h", new TextValue("64"));
 
         Assert.Equal("64", values.Substitute("${h}"));
-        Assert.Equal("The name 'h' is a text, not a block.", Assert.Throws<StepFailedException>(() => values.Get<BlockValue>("h")).Message);
+        Assert.Equal("The name 'h' is a text, not a block.", Assert.Throws<StepFailedException>(() => values.Get<PlacedBlock>("h")).Message);
     }
 
     [Fact]
@@ -260,7 +259,7 @@ public class ScenarioValuesTests
 
     private void Define(string name, string uid)
     {
-        new Name<BlockValue>(name).Set(_context, new BlockValue { Uid = uid });
+        new Name<PlacedBlock>(name).Set(_context, new PlacedBlock { Uid = uid });
     }
 
     private sealed class Context : BareStepContext

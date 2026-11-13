@@ -20,7 +20,7 @@ public sealed class LookAtBlock : Step
         if (central == null)
             yield break;
 
-        var center = BlockCenter.Of(central, Block.Get(context).Uid);
+        var center = BlockCenter.Of(central.GetBlock(context, Block));
         central.cam.transform.position = center + new Vector3(0, 24, -24);
         var camera = central.cam.cameraTransform;
         camera.rotation = Quaternion.LookRotation(center - camera.position);

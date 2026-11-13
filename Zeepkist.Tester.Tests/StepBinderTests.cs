@@ -94,8 +94,8 @@ public class StepBinderTests
     [Fact]
     public void ASubstitution_WorksInASingleValue_OfAnyType()
     {
-        _values.Define("h", new TestSteps.BlockValue { Uid = "64" });
-        _values.Define("mode", new TestSteps.BlockValue { Uid = "page-up" });
+        _values.Define("h", new TestSteps.PlacedBlock { Uid = "64" });
+        _values.Define("mode", new TestSteps.PlacedBlock { Uid = "page-up" });
 
         Assert.Equal(64f, Bind<TestSteps.Wait>("wait: ${h}").Seconds.Value);
         Assert.Equal(TestSteps.Axis.PageUp, Bind<TestSteps.EveryType>("every-type:\n      axis: ${mode}").Axis);
@@ -108,10 +108,10 @@ public class StepBinderTests
     {
         var node = Read("written:\n      string: a $${b} ${c}");
 
-        _values.Define("c", new TestSteps.BlockValue { Uid = "one" });
+        _values.Define("c", new TestSteps.PlacedBlock { Uid = "one" });
         var first = (TestSteps.Written)StepBinder.Bind(node, typeof(TestSteps.Written), _values);
         var other = new ScenarioValues();
-        other.Define("c", new TestSteps.BlockValue { Uid = "two" });
+        other.Define("c", new TestSteps.PlacedBlock { Uid = "two" });
         var second = (TestSteps.Written)StepBinder.Bind(node, typeof(TestSteps.Written), other);
 
         Assert.Equal("a ${b} one", first.String);
@@ -138,8 +138,8 @@ public class StepBinderTests
     [InlineData("wait: ${nope}", 11, "The name 'nope' isn't defined by an earlier step.")]
     public void AValueOnlyKnownWhenItRuns_FailsTheStep_WithItsLocationAndWhatsWrong(string written, int column, string problem)
     {
-        _values.Define("h", new TestSteps.BlockValue { Uid = "soon" });
-        _values.Define("n", new TestSteps.BlockValue { Uid = "LAMP" });
+        _values.Define("h", new TestSteps.PlacedBlock { Uid = "soon" });
+        _values.Define("n", new TestSteps.PlacedBlock { Uid = "LAMP" });
         var node = Read(written);
 
         var exception = Assert.Throws<StepFailedException>(() => StepBinder.Bind(node, ScenarioSteps.TypeOf(node), _values));
