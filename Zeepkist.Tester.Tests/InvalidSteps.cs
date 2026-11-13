@@ -201,6 +201,54 @@ public static class InvalidSteps
         public Name<SubstituteNotAString> Value { get; set; }
     }
 
+    [ValueKind("lamp")]
+    public sealed class LampOne
+    {
+    }
+
+    [ValueKind("lamp")]
+    public sealed class LampTwo
+    {
+    }
+
+    [Step("defines-lamp-one", Namespace = "a")]
+    public sealed class DefinesLampOne : Base
+    {
+        [Arg]
+        public Name<LampOne> Value { get; set; }
+    }
+
+    [Step("uses-lamp-two", Namespace = "b")]
+    public sealed class UsesLampTwo : Base
+    {
+        [Arg]
+        public List<Ref<LampTwo>> Values { get; set; }
+    }
+
+    [Step("uses-lamp-one", Namespace = "b")]
+    public sealed class UsesLampOne : Base
+    {
+        [Arg]
+        public Ref<LampOne> Value { get; set; }
+    }
+
+    [ValueKind("lamp")]
+    public class LampBase
+    {
+    }
+
+    [ValueKind("dimmable-lamp")]
+    public sealed class DimmableLamp : LampBase
+    {
+    }
+
+    [Step("uses-dimmable-lamp", Namespace = "b")]
+    public sealed class UsesDimmableLamp : Base
+    {
+        [Arg]
+        public Ref<DimmableLamp> Value { get; set; }
+    }
+
     public sealed class NoStepAttribute : Base
     {
     }

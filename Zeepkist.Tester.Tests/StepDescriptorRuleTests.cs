@@ -181,6 +181,30 @@ public class StepDescriptorRuleTests
         Assert.Equal(2, descriptors.Count);
     }
 
+    [Fact]
+    public void BuildAll_TwoClassesOfOneValueKind_FailsNamingBoth()
+    {
+        var exception = Assert.Throws<StepDefinitionException>(() => new StepDescriptorBuilder().BuildAll([typeof(InvalidSteps.DefinesLampOne), typeof(InvalidSteps.UsesLampTwo)]));
+
+        Assert.Equal($"{InvalidStepsType}+LampOne and {InvalidStepsType}+LampTwo are both the value kind 'lamp'. A kind's name has to be unique across every mod's steps.", exception.Message);
+    }
+
+    [Fact]
+    public void BuildAll_ABaseClassOfAnotherClassesValueKind_FailsNamingBoth()
+    {
+        var exception = Assert.Throws<StepDefinitionException>(() => new StepDescriptorBuilder().BuildAll([typeof(InvalidSteps.DefinesLampOne), typeof(InvalidSteps.UsesDimmableLamp)]));
+
+        Assert.Equal($"{InvalidStepsType}+LampOne and {InvalidStepsType}+LampBase are both the value kind 'lamp'. A kind's name has to be unique across every mod's steps.", exception.Message);
+    }
+
+    [Fact]
+    public void BuildAll_OneClassOfAValueKindInSeveralSteps_BuildsThem()
+    {
+        var descriptors = new StepDescriptorBuilder().BuildAll([typeof(InvalidSteps.DefinesLampOne), typeof(InvalidSteps.UsesLampOne)]);
+
+        Assert.Equal(2, descriptors.Count);
+    }
+
     private static void AssertFails(Type stepType, string message)
     {
         var exception = Assert.Throws<StepDefinitionException>(() => AsTester().Build(stepType));
