@@ -291,7 +291,7 @@ public class TesterInputTests
     public void TheInProcessRoute_HandsEveryDriverEachCall()
     {
         var other = new FakeDriver();
-        var composite = new InProcessDrivers(_driver, other);
+        var composite = new InProcessDrivers(_ => { }, _driver, other);
 
         Assert.True(composite.PressButton(MouseButton.Left));
         composite.GiveBack();
@@ -301,9 +301,22 @@ public class TesterInputTests
     }
 
     [Fact]
+    public void TheInProcessRoute_GivesBackOnEveryDriver_WhenOneThrows_AndLogsWhatItThrew()
+    {
+        var thrown = new InvalidOperationException("stuck");
+        var logged = new List<Exception>();
+        var composite = new InProcessDrivers(logged.Add, new FakeDriver { GiveBackThrows = thrown }, _driver);
+
+        composite.GiveBack();
+
+        Assert.Equal(["give back"], _driver.Events);
+        Assert.Equal([thrown], logged);
+    }
+
+    [Fact]
     public void TheInProcessRoute_TakesTheInput_WhenAnyDriverDoes()
     {
-        var composite = new InProcessDrivers(new FakeDriver { Takes = false }, _driver);
+        var composite = new InProcessDrivers(_ => { }, new FakeDriver { Takes = false }, _driver);
 
         Assert.True(composite.ReleaseButton(MouseButton.Left));
         Assert.Equal(["release Left"], _driver.Events);
@@ -312,7 +325,7 @@ public class TesterInputTests
     [Fact]
     public void TheInProcessRoute_DoesntTakeTheInput_WhenNoDriverDoes()
     {
-        var composite = new InProcessDrivers(new FakeDriver { Takes = false }, new FakeDriver { Takes = false });
+        var composite = new InProcessDrivers(_ => { }, new FakeDriver { Takes = false }, new FakeDriver { Takes = false });
 
         Assert.False(composite.MoveMouse(_point));
     }
@@ -403,8 +416,13 @@ public class TesterInputTests
             return Add([$"release {button}"]);
         }
 
+        public Exception GiveBackThrows { get; set; }
+
         public void GiveBack()
         {
+            if (GiveBackThrows != null)
+                throw GiveBackThrows;
+
             Events.Add("give back");
         }
 
