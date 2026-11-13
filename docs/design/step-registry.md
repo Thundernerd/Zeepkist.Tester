@@ -461,7 +461,7 @@ The steps the tester ships with so far:
 | `test-mode` | Starts test mode and waits for the round. The level needs a start block. | `editor` | leaves `editor`, enters `test-mode` |
 | `back-to-editor` | Quits through the pause menu and waits for the level to load. | `test-mode` | leaves `test-mode`, enters `editor` |
 | `press-action` | Presses one of the game's input actions by name for a frame, whatever it's bound to. In-process only: it fails on `input: os`. | | |
-| `hold-action` | Holds an input action for `for:`, at `value:` (default 1, from -1 to 1 for an axis). In-process only. | | |
+| `hold-action` | Holds an input action for `for:`, at `value:` (default 1, from -1 to 1 for an axis). In-process only: it fails on `input: os`. | | |
 
 The key and mouse input steps come with #20. `Zeepkist.Tester.Tests.InGame` is a test plugin and scenarios for the in-game check, and its `run.sh` deploys and runs them.
 

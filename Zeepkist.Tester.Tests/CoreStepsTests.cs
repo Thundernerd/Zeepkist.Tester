@@ -151,8 +151,8 @@ public class CoreStepsTests
         var step = Step("hold-action");
 
         Assert.Equal(["action", "for", "value"], step.Arguments.Select(argument => argument.Name));
+        Assert.DoesNotContain(step.Arguments, argument => argument.IsPrimary);
         var action = step.Arguments[0];
-        Assert.True(action.IsPrimary);
         Assert.True(action.IsRequired);
         Assert.Equal(ArgumentKind.String, action.Type.Kind);
         var duration = step.Arguments[1];

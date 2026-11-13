@@ -13,14 +13,14 @@ namespace TNRD.Zeepkist.Tester.Steps;
 public sealed class HoldAction : Step
 {
     /// <summary>The action, as the game's input settings name it, such as <c>Horizontal</c> for steering.</summary>
-    [Arg(Primary = true)]
+    [Arg]
     public required string Action { get; set; }
 
     /// <summary>How long to hold it.</summary>
     [Arg]
     public required Seconds For { get; set; }
 
-    /// <summary>What to hold it at: 1 for a button, and from -1 to 1 for an axis, where below 0 steers left.</summary>
+    /// <summary>What to hold it at: 1 for a button, and from -1 to 1 for an axis, such as below 0 to steer left with <c>Horizontal</c>.</summary>
     [Arg(Default = 1)]
     [InRange(-1, 1)]
     public float Value { get; set; } = 1;
