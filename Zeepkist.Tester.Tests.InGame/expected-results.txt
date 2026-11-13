@@ -119,6 +119,7 @@ set-block-setting | a-setting-it-does-not-have | FAIL
 main menu |  | pass
 new level |  | pass
 sample.show-input-window | imui-input | pass
+sample.click-covered-field | imui-input | pass
 sample.click-field | imui-input | pass
 sample.type-text | imui-input | pass
 sample.expect-field | imui-input | pass

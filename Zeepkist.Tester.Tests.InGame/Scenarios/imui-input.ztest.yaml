@@ -2,6 +2,7 @@ description: Reaches a ZeepSDK window's Imui controls through context.Input, as 
 start: editor
 steps:
   - sample.show-input-window
+  - sample.click-covered-field
   - sample.click-field
   - sample.type-text: Hello, World(1)!
   - sample.expect-field: Hello, World(1)!
