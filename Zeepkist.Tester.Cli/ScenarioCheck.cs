@@ -30,6 +30,7 @@ internal sealed class ScenarioCheck
     private readonly List<string> _running = [];
     private readonly List<CheckProblem> _problems = [];
     private readonly HashSet<string> _reported = [];
+    private HeldStates _held;
     private SourceLocation _ranFrom;
     private int _nodesFollowed;
 
@@ -140,19 +141,20 @@ internal sealed class ScenarioCheck
         if (level != null && !File.Exists(level))
             Report(scenario.Start.Location, CheckSeverity.Error, $"start: {scenario.Start.State.Name} can't find '{scenario.Start.Value}' from this file.");
 
-        Follow(scenario, new Scope(null) { DefinesUnknownNames = mayBeGivenNames }, [scenario.Start.State.Name]);
+        _held = new HeldStates(_states, scenario.Start.State.Name);
+        Follow(scenario, new Scope(null) { DefinesUnknownNames = mayBeGivenNames });
     }
 
-    private void Follow(Scenario scenario, Scope scope, HashSet<string> held)
+    private void Follow(Scenario scenario, Scope scope)
     {
         var key = FullPathOf(scenario.File);
         _followed.Add(key);
         _running.Add(key);
-        Follow(scenario.File, scenario.Steps, scope, held);
+        Follow(scenario.File, scenario.Steps, scope);
         _running.RemoveAt(_running.Count - 1);
     }
 
-    private void Follow(string file, IReadOnlyList<ScenarioNode> nodes, Scope scope, HashSet<string> held)
+    private void Follow(string file, IReadOnlyList<ScenarioNode> nodes, Scope scope)
     {
         foreach (var node in nodes)
         {
@@ -168,24 +170,24 @@ internal sealed class ScenarioCheck
             switch (node)
             {
                 case StepNode step:
-                    FollowStep(step, scope, held);
+                    FollowStep(step, scope);
                     break;
                 case ForNode loop:
-                    FollowFor(file, loop, scope, held);
+                    FollowFor(file, loop, scope);
                     break;
                 case RepeatNode repeat:
                     for (var pass = 0; pass < Math.Min(repeat.Count, 2); pass++)
-                        Follow(file, repeat.Steps, new Scope(scope), held);
+                        Follow(file, repeat.Steps, new Scope(scope));
 
                     break;
                 case RunNode run:
-                    FollowRun(file, run, scope, held);
+                    FollowRun(file, run, scope);
                     break;
             }
         }
     }
 
-    private void FollowFor(string file, ForNode loop, Scope scope, HashSet<string> held)
+    private void FollowFor(string file, ForNode loop, Scope scope)
     {
         var outer = scope.Find(loop.Variable);
         if (outer != null)
@@ -195,11 +197,11 @@ internal sealed class ScenarioCheck
         {
             var body = new Scope(scope);
             body.Define(loop.Variable, new NamedValue([TextValue.Kind], true, value));
-            Follow(file, loop.Steps, body, held);
+            Follow(file, loop.Steps, body);
         }
     }
 
-    private void FollowRun(string file, RunNode run, Scope scope, HashSet<string> held)
+    private void FollowRun(string file, RunNode run, Scope scope)
     {
         // A run: file sees only what its with: passes in. Its text is known unless it uses a value only a run can know
         var given = new Scope(null);
@@ -228,11 +230,11 @@ internal sealed class ScenarioCheck
 
         var ranFrom = _ranFrom;
         _ranFrom = run.Location;
-        Follow(scenario, given, held);
+        Follow(scenario, given);
         _ranFrom = ranFrom;
     }
 
-    private void FollowStep(StepNode node, Scope scope, HashSet<string> held)
+    private void FollowStep(StepNode node, Scope scope)
     {
         // A step's values are all read before it runs, so what it defines is only there for the next step
         var defines = new List<Definition>();
@@ -254,7 +256,7 @@ internal sealed class ScenarioCheck
                 scope.Define(definition.Name, new NamedValue([type.ValueKind, .. type.BaseValueKinds], type.Substitute != null, null));
         }
 
-        FollowStates(node, held);
+        FollowStates(node);
     }
 
     private void FollowArguments(IReadOnlyList<ArgumentDescriptor> arguments, ObjectArgument written, Scope scope, List<Definition> defines)
@@ -343,37 +345,12 @@ internal sealed class ScenarioCheck
         return isKnown;
     }
 
-    private void FollowStates(StepNode node, HashSet<string> held)
+    private void FollowStates(StepNode node)
     {
-        foreach (var alternatives in node.Step.Requires)
-        {
-            var unmet = alternatives.Select(state => OutermostUnmet(state, held)).TakeWhile(state => state != null).ToList();
-            if (unmet.Count == alternatives.Count)
-                Report(node.Location, CheckSeverity.Warning, ScenarioMessages.Needs(node.Step, unmet.Distinct()));
-        }
+        foreach (var unmet in _held.Unmet(node.Step))
+            Report(node.Location, CheckSeverity.Warning, ScenarioMessages.Needs(node.Step, unmet));
 
-        foreach (var state in node.Step.Leaves)
-            Leave(state, held);
-
-        foreach (var state in node.Step.Enters)
-            held.Add(state);
-    }
-
-    /// <summary>
-    /// As the harness checks it: a state only holds when the ones around it do. Null when it holds, and otherwise the state to name, because that's the one to get into first.
-    /// </summary>
-    private StateDescriptor OutermostUnmet(string name, HashSet<string> held)
-    {
-        var state = _states[name];
-        var outer = state.Within == null ? null : OutermostUnmet(state.Within, held);
-        return outer ?? (held.Contains(name) ? null : state);
-    }
-
-    private void Leave(string name, HashSet<string> held)
-    {
-        held.Remove(name);
-        foreach (var inner in _states.Values.Where(state => state.Within == name))
-            Leave(inner.FullName, held);
+        _held.Apply(node.Step);
     }
 
     private static string RunTarget(string file, RunNode run)
