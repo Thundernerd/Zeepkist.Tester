@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
@@ -28,14 +27,12 @@ internal static class ScenarioYaml
     }
 
     /// <summary>
-    /// A YamlException's message starts with where it is, as <c>(Line: 3, Col: 5, Idx: 20) - (Line: 3, Col: 5, Idx: 20): </c>.
+    /// A YamlException's Message is only what's wrong: the place is added by its ToString, and the scenario's own
+    /// location takes its place. The syntax-error fixtures notice if an update moves the place into Message.
     /// </summary>
     private static string Problem(YamlException exception)
     {
-        const string AfterPlace = "): ";
-        var message = exception.Message;
-        var place = message.IndexOf(AfterPlace, StringComparison.Ordinal);
-        var problem = place < 0 ? message : message.Substring(place + AfterPlace.Length);
+        var problem = exception.Message;
         return problem.Contains("flow") ? $"{problem} Inside {{ }} or [ ], quote a value with ${{ or a colon in it." : problem;
     }
 }
