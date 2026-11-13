@@ -161,13 +161,28 @@ public class LegacyInputDriverTests
     }
 
     [Fact]
-    public void MousePosition_IsThePlayersUntilTheMouseIsMoved()
+    public void MousePosition_IsThePlayersUntilTheFrameAfterTheMouseIsMoved()
     {
         Assert.Null(_driver.MousePosition);
 
         Assert.True(_driver.MoveMouse(Point(100, 200)));
+        Assert.Null(_driver.MousePosition);
 
+        _frame = 11;
         Assert.Equal((100f, 200f, 0f), Coordinates(_driver.MousePosition));
+    }
+
+    [Fact]
+    public void MoveMouse_KeepsTheMouseWhereItWas_UntilTheFrameAfter()
+    {
+        _driver.MoveMouse(Point(100, 200));
+        _frame = 11;
+
+        _driver.MoveMouse(Point(300, 400));
+        Assert.Equal((100f, 200f, 0f), Coordinates(_driver.MousePosition));
+
+        _frame = 12;
+        Assert.Equal((300f, 400f, 0f), Coordinates(_driver.MousePosition));
     }
 
     [Fact]
@@ -192,14 +207,20 @@ public class LegacyInputDriverTests
     }
 
     [Fact]
-    public void DragMouse_MovesTheMouseByTheDelta()
+    public void DragMouse_MovesTheMouseByTheDelta_InTheFrameItsDeltaIsSeen()
     {
         _driver.MoveMouse(Point(100, 200));
         _driver.PressButton(MouseButton.Left);
 
-        Assert.True(_driver.DragMouse(Point(5, -20), MouseButton.Left));
+        _frame = 12;
 
-        Assert.Equal((105f, 180f, 0f), Coordinates(_driver.MousePosition));
+        Assert.True(_driver.DragMouse(Point(5, -20), MouseButton.Left));
+        Assert.True(_driver.DragMouse(Point(5, 0), MouseButton.Left));
+        Assert.Equal((100f, 200f, 0f), Coordinates(_driver.MousePosition));
+
+        _frame = 13;
+        Assert.Equal((110f, 180f, 0f), Coordinates(_driver.MousePosition));
+        Assert.Equal(10, _driver.Axis("mouse x", 0));
     }
 
     [Theory]

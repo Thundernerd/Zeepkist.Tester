@@ -67,6 +67,13 @@ internal sealed class LegacyInputDriver : IInputDriver
     private readonly Dictionary<KeyCode, List<Stroke>> _strokes = [];
     private (int Frame, float X, float Y) _mouseDelta;
 
+    /// <summary>
+    /// Where the game sees the mouse until <see cref="_movedFrame"/>, and where from then.
+    /// </summary>
+    private Vector3? _seenMouse;
+    private Vector3? _movedMouse;
+    private int _movedFrame;
+
     /// <param name="frame">Unity's <c>Time.frameCount</c>.</param>
     /// <param name="deltaTime">Seconds since the frame before, for how far a key axis ramps in this one.</param>
     public LegacyInputDriver(Func<int> frame, Func<float> deltaTime)
@@ -104,7 +111,7 @@ internal sealed class LegacyInputDriver : IInputDriver
     public bool MoveMouse(Vector2 screenPoint)
     {
         // Its fields are set one by one because the unit tests' UnityEngine has no method bodies
-        MousePosition = new Vector3 { x = screenPoint.x, y = screenPoint.y };
+        MoveTo(new Vector3 { x = screenPoint.x, y = screenPoint.y });
         return true;
     }
 
@@ -123,8 +130,8 @@ internal sealed class LegacyInputDriver : IInputDriver
             ? (seenIn, _mouseDelta.X + delta.x, _mouseDelta.Y + delta.y)
             : (seenIn, delta.x, delta.y);
 
-        var from = MousePosition ?? default;
-        MousePosition = new Vector3 { x = from.x + delta.x, y = from.y + delta.y };
+        var from = _movedMouse ?? _seenMouse ?? default;
+        MoveTo(new Vector3 { x = from.x + delta.x, y = from.y + delta.y });
         return true;
     }
 
@@ -149,7 +156,8 @@ internal sealed class LegacyInputDriver : IInputDriver
         }
 
         _mouseDelta = default;
-        MousePosition = null;
+        _seenMouse = null;
+        _movedMouse = null;
     }
 
     /// <summary>
@@ -160,9 +168,11 @@ internal sealed class LegacyInputDriver : IInputDriver
     public bool AnyKeyDown => _strokes.Keys.Any(GetKeyDown);
 
     /// <summary>
-    /// Where the mouse is, in screen pixels counted from the bottom left, or null while it's the player's.
+    /// Where the mouse is, in screen pixels counted from the bottom left, or null while it's the player's. A move is seen
+    /// from the frame after, with a drag's delta and the buttons pressed alongside it. Giving back hands the player the
+    /// mouse at once.
     /// </summary>
-    public Vector3? MousePosition { get; private set; }
+    public Vector3? MousePosition => _movedMouse != null && _frame() >= _movedFrame ? _movedMouse : _seenMouse;
 
     /// <param name="button">0 for the left button, as Unity counts them.</param>
     public bool GetMouseButton(int button)
@@ -423,6 +433,13 @@ internal sealed class LegacyInputDriver : IInputDriver
         _heldKeys.Remove(key);
         var last = _strokes[key][_strokes[key].Count - 1];
         last.Up = Math.Max(_frame() + 1, last.Down);
+    }
+
+    private void MoveTo(Vector3 position)
+    {
+        _seenMouse = MousePosition;
+        _movedMouse = position;
+        _movedFrame = _frame() + 1;
     }
 
     private sealed class Stroke
