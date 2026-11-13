@@ -31,8 +31,10 @@ public sealed class InputWindow : IZeepGUIDrawer
     {
         get
         {
-            var start = Mathf.Clamp(Mathf.Min(_fieldState.Caret, _fieldState.Caret + _fieldState.Selection), 0, _text.Length);
-            var end = Mathf.Clamp(Mathf.Max(_fieldState.Caret, _fieldState.Caret + _fieldState.Selection), 0, _text.Length);
+            var caret = Mathf.Clamp(_fieldState.Caret, 0, _text.Length);
+            var other = Mathf.Clamp(_fieldState.Caret + _fieldState.Selection, 0, _text.Length);
+            var start = Mathf.Min(caret, other);
+            var end = Mathf.Max(caret, other);
             return _text.Substring(start, end - start);
         }
     }

@@ -9,6 +9,7 @@ public sealed class DoubleClickField : Step
 {
     public override IEnumerator Run(IStepContext context)
     {
+        // A click takes 3 frames, so the second press is a double-click only above about 15 frames a second, as a player's is
         var window = context.Get<InputWindow>();
         yield return context.Input.Click(window.FieldStart);
         yield return context.Input.Click(window.FieldStart);

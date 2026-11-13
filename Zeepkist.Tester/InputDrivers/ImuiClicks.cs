@@ -20,9 +20,7 @@ internal sealed class ImuiClicks
     /// </summary>
     private const float PositionThreshold = 20f;
 
-    private readonly int[] _count = new int[3];
-    private readonly float[] _time = new float[3];
-    private readonly Vector2[] _position = new Vector2[3];
+    private readonly LastPress[] _lastPresses = new LastPress[Enum.GetValues(typeof(MouseButton)).Length];
 
     /// <summary>
     /// How many clicks in a row this press is.
@@ -32,13 +30,13 @@ internal sealed class ImuiClicks
     /// <param name="time">Seconds of real time.</param>
     public int Press(MouseButton button, Vector2 position, float time)
     {
-        var index = (int)button;
-        if (time - _time[index] >= TimeThreshold || Distance(position, _position[index]) >= PositionThreshold)
-            _count[index] = 0;
+        ref var last = ref _lastPresses[(int)button];
+        if (time - last.Time >= TimeThreshold || Distance(position, last.Position) >= PositionThreshold)
+            last.Count = 0;
 
-        _time[index] = time;
-        _position[index] = position;
-        return ++_count[index];
+        last.Time = time;
+        last.Position = position;
+        return ++last.Count;
     }
 
     /// <summary>
@@ -46,7 +44,8 @@ internal sealed class ImuiClicks
     /// </summary>
     public void Forget()
     {
-        Array.Clear(_count, 0, _count.Length);
+        for (var i = 0; i < _lastPresses.Length; i++)
+            _lastPresses[i].Count = 0;
     }
 
     /// <summary>
@@ -57,5 +56,15 @@ internal sealed class ImuiClicks
         double x = a.x - b.x;
         double y = a.y - b.y;
         return Math.Sqrt((x * x) + (y * y));
+    }
+
+    /// <summary>
+    /// A button's last press, and how many clicks in a row it was.
+    /// </summary>
+    private struct LastPress
+    {
+        public int Count;
+        public float Time;
+        public Vector2 Position;
     }
 }
