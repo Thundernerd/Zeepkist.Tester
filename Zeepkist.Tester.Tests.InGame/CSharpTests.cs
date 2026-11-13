@@ -54,4 +54,19 @@ public sealed class CSharpTests
         yield return null;
         context.Fail("To check a test can fail outside a step.", "1", 2.ToString(CultureInfo.InvariantCulture));
     }
+
+    /// <summary>Starts from a level file in the scenarios folder, with its blocks.</summary>
+    [InGameTest(Level = "levels/three-blocks.zeeplevel")]
+    public IEnumerator FromALevelFile(IStepContext context)
+    {
+        yield return context.Run(new ExpectEditor());
+        yield return context.Run(new ExpectBlockCount { Count = 3 });
+    }
+
+    /// <summary>Starts in free play, on the first adventure level, whose UID is the same on every install.</summary>
+    [InGameTest(Start = Start.FreePlay, FreePlayUid = "EZ01")]
+    public IEnumerator InFreePlay(IStepContext context)
+    {
+        yield return context.Run(new ExpectFreePlay { Uid = "EZ01" });
+    }
 }
