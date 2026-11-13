@@ -45,8 +45,8 @@ internal sealed class ConvertCommand
 
             if (arguments[i].StartsWith('-'))
                 return false;
-            else
-                _paths.Add(arguments[i]);
+
+            _paths.Add(arguments[i]);
         }
 
         return _paths.Count > 0;

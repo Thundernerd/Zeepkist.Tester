@@ -31,6 +31,7 @@ internal static class StepSchema
     /// </summary>
     private const string NumberText = "^[-+]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][-+]?[0-9]+)?$";
 
+    // JSON's usual indent, and System.Text.Json's
     private static readonly JsonSerializerOptions _indented = ReadableJson.Options(2);
 
     private const string NamePattern = Name<object>.Pattern;

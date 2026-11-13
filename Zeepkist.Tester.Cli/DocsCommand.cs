@@ -27,10 +27,10 @@ internal static class DocsCommand
             if (PluginArguments.TryRead(arguments, ref i, plugins))
                 continue;
 
-            if (arguments[i] == "--output" && i + 1 < arguments.Count && file == null)
-                file = arguments[++i];
-            else
+            if (arguments[i] != "--output" || i + 1 >= arguments.Count || file != null)
                 return null;
+
+            file = arguments[++i];
         }
 
         var steps = ProjectSteps.Read(folder, plugins, output);
