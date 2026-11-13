@@ -168,6 +168,28 @@ public sealed class ScenarioRunnerTests : IDisposable
     }
 
     [Fact]
+    public void PlacingABlock_OutsideTheEditor_FailsTheStep_AndNamesNothing()
+    {
+        Run(Write("a", "steps:\n  - t.place-lamp: lamp\n"));
+
+        var step = Assert.Single(_steps);
+        Assert.False(step.Passed);
+        Assert.Equal("This step needs the level editor, and the game isn't in it.", step.Detail);
+        Assert.DoesNotContain("placed without the editor", Events);
+    }
+
+    [Fact]
+    public void SettingABlocksSetting_OutsideTheEditor_FailsTheStep()
+    {
+        Run(Write("a", "steps:\n  - t.name-block: lamp\n  - t.set-mode: lamp\n"));
+
+        var step = _steps.Last();
+        Assert.False(step.Passed);
+        Assert.Equal("This step needs the level editor, and the game isn't in it.", step.Detail);
+        Assert.DoesNotContain("set without the editor", Events);
+    }
+
+    [Fact]
     public void AForLoop_RunsItsBodyPerValue_WithTheVariableInAnyTypeOfValue()
     {
         Run(Write("a", "steps:\n  - for: { h: [64, 120] }\n    steps:\n      - t.number: ${h}\n      - t.note: h is ${h}\n"));

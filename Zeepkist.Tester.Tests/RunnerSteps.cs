@@ -244,6 +244,52 @@ public static class RunnerSteps
         }
     }
 
+    [Step("name-block", Namespace = "t")]
+    public sealed class NameBlock : Step
+    {
+        [Arg(Primary = true)]
+        public required Name<BlockValue> As { get; set; }
+
+        public override IEnumerator Run(IStepContext context)
+        {
+            As.Set(context, new BlockValue("2448-1"));
+            yield break;
+        }
+    }
+
+    /// <summary>
+    /// A mod's step that places a block as place-block does, after finding its type by a name of its own.
+    /// </summary>
+    [Step("place-lamp", Namespace = "t")]
+    public sealed class PlaceLamp : Step
+    {
+        [Arg(Primary = true)]
+        public required Name<BlockValue> As { get; set; }
+
+        public override IEnumerator Run(IStepContext context)
+        {
+            context.Blocks.Place(2448, As);
+            context.Get<Recorder>().Events.Add("placed without the editor");
+            yield break;
+        }
+    }
+
+    /// <summary>
+    /// A mod's step that changes a block's setting as set-block-setting does, after finding its key by a name of its own.
+    /// </summary>
+    [Step("set-mode", Namespace = "t")]
+    public sealed class SetMode : Step
+    {
+        [Arg(Primary = true)]
+        public required Ref<BlockValue> Block { get; set; }
+
+        public override IEnumerator Run(IStepContext context)
+        {
+            yield return context.Blocks.SetSetting(Block, "m", "2");
+            context.Get<Recorder>().Events.Add("set without the editor");
+        }
+    }
+
     [Step("shot", Namespace = "t")]
     public sealed class Shot : Step
     {

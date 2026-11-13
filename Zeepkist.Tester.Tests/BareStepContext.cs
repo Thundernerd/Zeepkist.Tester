@@ -26,6 +26,8 @@ public abstract class BareStepContext : IStepContext
 
     public IExceptionLog Exceptions => throw new NotSupportedException();
 
+    public IEditorBlocks Blocks => throw new NotSupportedException();
+
     public string LastScreenshotBlankColor => throw new NotSupportedException();
 
     public T Get<T>()
