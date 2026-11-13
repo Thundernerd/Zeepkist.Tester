@@ -546,7 +546,7 @@ public sealed class WindowTests
 | Offline checks | `ztest check [files or folders...] [--plugin <dll>]...`, `ztest check --registry` | The registry; reports `file:line:col: error\|warning: message`, and exits with 1 on errors |
 | `.zlstest` → YAML | `ztest convert` | The registry plus a `[LineSyntax("<function> [as <as>]")]` attribute per old step; see below |
 
-`ztest check` with no files checks the `scenarios` folder of the nearest `zeepkist-test.json`, and reads the steps of its `testPlugin`, a project or a DLL, unless `--plugin` names others. Of the files it's given, one that another runs is only followed from there, because it may need what that passes in through `with:`. It reports a file's first problem from loading, and then every problem with names and states. It stops following a scenario, with a warning, after a million steps of nested loops and `run:` files, and a value used in nested `for`s tries its first 1000 combinations.
+`ztest check` with no files checks the `scenarios` folder of the nearest `zeepkist-test.json`, and reads the steps of its `testPlugin`, a project or a DLL, unless `--plugin` names others. Of the files it's given, one that another runs is only followed from there, because it may need what that passes in through `with:`. It reports a file's first problem from loading, and then every problem with names and states. A file whose lists and maps nest more than 100 deep is a load error, in the game as well, so that reading it can't overflow the stack. It stops following a scenario, with a warning, after a million steps of nested loops and `run:` files, and a value used in nested `for`s tries its first 1000 combinations.
 
 ### The editor schema
 

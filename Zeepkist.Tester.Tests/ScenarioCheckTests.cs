@@ -241,6 +241,7 @@ public class ScenarioCheckTests
     [InlineData("unknown-step", 3, 5, "There's no step 'nope'.")]
     [InlineData("unknown-argument", 2, 36, "place-block has no argument 'colour'. It takes: function, as, how-many, offset.")]
     [InlineData("missing-required-argument", 2, 18, "place-block needs the argument 'function'.")]
+    [InlineData("nested-too-deep", 1, 107, "Lists and maps are nested more than 100 deep here.")]
     public void WhatTheParserFinds_IsReportedTheSameWay(string fixture, int line, int column, string problem)
     {
         var file = Path.Combine("Scenarios", "Errors", $"{fixture}.ztest.yaml");
